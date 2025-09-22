@@ -69,9 +69,20 @@ export class Notebook {
     return getIconString(this.data.icon)
   }
 
+  get colorValue() {
+    return (
+      this.data.customization?.coverColor ?? [
+        ['color(display-p3 0.24 0.67 0.98 / 0.74)', '#7ECEFF'],
+        ['color(display-p3 0.13 0.55 0.86 / 0.82)', '#00A5EB'],
+        ['#fff', '#fff']
+      ]
+    )
+  }
+
   get nameValue() {
     // also handle legacy space name
-    return (this.data as any)?.folderName || this.data?.name
+    // Note pull new name first, as otherwise reactivity breaks
+    return this.data?.name || (this.data as any)?.folderName
   }
 
   async updateData(updates: Partial<NotebookData>) {

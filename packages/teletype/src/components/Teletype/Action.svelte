@@ -439,7 +439,7 @@
 
 <style lang="scss">
   .action {
-    padding: 0.66rem 1.125rem;
+    padding: 0.65rem 0.75rem;
     margin: 0.25rem 0.5rem;
     box-sizing: border-box;
     font-size: 0.9rem;

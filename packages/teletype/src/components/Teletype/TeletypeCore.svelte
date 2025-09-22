@@ -412,7 +412,7 @@
       <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
       <div class="footer" onclick={() => !isModal && openTeletype()} role="none">
         <!-- svelte-ignore a11y-missing-attribute -->
-        <div class="icon-wrapper">
+        <!--<div class="icon-wrapper">
           {#if $editMode}
             <Icon name="edit" size="20" color="--(text)" />
           {:else if $selectedAction?.icon && typeof $selectedAction.icon === 'string'}
@@ -426,7 +426,7 @@
           {:else}
             <Icon name="search" size="18" color="--(text)" />
           {/if}
-        </div>
+        </div>-->
         {#if isModal}
           <p>{$currentAction.footerText || 'Teletype'}</p>
           <div
@@ -613,21 +613,21 @@
     color: var(--text);
     border-radius: var(--border-radius);
     display: flex;
-    outline: 1px solid rgba(126, 168, 240, 0.05);
+    ////outline: 1px solid rgba(126, 168, 240, 0.05);
     // background: var(--background-dark);
     // background: var(--background-dark-p3);
-    background: #fbfbff;
-    background: color(display-p3 0.9843 0.9843 1);
+    ////background: #fbfbff;
+    ////background: color(display-p3 0.9843 0.9843 1);
     flex-direction: column;
-    border: 0.5px solid rgba(0, 0, 0, 0.12);
+    ////border: 0.5px solid rgba(0, 0, 0, 0.12);
 
-    box-shadow:
-      inset 0px 1px 1px -1px white,
-      inset 0px -1px 1px -1px white,
-      inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
-      0px 0px 5px 0px rgba(201, 220, 248, 0.3),
-      0px 0.25px 1.125px 0.25px rgba(126, 168, 240, 0.4),
-      0px 4px 4px 0px rgba(126, 168, 240, 0.05);
+    ////box-shadow:
+    ////  inset 0px 1px 1px -1px white,
+    ////  inset 0px -1px 1px -1px white,
+    ////  inset 0px 30px 20px -20px rgba(255, 255, 255, 0.15),
+    ////  0px 0px 5px 0px rgba(201, 220, 248, 0.3),
+    ////  0px 0.25px 1.125px 0.25px rgba(126, 168, 240, 0.4),
+    ////  0px 4px 4px 0px rgba(126, 168, 240, 0.05);
     // overflow: auto;
 
     &.modal-content {
@@ -644,16 +644,16 @@
   .box-inner {
     border-radius: 13px;
     margin: 0.5rem;
-    background: #ffffff;
+    ////background: #ffffff;
     flex: 1;
     display: flex;
     flex-direction: column;
-    box-shadow:
-      0 0 0.47px 0 rgba(0, 0, 0, 0.18),
-      0 0.941px 2.823px 0 rgba(0, 0, 0, 0.1);
-    box-shadow:
-      0 0 0.47px 0 color(display-p3 0 0 0 / 0.18),
-      0 0.941px 2.823px 0 color(display-p3 0 0 0 / 0.1);
+    ////box-shadow:
+    ////  0 0 0.47px 0 rgba(0, 0, 0, 0.18),
+    ////  0 0.941px 2.823px 0 rgba(0, 0, 0, 0.1);
+    ////box-shadow:
+    ////  0 0 0.47px 0 color(display-p3 0 0 0 / 0.18),
+    ////  0 0.941px 2.823px 0 color(display-p3 0 0 0 / 0.1);
   }
 
   .component-wrapper {
@@ -745,14 +745,14 @@
   }
 
   .footer {
-    margin: 0.55rem;
-    padding: 0.15rem 0.65rem 0.65rem 0.65rem;
+    //margin: 0.55rem;
+    padding: 0.15rem 0.65rem 0 0.65rem;
     display: flex;
     align-items: start;
     border-radius: 11px;
     position: relative;
-    background: #fff;
-    min-height: 125px;
+    ////background: #fff;
+    //min-height: 125px;
 
     // no focus outline
     &:focus {

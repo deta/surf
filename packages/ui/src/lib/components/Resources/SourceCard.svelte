@@ -20,7 +20,7 @@
     interactive = true,
     permanentlyTilted = false,
     onDeleteResource,
-    onClick,
+    onclick,
     ...props
     //title,
     //subtitle,
@@ -35,7 +35,7 @@
     interactive?: boolean
     permanentlyTilted?: boolean
     onDeleteResource?: (resource: Resource) => void
-    onClick?: (e: MouseEvent) => void
+    onclick?: (e: MouseEvent) => void
     //title?: string
     //subtitle?: string
     //coverImage?: string
@@ -51,7 +51,7 @@
   let imageError = $state(false)
 
   const handleClick = (e: MouseEvent) => {
-    onClick?.(e)
+    onclick?.(e)
   }
 
   const handleImageError = () => {
@@ -63,24 +63,15 @@
   })
 </script>
 
-{#if !data}
-  <article loading>
-    <div class="card">
-      <div class="content">
-        <div class="cover fallback">
-          <DynamicIcon name="file;;document" width="1em" height="1em" />
-        </div>
-      </div>
-    </div>
-  </article>
-{:else}
+<svelte:boundary>
+  {#snippet failed(error, reset)}
+                {console.error(error)}
+                failed
   <article
-    onclick={handleClick}
     role="none"
     data-resource-id={resource.id}
     class:interactive
     class:permanently-tilted={permanentlyTilted}
-    {...props}
   >
     <div class="card">
       <div class="content">
@@ -105,40 +96,54 @@
             <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
           </div>
         {/if}
+    </article>
+  {/snippet}
 
-        {#if faviconUrl && faviconUrl.length > 0}
-          <div class="favicon">
-            <img src={faviconUrl} alt="" />
+  {#if !data}
+    <article loading>
+      <div class="card">
+        <div class="content">
+          <div class="cover fallback">
+            <DynamicIcon name="file;;document" width="1em" height="1em" />
           </div>
-        {/if}
+        </div>
       </div>
-    </div>
-
-    {#if !onlyCard}
-      {#if text || data.title || data.metadata?.sourceURI || data.source}
-        <div class="metadata">
-          {#if data.title && data.title.length > 0}
-            <span class="title typo-title-sm">{data.title}</span>
-          {:else if data.metadata?.text}
-            <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
-          {:else if data.content}
-            <span class="title typo-title-sm">{data.content}</span>
-          {:else if data.source.text}
-            <span class="title typo-title-sm">{data.source.text}</span>
+    </article>
+  {:else}
+    <article
+      onclick={handleClick}
+      role="none"
+      data-resource-id={resource.id}
+    {...props}
+    >
+      <div class="card">
+        <div class="content">
+          {#if data.image && !imageError}
+            <img
+              class="cover"
+              src={data.image}
+              alt={data?.title || data?.metadata?.text}
+              decoding="async"
+              loading="eager"
+              ondragstart={(e) => e.preventDefault()}
+              onerror={handleImageError}
+            />
+          {:else if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+            <ReadOnlyRichText content={truncate(data.content, 2000)} />
+          {:else if data.source.icon}
+            <div class="cover fallback">
+              <DynamicIcon name={data.source.icon} width="1em" height="1em" />
+            </div>
+          {:else}
+            <div class="cover fallback">
+              <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
+            </div>
           {/if}
 
-          {#if isGeneratedResource(resource)}
-            <span class="subtitle typo-title-sm" style="opacity: 0.3;">Surflet</span>
-          {:else if data.url}
-            <span class="subtitle typo-title-sm" style="opacity: 0.3;"
-              >{new URL(data.url)?.host}</span
-            >
-          {:else if data.metadata?.text}
-            <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
-          {:else if resource}
-            <span class="subtitle typo-title-sm" style="opacity: 0.3;"
-              >{getFileType(resource.type)}</span
-            >
+          {#if faviconUrl && faviconUrl.length > 0}
+            <div class="favicon">
+              <img src={faviconUrl} alt="" />
+            </div>
           {/if}
 
           {#if showSaved}
@@ -148,10 +153,40 @@
             </div>
           {/if}
         </div>
+      </div>
+
+      {#if !onlyCard}
+        {#if text || data.title || data.metadata?.sourceURI || data.source}
+          <div class="metadata">
+            {#if data.title && data.title.length > 0}
+              <span class="title typo-title-sm">{data.title}</span>
+            {:else if data.metadata?.text}
+              <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
+            {:else if data.content}
+              <span class="title typo-title-sm">{data.content}</span>
+            {:else if data.source.text}
+              <span class="title typo-title-sm">{data.source.text}</span>
+            {/if}
+
+            {#if isGeneratedResource(resource)}
+              <span class="subtitle typo-title-sm" style="opacity: 0.3;">Surflet</span>
+            {:else if data.url}
+              <span class="subtitle typo-title-sm" style="opacity: 0.3;"
+                >{new URL(data.url)?.host}</span
+              >
+            {:else if data.metadata?.text}
+              <span class="subtitle typo-title-sm" style="opacity: 0.3;">{data.metadata.text}</span>
+            {:else if resource}
+              <span class="subtitle typo-title-sm" style="opacity: 0.3;"
+                >{getFileType(resource.type)}</span
+              >
+            {/if}
+          </div>
+        {/if}
       {/if}
-    {/if}
-  </article>
-{/if}
+    </article>
+  {/if}
+</svelte:boundary>
 
 <style lang="scss">
   article[loading] {
@@ -257,6 +292,7 @@
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
+                          opacity: 0.7;
       }
     }
 

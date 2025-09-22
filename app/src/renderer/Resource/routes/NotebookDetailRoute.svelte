@@ -1,13 +1,13 @@
 <script lang="ts">
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import { type Notebook } from '@deta/services/notebook'
-  import { Button, PageMention, NotebookLoader } from '@deta/ui'
+  import { Button, PageMention, NotebookLoader, Renamable, contextMenu, openDialog } from '@deta/ui'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
-  import { ResourceLoader } from '@deta/ui'
+  import { ResourceLoader, NotebookCover } from '@deta/ui'
   import { type ResourceSearchResult } from '@deta/services/resources'
   import type { NotebookEntry, Option } from '@deta/types'
   import { ResourceTypes, SpaceEntryOrigin } from '@deta/types'
-  import { SearchResourceTags, useDebounce, useLogScope, wait } from '@deta/utils'
+  import { SearchResourceTags, truncate, useDebounce, useLogScope, wait } from '@deta/utils'
   import { onMount } from 'svelte'
   import { get, writable } from 'svelte/store'
   import { type MessagePortClient } from '@deta/services/messagePort'
@@ -18,6 +18,7 @@
   import { useTelemetry } from '@deta/services'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
+  import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
 
   let {
     route,
@@ -40,6 +41,7 @@
   let isRenamingNote = $state(null)
   let notebook: Notebook = $state(null)
   let notebookData = $derived(notebook.data ?? writable(null))
+  let isCustomizingNotebook = $state(null)
 
   let title = $derived(notebook?.nameValue ?? 'Notebook')
 
@@ -60,6 +62,19 @@
     )
 
     openResource(note.id, { target: 'active_tab' })
+  }
+
+  const handleDeleteNotebook = async (notebook: Notebook) => {
+    const { closeType: confirmed } = await openDialog({
+      title: `Delete <i>${truncate(notebook.nameValue, 26)}</i>`,
+      message: `This can't be undone. <br>Your resources won't be deleted.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit', kind: 'danger' }
+      ]
+    })
+    if (!confirmed) return
+    notebookManager.deleteNotebook(notebook.id, true)
   }
 
   const handleRenameNote = useDebounce((noteId: string, value: string) => {
@@ -102,6 +117,10 @@
   >
 </svelte:head>-->
 
+{#if isCustomizingNotebook}
+  <NotebookEditor bind:notebook={isCustomizingNotebook} />
+{/if}
+
 <NotebookLayout>
   <NotebookLoader
     {notebookId}
@@ -123,72 +142,47 @@
     {#snippet children([notebook, _])}
       <main>
         <div class="tty-wrapper">
-          <h1>
-            {notebook.nameValue}
-          </h1>
+          <div class="name">
+            <NotebookCover
+              {notebook}
+              height="5ch"
+              fontSize="0.3rem"
+              --round-base="6px"
+              --round-diff="-8px"
+              {@attach contextMenu({
+                canOpen: true,
+                items: [
+                  {
+                    type: 'action',
+                    text: 'Customize',
+                    icon: 'edit',
+                    action: () => (isCustomizingNotebook = notebook)
+                  },
+
+                  {
+                    type: 'action',
+                    kind: 'danger',
+                    text: 'Delete',
+                    icon: 'trash',
+                    action: () => handleDeleteNotebook(notebook)
+                  }
+                ]
+              })}
+            />
+            <h1>
+              <Renamable
+                value={notebook.nameValue}
+                style="text-align: left;"
+                onchange={(e) => {
+                  notebook.updateData({
+                    name: (e.target as HTMLInputElement).value ?? notebook.name
+                  })
+                }}
+              />
+            </h1>
+          </div>
           <TeletypeEntry open={true} />
         </div>
-
-        <section class="notes">
-          <header>
-            <label>Latest Notes</label>
-
-            <Button size="md" onclick={handleCreateNote}>
-              <Icon name="add" size="0.95rem" />
-              <span class="typo-title-sm" style="opacity: 0.75;">Create Note</span>
-            </Button>
-            <!--<Button size="md" onclick={handleCreateNote}>
-              <span class="typo-title-sm" style="opacity: 0.75;">View all Notes</span>
-            </Button>-->
-          </header>
-          {#if filterNoteResources(notebook.contents, undefined).length <= 0}
-            <div class="empty">
-              <Button size="md" onclick={handleCreateNote}>
-                <span class="typo-title-sm">Create New Note</span>
-              </Button>
-              <p class="typo-title-sm">You can also create notes through Teletype.</p>
-            </div>
-          {:else}
-            <ul
-              class:showAllNotes={filterNoteResources(notebook.contents, undefined).length <= 5 ||
-                showAllNotes}
-            >
-              {#each filterNoteResources(notebook.contents, undefined).slice(0, showAllNotes ? Infinity : 7) as { entry_id: resourceId } (resourceId)}
-                <ResourceLoader resource={resourceId}>
-                  {#snippet loading()}
-                    loading
-                  {/snippet}
-                  {#snippet children(resource: Resource)}
-                    <li>
-                      <PageMention
-                        sourceNotebookId={notebookId}
-                        {resource}
-                        editing={isRenamingNote === resourceId}
-                        onchange={(v) => {
-                          handleRenameNote(resourceId, v)
-                          isRenamingNote = undefined
-                        }}
-                        oncancel={handleCancelRenameNote}
-                        onclick={async (e) => {
-                          if (isRenamingNote) return
-                          handleResourceClick(resourceId, e)
-                        }}
-                        onrename={() => (isRenamingNote = resourceId)}
-                      />
-                    </li>
-                  {/snippet}
-                </ResourceLoader>
-              {/each}
-            </ul>
-          {/if}
-          {#if filterNoteResources(notebook.contents, undefined).length > 5}
-            <Button size="md" onclick={() => (showAllNotes = !showAllNotes)}>
-              <span class="more"
-                >{#if !showAllNotes}Show {filterNoteResources(notebook.contents, undefined).length -
-                    6} more{:else}Hide{/if}</span
-              >
-            </Button>{/if}
-        </section>
       </main>
     {/snippet}
   </NotebookLoader>
@@ -284,9 +278,15 @@
   .tty-wrapper {
     width: 100%;
 
+    .name {
+      display: flex;
+      align-items: center;
+      gap: 2ch;
+      padding-inline: 1.5rem;
+    }
+
     h1 {
       font-size: 30px;
-      margin-bottom: 0.75rem;
       font-family: 'Gambarino';
       text-align: center;
     }

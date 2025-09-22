@@ -82,7 +82,7 @@
     class="teletype-provider"
     options={{
       iconComponent: DynamicIcon,
-      placeholder: 'Search the web, enter URL or ask a question...',
+      placeholder: 'Write a note, ask a question, enter a url or search the web…',
       localSearch: false,
       open: true
     }}

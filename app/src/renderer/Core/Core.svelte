@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
 
   import { useLogScope } from '@deta/utils/io'
-  import { TelemetryCreateTabSource, type Fn } from '@deta/types'
+  import { TelemetryCreateTabSource, ViewType, type Fn } from '@deta/types'
 
   import { ShortcutActions } from '@deta/services/shortcuts'
   import { initServices } from '@deta/services/helpers'
@@ -84,6 +84,15 @@
 
     shortcutsManager.registerHandler(ShortcutActions.NEW_TAB, () => {
       log.debug('Creating new tab (CMD+T)')
+
+      if (
+        viewManager.sidebarViewOpen &&
+        [ViewType.NotebookHome, ViewType.Notebook].includes(
+          viewManager.activeSidebarView?.typeValue
+        )
+      )
+        viewManager.setSidebarState({ open: false })
+
       tabsService.openNewTabPage()
       telemetry.trackCreateTab(TelemetryCreateTabSource.KeyboardShortcut)
 
@@ -148,7 +157,12 @@
     })
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
-      viewManager.toggleSidebar()
+      if (
+        [ViewType.NotebookHome, ViewType.Notebook].includes(tabsService.activeTab?.view?.typeValue)
+      ) {
+        tabsService.delete(tabsService.activeTabIdValue)
+      }
+      viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
       return true
     })
 

@@ -5,7 +5,6 @@
   import { MaskedScroll } from '@deta/ui'
   import { contextMenu, type CtxItem } from '@deta/ui'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
-  import NotebookCover from '../components/notebook/NotebookCover.svelte'
   import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
   import {
     useResourceManager,

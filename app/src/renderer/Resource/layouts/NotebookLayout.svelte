@@ -7,7 +7,7 @@
 <style lang="scss">
   @media screen and (min-width: 1200px) {
     :global(.notebook:has(aside.open) main) {
-      transform: translateX(calc(-1 * var(--sidebar-width) / 2));
+      transform: translateX(calc(1 * var(--sidebar-width) / 2));
     }
     :global(.notebook main) {
       transition: transform 123ms ease-out;

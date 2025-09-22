@@ -89,14 +89,18 @@
 
     &:not(.open) {
       .content {
-        max-height: 7rem;
+        max-height: var(--closed-height, 20rem);
         overflow: hidden;
 
-        mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+        mask-image: linear-gradient(to bottom, #000 80%, #00000000 100%);
       }
       .icon {
         rotate: -90deg;
       }
+    }
+
+    .content {
+      padding-block: 5px;
     }
   }
 

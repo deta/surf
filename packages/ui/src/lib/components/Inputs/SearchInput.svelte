@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
   import { clickOutside } from '@deta/utils'
+  import { onMount, tick } from 'svelte'
 
   let {
     placeholder = 'Search',
@@ -8,7 +9,8 @@
     collapsed = false,
     onsearchinput,
     autofocus = false,
-    fullWidth = false
+    fullWidth = false,
+          animated = true,
   }: {
     placeholder?: string
     value?: string
@@ -16,6 +18,7 @@
     onsearchinput?: (value: string) => void
     autofocus?: boolean
     fullWidth?: boolean
+          animated?: boolean
   } = $props()
 
   let inputEl: HTMLInputElement
@@ -23,6 +26,11 @@
   export const focus = () => {
     inputEl?.focus()
   }
+
+  onMount(() => {
+    if (!autofocus) return
+    tick().then(() => inputEl?.focus())
+  })
 </script>
 
 {#key collapsed}
@@ -30,6 +38,7 @@
     class="input-container"
     class:full-width={fullWidth}
     class:collapsed
+                class:animated
     {@attach clickOutside(() => inputEl?.blur())}
   >
     <input
@@ -69,10 +78,12 @@
       max-width: initial;
     }
 
+          &.animated {
     @starting-style {
       width: 0;
       opacity: 0;
     }
+          }
 
     @keyframes collapse-out {
       100% {

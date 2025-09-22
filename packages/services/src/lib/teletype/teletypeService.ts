@@ -127,6 +127,7 @@ export class TeletypeService {
       // @ts-ignore
       window.teletypeService = this
     }
+    this.attachListeners()
   }
 
   get queryValue() {

@@ -183,7 +183,7 @@
 
     
     display: inherit;
-    width: 100%;
+    //width: 100%;
     min-width: 2ch;
     
     text-align: inherit;

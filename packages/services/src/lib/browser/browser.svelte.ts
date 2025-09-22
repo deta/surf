@@ -818,24 +818,26 @@ export class BrowserService {
     //   return
     // }
 
-    const view = await this.createAndOpenNote(
-      {},
-      {
-        target: 'sidebar'
-      }
-    )
-    if (!view) {
-      this.log.error('Failed to create and open note view')
-      return
-    }
+    //const view = await this.createAndOpenNote(
+    //  {},
+    //  {
+    //    target: 'sidebar'
+    //  }
+    //)
+    //if (!view) {
+    //  this.log.error('Failed to create and open note view')
+    //  return
+    //}
 
-    const webContents = await view.waitForWebContentsReady()
+    this.navigateToUrl(`surf://surf/notebook`, { target: 'sidebar' })
+
+    const webContents = await this.viewManager.activeSidebarView?.waitForWebContentsReady()
     if (!webContents) {
       this.log.error('Failed to wait for web contents to be ready')
       return
     }
 
-    await wait(100)
+    await wait(300)
 
     await webContents.insertNoteMentionQuery({
       id: 'active_tab',

@@ -45,7 +45,7 @@
   scroll-container {
     display: block;
     height: inherit;
-    --mask-default: 2rem;
+    --mask-default: 0.5rem;
 
     overflow-y: auto;
     overflow-x: hidden;

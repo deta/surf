@@ -2118,9 +2118,13 @@
     box-sizing: content-box;
   }
 
-  :global(body.custom .text-resource-wrapper .tiptap ::selection) {
+  :global(body .text-resource-wrapper .tiptap ::selection) {
     color: var(--mixed-bg);
     background: var(--contrast-color);
+              background: rgba(216, 236, 255, 1);
+          background: rgba(204, 229, 255, 1);
+          color: #222;
+
   }
   :global(body.custom.dark .text-resource-wrapper .tiptap ::selection) {
     color: var(--mixed-bg-dark);

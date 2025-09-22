@@ -4,14 +4,16 @@
   import { Button } from '@deta/ui'
   import { onMount } from 'svelte'
   import { type Notebook } from '@deta/services/notebook'
-  import { openDialog } from '@deta/ui'
+  import { MaskedScroll, openDialog, contextMenu, NotebookCover } from '@deta/ui'
   import { truncate, useDebounce } from '@deta/utils'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
-  import { openResource } from '../handlers/notebookOpenHandlers'
-  import { type Fn } from '@deta/types'
+  import { openNotebook, openResource } from '../handlers/notebookOpenHandlers'
+  import { type Fn, SpaceEntryOrigin } from '@deta/types'
   import { useResourceManager } from '@deta/services/resources'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
+  import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
+  import { useTeletypeService } from '../../../../../packages/services/src/lib'
 
   let {
     onopensidebar,
@@ -21,9 +23,12 @@
   let isCreatingNotebook = $state(false)
   let isRenamingNotebook: string | undefined = $state(undefined)
   let newNotebookName: string | undefined = $state(undefined)
+  let isCustomizingNotebook = $state(null)
 
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
+  const teletype = useTeletypeService()
+  const ttyQuery = teletype.query
   const notebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))
 
   const handleCreateNotebook = async () => {
@@ -69,10 +74,6 @@
     isRenamingNotebook = undefined
   }
 
-  const handleUnPinNotebook = (notebookId: string) => {
-    notebookManager.updateNotebookData(notebookId, { pinned: false })
-  }
-
   const handleCreateNote = async () => {
     const note = await resourceManager.createResourceNote(
       '',
@@ -85,15 +86,28 @@
     openResource(note.id, { target: 'active_tab' })
   }
 
+  const handlePinNotebook = (notebookId: string) => {
+    notebookManager.updateNotebookData(notebookId, { pinned: true })
+  }
+  const handleUnPinNotebook = (notebookId: string) => {
+    notebookManager.updateNotebookData(notebookId, { pinned: false })
+  }
+
   onMount(() => {
     document.title = 'Surf'
     notebookManager.loadNotebooks()
   })
+
+  const pinnedNotebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))
 </script>
 
 <svelte:head>
   <title>Surf</title>
 </svelte:head>
+
+{#if isCustomizingNotebook}
+  <NotebookEditor bind:notebook={isCustomizingNotebook} />
+{/if}
 
 <NotebookLayout>
   <main>
@@ -103,97 +117,58 @@
       </h1>-->
       <TeletypeEntry open={true} />
     </div>
-    <section>
-      <div
-        style="display: flex; justify-content: space-between;align-items: center;margin-top: 0rem; opacity: 0.5;"
-      >
-        <Button size="md" onclick={handleCreateNotebook}
-          ><Icon name="add" size="1.1em" />New Notebook</Button
-        >
-        <!--<Button size="md" onclick={() => (showAllNotebooks = !showAllNotebooks)}
-          >{showAllNotebooks ? 'Hide All' : 'Show All'}</Button
-        >-->
-        <Button size="md" onclick={handleCreateNote}>
-          <Icon name="add" size="1.1em" />
-          Create Note
-        </Button>
-      </div>
-    </section>
-    <section>
-      <!--{#if notebooks.length <= 0}
-        <div class="empty">
-          <p class="typo-title-sm">
-            Pin your favourite notebooks here by right-clicking them in the <i>Sources</i> panel on the
-            right.
-          </p>
-        </div>
-      {:else}
-        <MaskedScroll>
-          <div class="notebook-grid">
-            <!--<div
-              class="notebook-wrapper"
-              style="width: 100%;max-width: 12ch;"
-              style:--delay={'100ms'}
-              onclick={async (event) => {
-                handleNotebookClick('drafts', event)
-              }}
-            >
-              <NotebookCard title="Drafts" size={12} color={['#232323', 'green']} />
-            </div>--
+    {#if $ttyQuery.length <= 0}
+      <section>
+        <div class="notebook-grid">
+          {#each pinnedNotebooks as notebook, i (notebook.id + i)}
+            <NotebookCover
+              {notebook}
+              height="17.25ch"
+              fontSize="0.84rem"
+              onclick={(e) => openNotebook(notebook.id, { target: 'auto' })}
+              {@attach contextMenu({
+                canOpen: true,
+                items: [
+                  !notebook.data.pinned
+                    ? {
+                        type: 'action',
+                        text: 'Pin',
+                        icon: 'pin',
+                        action: () => handlePinNotebook(notebook.id)
+                      }
+                    : {
+                        type: 'action',
+                        text: 'Unpin',
+                        icon: 'pinned-off',
+                        action: () => handleUnPinNotebook(notebook.id)
+                      },
+                  /*{
+                  type: 'action',
+                  text: 'Rename',
+                  icon: 'edit',
+                  action: () => (isRenamingNotebook = notebook.id)
+                },*/
+                  {
+                    type: 'action',
+                    text: 'Customize',
+                    icon: 'edit',
+                    action: () => (isCustomizingNotebook = notebook)
+                  },
 
-            {#each notebooks.slice(0, showAllNotebooks ? Infinity : 4) as notebook, i (notebook.id)}
-              <div
-                class="notebook-wrapper"
-                style="width: 100%;max-width: 12ch;"
-                style:--delay={100 + i * 10 + 'ms'}
-                {@attach contextMenu({
-                  canOpen: true,
-                  items: [
-                    {
-                      type: 'action',
-                      text: 'Unpin',
-                      icon: 'pin',
-                      action: () => handleUnPinNotebook(notebook.id)
-                    },
-                    {
-                      type: 'action',
-                      text: 'Rename',
-                      icon: 'edit',
-                      action: () => (isRenamingNotebook = notebook.id)
-                    },
-                    {
-                      type: 'action',
-                      kind: 'danger',
-                      text: 'Delete',
-                      icon: 'trash',
-                      action: () => handleDeleteNotebook(notebook)
-                    }
-                  ]
-                })}
-              >
-                <NotebookCard
-                  {notebook}
-                  size={12}
-                  editing={isRenamingNotebook === notebook.id}
-                  onclick={async (event) => {
-                    handleNotebookClick(notebook.id, event)
-                  }}
-                  onchange={(v) => {
-                    handleRenameNotebook(notebook.id, v)
-                    isRenamingNotebook = undefined
-                  }}
-                  oncancel={handleCancelRenameNotebook}
-                />
-              </div>
-            {/each}
-          </div>
-        </MaskedScroll>
-        <div
-          style="display: flex; justify-content: center;align-items: center;margin-bottom: 0.5rem; opacity: 1;"
-        ></div>
-      {/if}
-    </section>-->
-    </section>
+                  {
+                    type: 'action',
+                    kind: 'danger',
+                    text: 'Delete',
+                    icon: 'trash',
+                    action: () => handleDeleteNotebook(notebook)
+                  }
+                ]
+              })}
+            />
+          {/each}
+        </div>
+      </section>
+    {/if}
   </main>
 
   <NotebookSidebar title="Surf" bind:open={resourcesPanelOpen} />
@@ -278,5 +253,16 @@
       font-family: 'Gambarino';
       text-align: center;
     }
+  }
+
+  .notebook-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+
+    display: flex;
+    flex-wrap: wrap;
+    //justify-content: space-between;
+    justify-items: center;
   }
 </style>

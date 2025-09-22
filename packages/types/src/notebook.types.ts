@@ -1,5 +1,28 @@
 import type { IconData } from '@deta/icons'
 
+// NOTE: Use p3 as main colors and something like rgb as fallbacks.
+// [[bg1, bg1-fallback], [bg2, bg2-fallback], [text, text-fallback]]
+export type NotebookCoverColor = [[string, string], [string, string], [string, string]]
+export type NotebookFontFamily = 'sans-serif' | 'serif' | 'monospace'
+export interface NotebookCoverSticker {
+  position: [number, number]
+  rotation: number
+  url: string
+}
+
+export interface NotebookCustomization {
+  version: 1
+  coverColor: NotebookCoverColor
+  coverScribble: {
+    path: string
+    width: number
+    height: number
+    color: string
+  }[]
+  coverStickers: NotebookCoverSticker[]
+  coverFontFamily: NotebookFontFamily
+}
+
 export interface NotebookSpace {
   id: string
   name: NotebookData
@@ -14,6 +37,7 @@ export interface NotebookData {
   icon: IconData
   index: number
   pinned: boolean
+  customization: NotebookCustomization
 }
 
 export const NotebookEntryOrigin = {

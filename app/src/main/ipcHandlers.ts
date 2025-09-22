@@ -797,7 +797,11 @@ export const ipcSenders = {
     const webContentViews = getWebContentsViews()
     const windows = [getMainWindow(), getSettingsWindow(), ...webContentViews]
     windows.forEach((window) => {
-      if (!window || (window instanceof BrowserWindow ? window.isDestroyed() : window.webContents.isDestroyed())) return
+      if (
+        !window ||
+        (window instanceof BrowserWindow ? window.isDestroyed() : window.webContents.isDestroyed())
+      )
+        return
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })
