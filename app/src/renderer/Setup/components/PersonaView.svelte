@@ -29,7 +29,7 @@
       selectedPersonas = ['Other']
     }
     dispatch('personasChange', selectedPersonas)
-    dispatch('viewChange', 'language')
+    dispatch('viewChange', 'disclaimer')
   }
 
   // const handleBack = () => {

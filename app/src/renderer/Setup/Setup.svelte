@@ -1,22 +1,23 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from 'svelte'
   import { writable } from 'svelte/store'
+  import type { UserSettings } from '@deta/types'
+
   import EmailView from './components/EmailView.svelte'
   import InviteView from './components/InviteView.svelte'
-  import LanguageView from './components/LanguageView.svelte'
-  // import PrefsView from './components/PrefsView.svelte'
   import PersonaView from './components/PersonaView.svelte'
+  import DoneView from './components/DoneView.svelte'
+  import AnalyticsView from './components/AnalyticsView.svelte'
+  // import LanguageView from './components/LanguageView.svelte'
+  // import PrefsView from './components/PrefsView.svelte'
   // import ExplainerStuff from './components/ExplainerStuff.svelte'
   // import ExplainerChat from './components/ExplainerChat.svelte'
-  import DoneView from './components/DoneView.svelte'
 
-  import type { UserSettings } from '@deta/types'
   // import { provideConfig, createResourceManager, createTelemetry } from '@deta/services'
   // import { provideOasis } from '@horizon/core/src/lib/service/oasis'
   // import ContextView from './components/ContextView.svelte'
   // import ImportView from './components/ImportView.svelte'
   // import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
-  import AnalyticsView from './components/AnalyticsView.svelte'
 
   let telemetryAPIKey = ''
   let telemetryActive = false
@@ -48,11 +49,11 @@
     // | 'explainer.stuff'
     // | 'contexts'
     // | 'explainer.chat'
-    | 'language'
+    // | 'language'
     // | 'prefs'
-    | 'done'
+    //  | 'app_preferences'
     | 'disclaimer'
-    | 'app_preferences'
+    | 'done'
 
   //@ts-ignore
   let presetInviteCode: string = window.presetInviteCode || ''
@@ -107,40 +108,11 @@
   })
 
   /**
-   * Check if the experimental notes chat sidebar feature is enabled
-   * @returns {Promise<boolean>} True if the feature is enabled, false otherwise
-   */
-  const isNotesChatSidebarEnabled = async (): Promise<boolean> => {
-    try {
-      //@ts-ignore
-      const userConfig = await window.api.getUserConfig()
-      console.log(
-        'User config notes sidebar setting:',
-        userConfig?.settings?.experimental_notes_chat_sidebar
-      )
-      return userConfig?.settings?.experimental_notes_chat_sidebar === true
-    } catch (error) {
-      console.error('Error checking experimental_notes_chat_sidebar setting:', error)
-      return false
-    }
-  }
-
-  /**
    * Handle view changes in the setup flow
    */
   const handleViewChange = async (event: CustomEvent<ViewType>) => {
     // Get the target view from the event
     let targetView = event.detail
-
-    // Skip the chat explainer if we're going to explainer.chat and the feature is enabled
-    if (targetView === 'explainer.chat') {
-      const isNotesSidebarEnabled = await isNotesChatSidebarEnabled()
-
-      if (isNotesSidebarEnabled) {
-        console.log('Skipping chat explainer due to notes chat sidebar feature being enabled')
-        targetView = 'language' // Skip directly to the language view
-      }
-    }
 
     // Set the view and update history
     view = targetView
@@ -160,13 +132,13 @@
     }
   }
 
-  const handleModelChange = (event: CustomEvent<UserSettings['embedding_model']>) => {
-    embeddingModel = event.detail
-  }
+  // const handleModelChange = (event: CustomEvent<UserSettings['embedding_model']>) => {
+  //   embeddingModel = event.detail
+  // }
 
-  const handleOrientationChange = (event: CustomEvent<'horizontal' | 'vertical'>) => {
-    tabsOrientation = event.detail
-  }
+  // const handleOrientationChange = (event: CustomEvent<'horizontal' | 'vertical'>) => {
+  //   tabsOrientation = event.detail
+  // }
 
   const handlePersonasChange = (event: CustomEvent<string[]>) => {
     selectedPersonas = event.detail
@@ -174,7 +146,7 @@
 
   const handleStart = async () => {
     await window.api.updateUserConfigSettings({
-      embedding_model: embeddingModel,
+      // embedding_model: embeddingModel,
       tabs_orientation: tabsOrientation,
       personas: selectedPersonas
     })
@@ -216,7 +188,7 @@
         on:viewChange={handleViewChange}
         on:back={handleBack}
       /> -->
-    {:else if view === 'language'}
+      <!-- {:else if view === 'language'}
       <LanguageView
         {embeddingModel}
         on:modelChange={handleModelChange}
@@ -229,7 +201,7 @@
         on:orientationChange={handleOrientationChange}
         on:viewChange={handleViewChange}
         on:back={handleBack}
-      />
+      /> -->
     {:else if view === 'disclaimer'}
       <AnalyticsView on:viewChange={handleViewChange} />
     {:else if view === 'done'}

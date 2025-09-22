@@ -13,7 +13,7 @@
 
   const handleAcceptAIFeatures = () => {
     // dispatch('viewChange', 'app_preferences')
-    dispatch('viewChange', 'persona')
+    dispatch('viewChange', 'done')
   }
 </script>
 

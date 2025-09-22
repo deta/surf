@@ -85,7 +85,7 @@ export const getUserConfig = (path?: string) => {
   if (!storedConfig.settings) {
     storedConfig.settings = {
       search_engine: 'google',
-      embedding_model: 'english_small',
+      embedding_model: 'multilingual_small',
       tabs_orientation: 'vertical',
       app_style: 'light',
       use_semantic_search: false,
