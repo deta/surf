@@ -211,11 +211,13 @@ class AppMenu {
         // { role: 'zoomIn' },
         // { role: 'zoomOut' },
         // { type: 'separator' },
+        /*
         {
           label: 'Toggle Sidebar',
           accelerator: 'CmdOrCtrl+E',
           click: () => ipcSenders.toggleRightSidebar()
         },
+        */
         { role: 'togglefullscreen' },
         {
           label: 'Toggle Developer Tools',
