@@ -416,6 +416,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.attachIPCEvents()
   }
 
+  getWebContentsViews() {
+    return Array.from(this.views.values()).map((v) => v.wcv)
+  }
+
   async createView(opts: WebContentsViewCreateOptions) {
     try {
       const { navigationHistory, ...logOptions } = opts

@@ -12,8 +12,7 @@ import {
   EventEmitterBase,
   generateID,
   isDev,
-  wait,
-  stripTrailingSlash
+  parseUrlIntoCanonical
 } from '@deta/utils'
 import { ConfigService, useConfig } from '../config'
 import { KVStore, useKVTable } from '../kv'
@@ -530,12 +529,12 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
 
   openURLInSidebar(url: string) {
     if (this.activeSidebarView && this.activeSidebarView.webContents) {
-      const activeUrl = stripTrailingSlash(this.activeSidebarView.dataValue.url)
-      const requestedUrl = stripTrailingSlash(url)
-      if (activeUrl === requestedUrl) {
-        return this.activeSidebarView
+      const activeUrl = parseUrlIntoCanonical(this.activeSidebarView.dataValue.url)
+      const requestedUrl = parseUrlIntoCanonical(url)
+      if (activeUrl !== requestedUrl) {
+        this.activeSidebarView.webContents.loadURL(url)
       }
-      this.activeSidebarView.webContents.loadURL(url)
+
       this.setSidebarState({ open: true, view: this.activeSidebarView })
       return this.activeSidebarView
     }

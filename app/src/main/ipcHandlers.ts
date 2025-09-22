@@ -1,9 +1,9 @@
 import { useLogScope } from '@deta/utils/io'
 import { isMac } from '@deta/utils/system'
-import { app, dialog, session } from 'electron'
+import { app, BrowserWindow, dialog, session } from 'electron'
 import path from 'path'
 import { setAdblockerState, getAdblockerState } from './adblocker'
-import { getMainWindow } from './mainWindow'
+import { getMainWindow, getWebContentsViews } from './mainWindow'
 import {
   getUserConfig,
   getUserStats,
@@ -794,9 +794,10 @@ export const ipcSenders = {
     // }
 
     // notify all windows
-    const windows = [getMainWindow(), getSettingsWindow()]
+    const webContentViews = getWebContentsViews()
+    const windows = [getMainWindow(), getSettingsWindow(), ...webContentViews]
     windows.forEach((window) => {
-      if (!window || window.isDestroyed()) return
+      if (!window || (window instanceof BrowserWindow ? window.isDestroyed() : window.webContents.isDestroyed())) return
 
       IPC_EVENTS_MAIN.userConfigSettingsChange.sendToWebContents(window.webContents, settings)
     })

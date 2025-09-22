@@ -32,6 +32,7 @@ import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
 
 let mainWindow: BrowserWindow | undefined
+let viewManager: WCViewManager | undefined
 
 const log = useLogScope('MainWindow')
 
@@ -360,7 +361,7 @@ export function createWindow() {
   //   getMainWindow()?.webContents.send('fullscreen-change', { isFullscreen: false })
   // })
 
-  const viewManager = attachWCViewManager(mainWindow)
+  viewManager = attachWCViewManager(mainWindow)
   viewManager.on('create', (view) => {
     setupWebContentsViewWebContentsHandlers(view.wcv.webContents)
   })
@@ -378,6 +379,10 @@ export function createWindow() {
 
 export function getMainWindow(): BrowserWindow | undefined {
   return mainWindow
+}
+
+export function getWebContentsViews() {
+  return viewManager?.getWebContentsViews() ?? []
 }
 
 function setupMainWindowWebContentsHandlers(
