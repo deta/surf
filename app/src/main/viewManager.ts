@@ -52,6 +52,7 @@ export class WCView {
         webSecurity: !isDev,
         scrollBounce: true,
         defaultFontSize: 16,
+        spellcheck: false,
         autoplayPolicy: 'document-user-activation-required',
         preload: opts.preload || path.resolve(__dirname, '../preload/webcontents.js'),
         additionalArguments: opts.additionalArguments || [],

@@ -16,7 +16,7 @@
     SpaceEntryOrigin
   } from '@deta/types'
   import { NotebookLoader, SurfLoader, SourceCard } from '@deta/ui'
-  import { type Notebook } from '@deta/services/notebook'
+  import { type Notebook } from '@deta/services/notebooks'
   import { type Resource, getResourceCtxItems } from '@deta/services/resources'
   import {
     isModKeyPressed,
