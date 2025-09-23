@@ -173,6 +173,13 @@ export const getResourceCtxItems = ({
       action: () => copyToClipboard(resource.url)
     }),
 
+    ...conditionalArrayItem<CtxItem>(isDev || (window as any).LOG_LEVEL === 'debug', {
+      type: 'action',
+      icon: 'code',
+      text: 'Copy Resource ID',
+      action: () => copyToClipboard(resource.id)
+    }),
+
     ...conditionalArrayItem<CtxItem>(onOpenOffline !== undefined, [
       { type: 'separator' },
       {

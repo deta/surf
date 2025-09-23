@@ -145,13 +145,6 @@
               <img src={faviconUrl} alt="" />
             </div>
           {/if}
-
-          {#if showSaved}
-            <div class="saved-info">
-              <Icon name="check" size="17px" color="rgb(6, 158, 54)" />
-              <span class="subtitle typo-title-sm">Added to Surf</span>
-            </div>
-          {/if}
         </div>
       </div>
 
@@ -180,6 +173,13 @@
               <span class="subtitle typo-title-sm" style="opacity: 0.3;"
                 >{getFileType(resource.type)}</span
               >
+            {/if}
+
+            {#if showSaved}
+              <div class="saved-info">
+                <Icon name="check" size="17px" color="rgb(6, 158, 54)" />
+                <span class="subtitle typo-title-sm">Added to Surf</span>
+              </div>
             {/if}
           </div>
         {/if}
@@ -331,6 +331,6 @@
     gap: 0.25rem;
     font-size: 0.8rem;
     color: rgba(0, 0, 0, 0.5);
-    margin-top: 0.4rem;
+    margin-top: 0.3rem;
   }
 </style>
