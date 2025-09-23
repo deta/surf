@@ -48,7 +48,7 @@ export const checkIfUrl = (url: string) => {
 }
 
 export const optimisticCheckIfUrl = (url: string) => {
-  const pattern = /^(?:https?:\/\/|surf:\/\/)(?:[\w-]+\.)*[\w-]+(?:\/[^\s]*)?$/
+  const pattern = /^(?:(?:https?:\/\/|surf:\/\/)?(?:[\w-]+\.)*[\w-]+(?:\/[^\s]*)?|\w+\.\w+)$/i
   return pattern.test(url)
 }
 
@@ -184,6 +184,11 @@ export const parseStringIntoBrowserLocation = (raw: string) => {
     return prependProtocol(raw, false)
   }
 
+  const isIPAddress = checkIfIPAddress(raw)
+  if (isIPAddress) {
+    return prependProtocol(raw, false)
+  }
+
   const isURL = checkIfUrl(raw)
   if (isURL) {
     return raw
@@ -192,11 +197,6 @@ export const parseStringIntoBrowserLocation = (raw: string) => {
   const url = parseStringIntoUrl(raw)
   if (url) {
     return url.href
-  }
-
-  const isIPAddress = checkIfIPAddress(raw)
-  if (isIPAddress) {
-    return prependProtocol(raw, false)
   }
 
   return null
