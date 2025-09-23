@@ -39,11 +39,17 @@
   }
 
   const handleResizeMouseDown = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
+
     window.addEventListener('mousemove', handleResizingMouseMove, { capture: true })
     window.addEventListener('mouseup', handleResizingMouseUp, { capture: true, once: true })
     isResizing = true
   }
   const handleResizingMouseMove = (e: MouseEvent) => {
+    e.preventDefault()
     targetSidebarWidth = Math.max(
       500,
       Math.min(targetSidebarWidth - e.movementX, window.innerWidth - 500)
@@ -51,8 +57,11 @@
     if (raf === null) requestAnimationFrame(rafCbk)
   }
   const handleResizingMouseUp = (e: MouseEvent) => {
+    e.preventDefault()
     window.removeEventListener('mousemove', handleResizingMouseMove, { capture: true })
     isResizing = false
+    document.body.style.userSelect = ''
+    document.body.style.cursor = ''
     sidebarStore.update('cfg', { siderbar_width: targetSidebarWidth })
   }
 
@@ -109,7 +118,7 @@
 
 {#if viewManager.sidebarViewOpen && viewManager.activeSidebarView}
   <div class="container" style:--sidebarWidth={sidebarWidth + 'px'}>
-    <div class="resize-handle" onmousedown={handleResizeMouseDown}></div>
+    <div class="resize-handle" onmousedown={handleResizeMouseDown} data-resizing={isResizing}></div>
     <aside class:open={viewManager.sidebarViewOpen}>
       <div class="sidebar-content">
         {#if viewManager.activeSidebarView}
@@ -208,7 +217,12 @@
     flex-shrink: 0;
     position: relative;
     width: var(--fold-width);
-    cursor: col-resize;
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+
     &::before {
       content: '';
       z-index: 5;
@@ -222,8 +236,15 @@
       border-radius: 20px;
       transition: background 123ms ease-out;
     }
+
     &:hover::before {
       background: rgba(0, 0, 0, 0.25);
+    }
+
+    &:active::before,
+    &[data-resizing='true']::before {
+      background: rgba(0, 0, 0, 0.5);
+      width: 4px;
     }
   }
   aside {
