@@ -47,9 +47,29 @@ export const checkIfUrl = (url: string) => {
   }
 }
 
-export const optimisticCheckIfUrl = (url: string) => {
-  const pattern = /^(?:(?:https?:\/\/|surf:\/\/)?(?:[\w-]+\.)*[\w-]+(?:\/[^\s]*)?|\w+\.\w+)$/i
-  return pattern.test(url)
+export const optimisticCheckIfUrl = (url: string, base?: URL) => {
+  try {
+    const u = new URL(url, base?.origin)
+    // NOTE: must have a hostname
+    //  new URL('localhost:9000') doesn't throw an error but hostname is empty
+    if (u.hostname) {
+      return u
+    }
+  } catch {
+    // NOTE: using http here to parse incomplete URLs like example.com
+    // we default to using http as sites will usually redirect to https if supported
+    // but we don't want to assume https
+    try {
+      const u = new URL(`http://${url}`, base?.origin)
+      // at least one dot and valid TLD (2+ chars)
+      if (/^[\w-]+\.[\w-]{2,}/.test(u.hostname)) {
+        return u
+      }
+    } catch {
+      return null
+    }
+  }
+  return null
 }
 
 export const optimisticCheckIfURLOrIPorFile = (url: string) => {
@@ -85,13 +105,10 @@ export const stringToURLList = (input: string) => {
 
 export const parseStringIntoUrl = (raw: string, base?: URL) => {
   try {
-    const isValidURL = optimisticCheckIfUrl(raw)
-    if (!isValidURL) {
-      return null
+    const validURL = optimisticCheckIfUrl(raw, base)
+    if (validURL) {
+      return validURL
     }
-
-    const text = prependProtocol(raw, true)
-    return base ? new URL(text, base.origin) : new URL(text)
   } catch (_) {
     return null
   }
@@ -179,6 +196,12 @@ export const checkIfIPAddress = (raw: string) => {
 }
 
 export const parseStringIntoBrowserLocation = (raw: string) => {
+  const url = optimisticCheckIfUrl(raw)
+  console.log('parsed optimistic url: ', url)
+  if (url) {
+    return url.href
+  }
+
   const isLocalhost = checkIfLocalhost(raw)
   if (isLocalhost) {
     return prependProtocol(raw, false)
@@ -188,17 +211,6 @@ export const parseStringIntoBrowserLocation = (raw: string) => {
   if (isIPAddress) {
     return prependProtocol(raw, false)
   }
-
-  const isURL = checkIfUrl(raw)
-  if (isURL) {
-    return raw
-  }
-
-  const url = parseStringIntoUrl(raw)
-  if (url) {
-    return url.href
-  }
-
   return null
 }
 
