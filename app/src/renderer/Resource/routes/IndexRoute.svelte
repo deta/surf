@@ -132,14 +132,14 @@
                   !notebook.data.pinned
                     ? {
                         type: 'action',
-                        text: 'Pin',
-                        icon: 'pin',
+                        text: 'Add to Favorites',
+                        icon: 'heart',
                         action: () => handlePinNotebook(notebook.id)
                       }
                     : {
                         type: 'action',
-                        text: 'Unpin',
-                        icon: 'pinned-off',
+                        text: 'Remove from Favorites',
+                        icon: 'heart.off',
                         action: () => handleUnPinNotebook(notebook.id)
                       },
                   /*{

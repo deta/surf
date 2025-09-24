@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { type Snippet } from "svelte"
+
   let {
     url,
+    children,
     position,
     rotation,
     size = "20%",
@@ -8,7 +11,8 @@
   
     onmoved,
   }: {
-    url: string
+    url?: string
+    children?: Snippet
     position: [number, number] // 0-1, 0-1
     rotation: number
     size: string
@@ -17,7 +21,7 @@
     onmoved?: (e: MouseEvent) => void
   } = $props()
   
-  let el: HTMLImageElement
+  let el: HTMLElement
   let scaling = $state(false)
   let rotating = $state(false)
   
@@ -64,67 +68,77 @@
     window.removeEventListener('mousemove', onmousemove, { capture: true })
   }
 </script>
-
-<img 
-  bind:this={el} 
+<!--
   src="https://i.imgur.com/db97JV7.png" 
+-->
+<div class="sticker" 
+  bind:this={el} 
   style:--x={position[0] * 100 + '%'} 
   style:--y={position[1] * 100 + '%'} 
   style:--r={rotation + 'deg'} 
   style:--size={size} 
   class:readonly  
-  draggable="false" 
   class:scaling 
   class:rotating 
   {onpointerdown} 
-  onmousemove={onmousemoveOver}
-/>
+  onmousemove={onmousemoveOver}>
+  
+  {#if url}
+    <img 
+      alt="Sticker"
+      src={url}
+      draggable="false" 
+    />
+    {:else if children}
+      {@render children?.()}
+  {/if}  
+</div>
 
-<style>
-  img {
+<style lang="scss">
+  .sticker {
     --scale: 1;
-  
+    --outline-width: 1px;
+
     pointer-events: all;
-    position: absolute;
-    top: var(--y);
-    left: var(--x);
-    rotate: var(--r);
-    width: var(--size);
-    height: auto;
-    transform: translate(-50%, -50%) scale(var(--scale));
-  
-    
-    filter:
-      drop-shadow(2px 0 0  white)
-      drop-shadow(-2px 0 0 white)
-      drop-shadow(0 2px 0  white)
-      drop-shadow(0 -2px 0 white);
-  
-  
+      position: absolute;
+      top: var(--y);
+      left: var(--x);
+      width: var(--size);
+      height: auto;
+      transform: translate(-50%, -50%) scale(var(--scale)) rotate(var(--r, 0deg));
+
     &:not(.readonly) {
       cursor: grab;
-  
-  
+
+      &.rotating {
+        cursor: crosshair !important;
+      }
+      &.scaling {
+        cursor: ns-resize !important;
+      }
+
       &:hover {
         --scale: 1.05;
       }
       &:active {
         cursor: grabbing;
-        filter: 
-          drop-shadow(2px 0 0  white)
-          drop-shadow(-2px 0 0 white)
-          drop-shadow(0 2px 0  white)
-          drop-shadow(0 -2px 0 white)
-          drop-shadow(0px 4px 2px rgba(0,0,0,0.3));
+        img {
+          filter: 
+            drop-shadow(var(--outline-width) 0 0  white)
+            drop-shadow(calc(-1 * var(--outline-width)) 0 0 white)
+            drop-shadow(0 var(--outline-width) 0  white)
+            drop-shadow(0 calc(-1 * var(--outline-width)) 0 white)
+            drop-shadow(0px 4px 2px rgba(0,0,0,0.3));
+        }
       }
     }
-  
-    &.scaling {
-      cursor: ns-resize !important;
-    }
-    &.rotating {
-      cursor: crosshair !important;
-    }
+  }
+  img {
+    filter:
+      drop-shadow(var(--outline-width) 0 0  white)
+      drop-shadow(calc(-1 * var(--outline-width)) 0 0 white)
+      drop-shadow(0 var(--outline-width) 0  white)
+      drop-shadow(0 calc(-1 * var(--outline-width)) 0 white);
   }
 </style>
 

@@ -124,7 +124,7 @@
   style:--color-end={colorValue[1][0]} 
   style:--color-end-fallback={colorValue[1][1]}
   style:--color-text={colorValue[2][0]} 
-  style:--color-text--fallback={colorValue[2][1]} 
+  style:--color-text-fallback={colorValue[2][1]} 
   class:canClick={onclick !== undefined}
   {onclick}
   {...restProps}
@@ -177,27 +177,35 @@
       >{notebook?.nameValue ?? title}</span>
     {/if}
     <div class="left-band"></div>
-                 <!-- <div class="stickers" bind:this={stickersEl}>
-                          <NotebookCoverSticker position={stickerPos} rotation={0} url="" readonly={false} onmoved={(e) => {
+    <div class="stickers" bind:this={stickersEl}>
+    <!--<span class="sub-text">foobar</span>-->
+  {#if notebook?.data?.pinned}
+        <NotebookCoverSticker position={[0.875, 0.09]} rotation={10} size="12%" url="" readonly>
+          <svg xmlns="http://www.w3.org/2000/svg" 
+            width="100%"  height="100%"  viewBox="0 0 24 24"  fill="color-mix(in oklch, var(--color-start-fallback), var(--color-end-fallback) 70%)" stroke-width="2" stroke="color-mix(in oklch, var(--color-text-fallback), transparent 20%)">
+            <path d="M6.979 3.074a6 6 0 0 1 4.988 1.425l.037 .033l.034 -.03a6 6 0 0 1 4.733 -1.44l.246 .036a6 6 0 0 1 3.364 10.008l-.18 .185l-.048 .041l-7.45 7.379a1 1 0 0 1 -1.313 .082l-.094 -.082l-7.493 -7.422a6 6 0 0 1 3.176 -10.215z" />
+          </svg>
+        </NotebookCoverSticker>
+      <!--<NotebookCoverSticker position={[0.85, 0.1]} rotation={0} size="13%" url="" readonly={false} onmoved={(e) => {
+          const rect = stickersEl.getBoundingClientRect();
   
-                                  const rect = stickersEl.getBoundingClientRect();
+          // Mouse position relative to the container
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
   
-    // Mouse position relative to the container
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+          // Normalize to 0–1 range
+          const nx = x / rect.width;
+          const ny = y / rect.height;
   
-    // Normalize to 0–1 range
-    const nx = x / rect.width;
-    const ny = y / rect.height;
+          // Clamp values (in case mouse goes slightly outside)
+          const clampedX = Math.max(0, Math.min(1, nx));
+          const clampedY = Math.max(0, Math.min(1, ny));
   
-    // Clamp values (in case mouse goes slightly outside)
-    const clampedX = Math.max(0, Math.min(1, nx));
-    const clampedY = Math.max(0, Math.min(1, ny));
-  
-                                  stickerPos[0] = clampedX
-                                  stickerPos[1] = clampedY
-                          }}/>
-                  </div>-->
+          stickerPos[0] = clampedX
+          stickerPos[1] = clampedY
+        }}/>-->
+{/if}
+    </div>
   
   
     {#if readonly && scribbleValue}
@@ -329,7 +337,10 @@
       line-clamp: 4;
       -webkit-box-orient: vertical;
 
-      color: var(--color-text);
+      color: var(--color-text-fallback);
+      @supports (color: color(display-p3 1 0.4 0.2)) {
+        color: var(--color-text);
+      }
       padding-right: 2ch;
 
       &.editable {
@@ -346,6 +357,32 @@
       &:focus {
         outline: none;
       }
+    }
+
+    .sub-text {
+      position: absolute;
+      z-index: 5;
+      bottom: 6%;
+      left: 18%;
+      right: 0.5ch;
+
+      font-size: calc(var(--font-size) / 1.8);
+      font-family: 'Inter';
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      line-height: 120%;
+      text-wrap: pretty;
+
+      hyphens: auto;
+      overflow-wrap: break-word;
+      word-break: normal;
+      overflow: hidden;
+      display: -webkit-box;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+
+      color: var(--color-text);
+      padding-right: 2ch;
     }
 
     .scribble-container {

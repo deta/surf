@@ -138,6 +138,8 @@ import ChartBarOff from './Icons/ChartBarOff.svelte'
 import PlaneLoader from './Icons/PlaneLoader.svelte'
 import Note from './Icons/Note.svelte'
 import FolderOpen from './Icons/FolderOpen.svelte'
+import Heart from './Icons/Heart.svelte'
+import HeartOff from './Icons/HeartOff.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -283,7 +285,9 @@ export const icons = {
   'chart-bar.off': ChartBarOff,
   'plane.loader': PlaneLoader,
   note: Note,
-  'folder.open': FolderOpen
+  'folder.open': FolderOpen,
+  heart: Heart,
+  'heart.off': HeartOff
 }
 
 export type Icons = keyof typeof icons
@@ -431,5 +435,7 @@ export {
   CircleCheckFilled,
   PlaneLoader,
   Note,
-  FolderOpen
+  FolderOpen,
+  Heart,
+  HeartOff
 }
