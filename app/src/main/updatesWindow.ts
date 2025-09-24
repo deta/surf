@@ -1,11 +1,10 @@
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { isMac } from '@deta/utils/system'
+import { UpdatesWindowEntryPoint } from './utils'
 
 let updatesWindow: BrowserWindow | undefined
-
-export const updatesEntryPoint = join(__dirname, '../renderer')
 
 export function createUpdatesWindow() {
   if (updatesWindow && !updatesWindow.isDestroyed()) {
@@ -26,6 +25,10 @@ export function createUpdatesWindow() {
     titleBarStyle: isMac() ? 'hidden' : 'default',
     webPreferences: {
       preload: join(__dirname, '../preload/updates.js'),
+      additionalArguments: [
+        `--userDataPath=${app.getPath('userData')}`,
+        `--updates-window-entry-point=${UpdatesWindowEntryPoint}`
+      ],
       defaultFontSize: 14,
       webviewTag: false,
       sandbox: true,
@@ -39,12 +42,7 @@ export function createUpdatesWindow() {
   updatesWindow.on('ready-to-show', () => {
     updatesWindow?.show()
   })
-
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    updatesWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/updates.html`)
-  } else {
-    updatesWindow.loadFile(join(updatesEntryPoint, 'updates.html'))
-  }
+  updatesWindow.loadURL(UpdatesWindowEntryPoint)
 }
 
 export function sendUpdateProgressStatus(progressPercent: number) {
