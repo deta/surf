@@ -60,7 +60,7 @@ export function esbuildConsolidatePreloads(
           format: 'cjs',
           platform: 'node',
           sourcemap: !obfuscate, // Disable sourcemap if obfuscating
-          external: ['electron', '@deta/backend'], // Add other node builtins as needed
+          external: ['electron', '@deta/backend', 'electron-chrome-extensions'], // Add other node builtins as needed
           loader: {
             '.js': 'js'
           },

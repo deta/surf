@@ -174,8 +174,21 @@ export class ExtensionsManager {
     }
   }
 
+  public addTab(webContentsId: number): void {
+    if (this.extensions) {
+      const addedWebContents = webContents.fromId(webContentsId)
+      if (addedWebContents) {
+        console.log('Adding tab for webContentsId:', webContentsId)
+        console.log('session:', addedWebContents.session)
+        this.extensions.addTab(addedWebContents, this.mainWindow!)
+      }
+    }
+  }
+
+  /*
   public closeTab(webContentsId: number): void {
     if (this.extensions) {
+      console.log('Closing tab for webContentsId:', webContentsId)
       const closedWebContents = webContents.fromId(webContentsId)
       if (closedWebContents && closedWebContents.id === this.activeWebContents?.id) {
         this.activeWebContents = null
@@ -184,6 +197,7 @@ export class ExtensionsManager {
       }
     }
   }
+  */
 
   private activateExtensions(webContents: WebContents): void {
     if (this.extensions) {

@@ -16,7 +16,7 @@ const CSP_DIRECTIVES = [
   "style-src 'self' 'unsafe-inline' surf-internal:",
 
   // Allow images from same origin, data: URLs, and any HTTPS source (needed for tab favicons and resource previews)
-  "img-src 'self' surf-internal: surf: data: blob: https:",
+  "img-src 'self' surf-internal: surf: data: blob: https: crx:",
 
   // Allow object-src from same origin and blob: URLs (needed for PDF previews)
   "object-src 'self' blob: surf-internal:",

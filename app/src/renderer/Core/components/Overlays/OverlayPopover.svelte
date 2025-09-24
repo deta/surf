@@ -8,12 +8,14 @@
     position = 'top',
     children,
     trigger,
-    autofocus = false
+    autofocus = false,
+    width = 300,
+    height = 500
   }: OverlayPopoverProps = $props()
 
   const log = useLogScope('OverlayPopover')
 
-  let bounds = $state({ x: 200, y: 200, width: 300, height: 500 })
+  let bounds = $state({ x: 200, y: 200, width, height })
 
   let ref: HTMLElement
 

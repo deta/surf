@@ -1,21 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Icon } from '@deta/icons'
-  import { createEventDispatcher } from 'svelte'
-  import CustomPopover from '../Atoms/CustomPopover.svelte'
   import { writable, derived } from 'svelte/store'
-  import AppBarButton from './AppBarButton.svelte'
-  import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
-  export let horizontalTabs: boolean = false
+  import { Icon } from '@deta/icons'
+  import { Button } from '@deta/ui'
+  import { useTabs } from '@deta/services/tabs'
 
-  const tabsViewManager = useTabsViewManager()
+  import OverlayPopover from '../Overlays/OverlayPopover.svelte'
 
-  const popoverOpened = writable(false)
+  const tabs = useTabs()
+
+  let isMenuOpen = $state(false)
+
   const extensions = writable<any[]>([])
   const hasNoExtensionsEnabled = derived(extensions, ($extensions) => $extensions.length === 0)
-
-  let windowBlurred = false
 
   async function updateExtensionState() {
     try {
@@ -35,12 +33,9 @@
     return () => cleanup?.()
   })
 
-  const dispatch = createEventDispatcher<{
-    'open-extension-store': void
-  }>()
-
   const handleOpenExtenionStore = () => {
-    dispatch('open-extension-store')
+    const url = 'https://chromewebstore.google.com/category/extensions'
+    tabs.openOrCreate(url, { active: true })
   }
 
   const handleOpenSettings = () => {
@@ -49,55 +44,25 @@
     window.api.openSettings()
   }
 
-  const handleBlur = () => {
-    windowBlurred = true
-  }
-
-  const handleFocus = () => {
-    windowBlurred = false
-
-    // When the window is focused we know that the extension popover is closed and we can notify the view manager
-    tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
-
-    window.removeEventListener('blur', handleBlur)
-    window.removeEventListener('focus', handleFocus)
-  }
-
   const handleShowPopover = () => {
     updateExtensionState()
-
-    // Since the extension popover overlays the tabs in horizontal mode, we need to notify the view manager
-    if (horizontalTabs) {
-      tabsViewManager.changeOverlayState({ extensionPopupOpen: true })
-
-      window.addEventListener('blur', handleBlur)
-      window.addEventListener('focus', handleFocus)
-    }
   }
 
-  const handleClosePopover = () => {
-    // If the window is blurred, we do not notify the view manager as that means an extension popup is open
-    if (!windowBlurred) {
-      tabsViewManager.changeOverlayState({ extensionPopupOpen: false })
+  $effect(() => {
+    if (isMenuOpen) {
+      handleShowPopover()
     }
-  }
+  })
 </script>
 
-<CustomPopover
-  {popoverOpened}
-  disableHover={false}
-  toggleOnClick={true}
-  position="bottom"
-  sideOffset={3}
-  on:show={handleShowPopover}
-  on:close={handleClosePopover}
->
-  <div slot="trigger">
-    <AppBarButton class="group">
-      <Icon name="puzzle" size="1.2rem" />
-    </AppBarButton>
-  </div>
-  <div slot="content" class="popover-content">
+<OverlayPopover bind:open={isMenuOpen} position="bottom" height={170}>
+  {#snippet trigger()}
+    <Button size="md" square>
+      <Icon name="puzzle" size="1.085em" />
+    </Button>
+  {/snippet}
+
+  <div class="popover-content">
     {#if $hasNoExtensionsEnabled}
       <div class="empty-state">
         <div class="description">
@@ -112,27 +77,27 @@
             with Surf.
           </p>
 
-          <button class="action-button" on:click={handleOpenExtenionStore}> Open Web Store </button>
+          <button class="action-button" onclick={handleOpenExtenionStore}> Open Web Store </button>
         </div>
       </div>
     {:else}
       <div class="installed-extensions">
         <div class="extensions-container">
-          <browser-action-list partition="persist:horizon" alignment="bottom right">
-          </browser-action-list>
+          <browser-action-list partition="persist:horizon" alignment="bottom right"
+          ></browser-action-list>
         </div>
         <div class="button-group">
-          <button class="action-button" on:click={handleOpenExtenionStore}>
-            <Icon name="add" /> Add Extension
+          <button class="action-button" onclick={handleOpenExtenionStore}>
+            <Icon name="add" size="17px" /> Install Extension
           </button>
-          <button class="action-button" on:click={handleOpenSettings}>
-            <Icon name="settings" />
+          <button class="action-button" onclick={handleOpenSettings}>
+            <Icon name="settings" size="17px" />
           </button>
         </div>
       </div>
     {/if}
   </div>
-</CustomPopover>
+</OverlayPopover>
 
 <style lang="scss">
   .popover-content {
@@ -145,6 +110,9 @@
     color: #586884;
     width: 200px;
     overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
 
     &:has(.empty-state) {
       width: 280px;
@@ -155,7 +123,7 @@
     display: flex;
     flex-direction: column;
     padding: 0.75rem;
-    gap: 0.75rem;
+    gap: 0.5rem;
   }
 
   .extensions-container {
@@ -199,7 +167,7 @@
   .action-button {
     background: rgba(255, 255, 255, 0.4);
     border-radius: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.4rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -209,6 +177,7 @@
     gap: 0.25rem;
     flex: 0 0 auto;
     min-width: 40px;
+    font-size: 0.8rem;
 
     &:hover {
       background: rgba(255, 255, 255, 0.8);

@@ -1,6 +1,5 @@
 import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { injectBrowserAction } from 'electron-chrome-extensions/dist/browser-action'
 
 import path from 'path'
 import mime from 'mime-types'
@@ -922,8 +921,6 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.preloadEvents = eventHandlers
 }
-
-injectBrowserAction()
 
 export type API = typeof api
 export type PreloadEventHandlers = typeof eventHandlers

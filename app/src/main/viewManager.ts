@@ -15,6 +15,7 @@ import { is } from '@electron-toolkit/utils'
 import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 import { MessageChannelMain } from 'electron/main'
+import { ExtensionsManager } from './extensions'
 
 type ContentData = {
   title: string
@@ -40,11 +41,11 @@ export class WCView {
 
     console.log('[main] webcontentsview-create: creating new WebContentsView with options', opts)
 
-    const wcvSession = session.fromPartition('persist:horizon')
+    const parition = opts.partition || 'persist:horizon'
+    const wcvSession = session.fromPartition(parition)
     const view = new WebContentsView({
       ...extraOpts,
       webPreferences: {
-        // partition: opts.partition || undefined,
         session: wcvSession,
         nodeIntegration: false,
         contextIsolation: true,
@@ -118,6 +119,7 @@ export class WCView {
     const currentBounds = this.wcv.getBounds()
     const currentNavigationHistory = this.wcv.webContents.navigationHistory.getAllEntries()
     const currentNavigationHistoryIndex = this.wcv.webContents.navigationHistory.getActiveIndex()
+    const extensionsManager = ExtensionsManager.getInstance()
 
     this.eventListeners.forEach((unsub) => unsub())
     this.wcv.webContents.removeAllListeners()
@@ -154,9 +156,13 @@ export class WCView {
       })
     }
 
+    try {
+      extensionsManager.addTab(this.wcv.webContents.id)
+    } catch (e) {
+      console.warn('[main] Could not transfer extension tabs to new WebContentsView', e)
+    }
     this.manager.recreatedWCV(this)
   }
-
   loadRightPreload(newUrl: string, oldUrl: string) {
     console.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
 

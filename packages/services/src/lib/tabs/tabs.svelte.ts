@@ -570,6 +570,14 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
             this.resourceManager.telemetry.trackActivateTab(telem_tab_type)
           }
         }
+
+        // To make the extensions work we need to inform the main process about the active tab's webContents id
+        tab.view.waitForWebContentsReady().then((webContents) => {
+          if (webContents && tab.id === this.activeTabIdValue) {
+            // @ts-ignore
+            window.api.setActiveTab(webContents.webContentsId)
+          }
+        })
       }
 
       // NOTE: Do we need this here? for "safety" reactivity shit afterwards?

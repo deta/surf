@@ -307,6 +307,7 @@
       <h1>Advanced</h1>
     </div>
 
+    -->
     <div
       on:click={() => activeTab.set('extensions')}
       role="tab"
@@ -317,7 +318,6 @@
       <Icon name="puzzle" size="24" />
       <h1>Extensions</h1>
     </div>
-    -->
   </div>
 
   <div class="content-wrapper">

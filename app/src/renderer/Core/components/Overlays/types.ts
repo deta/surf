@@ -48,6 +48,9 @@ export type OverlayPopoverProps = {
    */
   trigger?: Snippet
 
+  width?: number
+  height?: number
+
   /**
    * Whether the popover should autofocus the first focusable element when opened.
    *
