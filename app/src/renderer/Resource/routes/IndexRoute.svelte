@@ -163,7 +163,6 @@
   onMount(() => {
     document.title = 'Surf'
     notebookManager.loadNotebooks()
-
     ;(messagePort.viewMounted.handle(({ location }) => {
       log.debug('Received view-mounted event', location)
       viewLocation = location

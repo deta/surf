@@ -37,7 +37,7 @@ export class NavigationProvider implements ActionProvider {
       const normalizedUrl = normalizeURL(url)
 
       actions.push({
-        id: generateUUID(),
+        id: `navigation-${generateUUID()}`,
         name: `Go to ${normalizedUrl}`,
         icon: `favicon;;${url}`,
         section: 'Navigation',

@@ -33,14 +33,14 @@ export class CurrentQueryProvider implements ActionProvider {
 
   private createSearchAction(query: string): TeletypeAction {
     return {
-      id: generateUUID(),
+      id: `search-${generateUUID()}`,
       name: query,
       icon: 'search',
-      section: 'Search',
-      priority: 100, // Highest priority to appear at top
+      section: 'Search Suggestions',
+      priority: 90, // Highest priority to appear at top
       keywords: ['search', 'current', 'query'],
       description: ``,
-      buttonText: 'Search',
+      buttonText: 'Search Web',
       handler: async () => {
         await this.service.navigateToUrlOrSearch(query)
       }

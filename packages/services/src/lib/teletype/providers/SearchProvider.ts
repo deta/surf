@@ -44,11 +44,11 @@ export class SearchProvider implements ActionProvider {
       id: generateUUID(),
       name: query,
       icon: 'search',
-      section: 'Search',
+      section: 'Search Suggestions',
       priority,
       keywords,
       description: ``,
-      buttonText: 'Search',
+      buttonText: 'Search Web',
       handler: async ({ viewId }) => {
         await this.browser.handleTeletypeNavigateURL(query, 'active_tab', viewId)
       }

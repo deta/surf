@@ -37,6 +37,12 @@
     teletypeService.createNote(content)
   }
 
+  const handleSearchWeb = (event: CustomEvent<{ query: string }>) => {
+    const { query } = event.detail
+    log.debug('Search web requested:', query)
+    teletypeService.navigateToUrlOrSearch(query)
+  }
+
   const handleClear = () => {
     log.debug('Clear requested')
     teletypeService.clear()
@@ -83,7 +89,7 @@
     class="teletype-provider"
     options={{
       iconComponent: DynamicIcon,
-      placeholder: 'Write a note, ask a question, enter a url or search the web…',
+      placeholder: 'Ask a question, write a note, enter a URL or search the web…',
       localSearch: false,
       open: true
     }}
@@ -93,6 +99,7 @@
       on:ask={handleAsk}
       on:create-note={handleCreateNote}
       on:clear={handleClear}
+      on:search-web={handleSearchWeb}
     >
       <svelte:fragment slot="tools">
         <div class="controls-list">

@@ -182,14 +182,15 @@
 
       activeActionIndex++
       keepActiveActionVisible()
-    } else if (e.key === 'Enter' && !e.shiftKey && !isModKeyPressed(e)) {
-      e.preventDefault()
-      if (activeActionIndex === undefined && parsedActions.length > 1) return
-
-      const action = parsedActions.find((action) => action._index === activeActionIndex)
-      if (!action) return
-      executeAction(action, e)
     }
+    // } else if (e.key === 'Enter' && !e.shiftKey && isModKeyPressed(e)) {
+    //   e.preventDefault()
+    //   if (activeActionIndex === undefined && parsedActions.length > 1) return
+
+    //   const action = parsedActions.find((action) => action._index === activeActionIndex)
+    //   if (!action) return
+    //   executeAction(action, e)
+    // }
   }
 
   const keepActiveActionVisible = async () => {

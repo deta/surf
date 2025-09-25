@@ -49,10 +49,10 @@ export class HostnameProvider implements ActionProvider {
   ): TeletypeAction {
     const url = entry.url ? prependProtocol(entry.url) : null
     return {
-      id: generateUUID(),
+      id: `hostname-${generateUUID()}`,
       name: `Go to ${normalizeURL(url!)}`,
       icon: url ? `favicon;;${url}` : `file;;${getFileKind(entry.type)}`,
-      section: 'Suggestion',
+      section: 'Navigation',
       priority,
       keywords,
       // description: `Navigate to ${normalizeURL(url!)}`,

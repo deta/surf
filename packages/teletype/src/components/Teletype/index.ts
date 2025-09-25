@@ -470,6 +470,7 @@ class TeletypeCore {
 
       this.showAction(a)
     } else {
+      this.log.warn('No action handler', action)
       this.showAction(action)
       return false
     }

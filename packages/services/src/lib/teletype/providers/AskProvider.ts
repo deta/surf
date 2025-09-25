@@ -28,10 +28,10 @@ export class AskProvider implements ActionProvider {
 
     actions.push({
       id: 'ask-action',
-      name: `Ask about "${trimmedQuery}"`,
-      icon: 'message',
-      section: 'Ask',
-      priority: 90,
+      name: `${trimmedQuery}`,
+      icon: 'face',
+      section: 'Ask Surf',
+      priority: 95,
       keywords: ['ask', 'question', 'ai', 'chat', 'help'],
       // description: `Create a new Note about "${trimmedQuery}"`,
       buttonText: 'Ask Surf',

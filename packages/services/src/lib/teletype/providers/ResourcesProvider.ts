@@ -74,6 +74,7 @@ export class ResourcesProvider implements ActionProvider {
       description: ``,
       buttonText: 'Open',
       handler: async () => {
+        this.log.debug('Handling resource open', resource)
         await this.browser.openResourceInCurrentTab(resource)
       }
     }

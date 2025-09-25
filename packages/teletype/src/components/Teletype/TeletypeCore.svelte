@@ -7,7 +7,7 @@
   import { useTeletype } from './index'
   import Breadcrumb from './Breadcrumb.svelte'
   import ActionList from './ActionList.svelte'
-  import { Icon } from '@deta/icons'
+  import { DynamicIcon, Icon } from '@deta/icons'
   import ActionPanel from './ActionPanel.svelte'
   import { onMount, tick, createEventDispatcher, type Snippet } from 'svelte'
   import { isDev, isMac } from '@deta/utils/system'
@@ -22,6 +22,7 @@
     ask: { query: string; mentions: MentionItem[] }
     'create-note': { content: string }
     input: { query: string; mentions: MentionItem[] }
+    'search-web': { query: string }
     'actions-rendered': boolean
   }>()
 
@@ -237,20 +238,82 @@
     teletype.showAction('teletype-helper')
   }
 
-  const handleSubmit = (modKeyPressed: boolean) => {
-    if (!$inputValue || $inputValue.length === 0) return
+  type ActionType = 'ask' | 'create-note' | 'search-web' | 'selected'
 
-    console.log('Submit clicked', $selectedAction, modKeyPressed)
-    if ($selectedAction && !modKeyPressed) {
+  let ttyActions = $derived.by(() => {
+    let actions: { primary: ActionType | null; secondary: ActionType | null } = {
+      primary: null,
+      secondary: null
+    }
+
+    if (hideNavigation) {
+      actions.primary = 'ask'
+
+      if ($inputValue && $inputValue.length > 0) {
+        actions.secondary = 'create-note'
+      }
+
+      return actions
+    }
+
+    if (!$selectedAction || $selectedAction?.id === 'ask-action') {
+      actions.primary = 'ask'
+    } else {
+      actions.primary = 'selected'
+    }
+
+    if (isInMentionMode || hasMentions) {
+      actions.secondary = 'create-note'
+    } else if (!$selectedAction || $selectedAction?.id === 'ask-action') {
+      actions.secondary = 'search-web'
+    } else if (
+      ($selectedAction as any)?.providerId === 'search' ||
+      ($selectedAction as any)?.providerId === 'current-query'
+    ) {
+      actions.secondary = 'ask'
+    } /* else if (($selectedAction as any)?.providerId === 'navigation' || ($selectedAction as any)?.providerId === 'hostname-search') {
+      actions.secondary = 'search-web'
+    }*/
+
+    return actions
+  })
+
+  const executeAction = (actionType: ActionType | null) => {
+    if (!actionType) return
+
+    if (actionType === 'ask') {
+      const providerId = ($selectedAction as any).providerId as string
+      if (providerId === 'search' || providerId === 'current-query') {
+        handleAsk($selectedAction.name)
+      } else {
+        handleAsk()
+      }
+    } else if (actionType === 'create-note') {
+      handleCreateNote()
+    } else if (actionType === 'search-web') {
+      handleSearchWeb()
+    } else if (actionType === 'selected' && $selectedAction) {
       callAction($selectedAction)
     } else {
-      handleAsk()
+      console.warn('No action defined', actionType)
     }
   }
 
-  const handleAsk = () => {
+  const handleSubmit = (modKeyPressed: boolean) => {
+    if (!$inputValue || $inputValue.length === 0) return
+
+    if (modKeyPressed && ttyActions.secondary) {
+      executeAction(ttyActions.secondary)
+    } else if (ttyActions.primary) {
+      executeAction(ttyActions.primary)
+    } else {
+      console.warn('No primary action defined')
+    }
+  }
+
+  const handleAsk = (query?: string) => {
     mentions = editorComponent.getMentions()
-    dispatch('ask', { query: $inputValue, mentions })
+    dispatch('ask', { query: query || $inputValue, mentions })
     clearTeletype()
   }
 
@@ -258,6 +321,12 @@
     console.log('Creating note with query:', $inputValue, mentions)
     const content = editorComponent.getParsedEditorContent()
     dispatch('create-note', { content: content.html ?? content.text })
+    clearTeletype()
+  }
+
+  const handleSearchWeb = () => {
+    if (!$inputValue || $inputValue.length === 0) return
+    dispatch('search-web', { query: $inputValue })
     clearTeletype()
   }
 
@@ -319,6 +388,16 @@
       !$currentAction?.lazyComponent &&
       !$loading &&
       !$currentAction?.requireInput
+  )
+
+  const navigationMode = $derived(
+    $selectedAction &&
+      ($selectedAction?.id.startsWith('hostname-') ||
+        $selectedAction?.id.startsWith('navigation-') ||
+        !(
+          $selectedAction?.providerId === 'search' ||
+          $selectedAction?.providerId === 'current-query'
+        ))
   )
 
   const mentionItemsFetcher = createRemoteMentionsFetcher()
@@ -423,17 +502,17 @@
         <!-- svelte-ignore a11y-missing-attribute -->
         <!--<div class="icon-wrapper">
           {#if $editMode}
-            <Icon name="edit" size="20" color="--(text)" />
-          {:else if $selectedAction?.icon && typeof $selectedAction.icon === 'string'}
-            <Icon
+            <Icon name="edit" size="20px" color="--(text)" />
+          {:else if navigationMode && $selectedAction?.icon && typeof $selectedAction.icon === 'string'}
+            <DynamicIcon
               name={$selectedAction.icon.startsWith('favicon') ? 'world' : $selectedAction.icon}
-              size="18"
+              size="20px"
               color="--(text)"
             />
-          {:else if hideNavigation}
-            <Icon name="face" size="18" color="--(text)" />
+          {:else if navigationMode}
+            <Icon name="search" size="20px" color="--(text)" />
           {:else}
-            <Icon name="search" size="18" color="--(text)" />
+            <Icon name="face" size="20px" color="--(text)" />
           {/if}
         </div>-->
         {#if isModal}
@@ -456,8 +535,8 @@
             <Editor
               bind:this={editorComponent}
               bind:content={$inputValue}
-              {placeholder}
-              placeholderNewLine={placeholder}
+              placeholder={$placeholderText}
+              placeholderNewLine={$placeholderText}
               submitOnEnter={true}
               autofocus={true}
               parseMentions={true}
@@ -519,25 +598,24 @@
         ></slot>
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
-          {#if hideNavigation}
-            {#if $inputValue && $inputValue.length > 0}
-              <Button
-                size="md"
-                onclick={handleCreateNote}
-                class="secondary-button"
-                disabled={!$inputValue || $inputValue.length === 0}
-              >
-                Create Note
-              </Button>
-            {/if}
-            <!--{:else}
+          {#if ttyActions.secondary}
             <Button
               size="md"
-              onclick={handleAsk}
+              onclick={() => executeAction(ttyActions.secondary)}
               class="secondary-button"
               disabled={!$inputValue || $inputValue.length === 0}
             >
-              Ask Surf <ShortcutVisualizer
+              {#if ttyActions.secondary === 'ask'}
+                Ask Surf
+              {:else if ttyActions.secondary === 'create-note'}
+                Create Note
+              {:else if ttyActions.secondary === 'search-web'}
+                Search Web
+              {:else if ttyActions.secondary === 'selected'}
+                {$selectedAction?.buttonText || 'Execute'}
+              {/if}
+
+              <ShortcutVisualizer
                 shortcut={{ mac: ['cmd', 'return'], win: ['ctrl', 'return'] }}
                 size="tiny"
                 color="#e4e7ff"
@@ -545,58 +623,24 @@
             </Button>
           {/if}
 
-          {#if isInMentionMode || hasMentions}-->
-            <Button
-              size="md"
-              onclick={handleAsk}
-              class="send-button"
-              disabled={!$inputValue || $inputValue.length === 0}
-            >
-              Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            </Button>
-          {:else if $selectedAction?.id === 'ask-action' || isInMentionMode || hasMentions}
-            <Button
-              size="md"
-              onclick={handleCreateNote}
-              class="secondary-button"
-              disabled={!$inputValue || $inputValue.length === 0}
-            >
+          <Button
+            size="md"
+            onclick={() => executeAction(ttyActions.primary)}
+            class="send-button"
+            disabled={!$inputValue || $inputValue.length === 0}
+          >
+            {#if ttyActions.primary === 'ask'}
+              Ask Surf
+            {:else if ttyActions.primary === 'create-note'}
               Create Note
-            </Button>
-          {:else}
-            <Button
-              size="md"
-              onclick={handleAsk}
-              class="secondary-button"
-              disabled={!$inputValue || $inputValue.length === 0}
-            >
-              Ask Surf <ShortcutVisualizer
-                shortcut={{ mac: ['cmd', 'return'], win: ['ctrl', 'return'] }}
-                size="tiny"
-                color="#e4e7ff"
-              />
-            </Button>
-            {#if isInMentionMode || hasMentions}
-              <Button
-                size="md"
-                onclick={handleAsk}
-                class="send-button"
-                disabled={!$inputValue || $inputValue.length === 0}
-              >
-                Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-              </Button>
-            {:else}
-              <Button
-                size="md"
-                onclick={() => handleSubmit(false)}
-                class="send-button"
-                disabled={!$inputValue || $inputValue.length === 0}
-              >
-                {$selectedAction?.buttonText || 'Search'}
-                <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-              </Button>
+            {:else if ttyActions.primary === 'search-web'}
+              Search Web
+            {:else if ttyActions.primary === 'selected'}
+              {$selectedAction?.buttonText || 'Search'}
             {/if}
-          {/if}
+
+            <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
+          </Button>
         </div>
       </div>
       {#if $open && !isModal}

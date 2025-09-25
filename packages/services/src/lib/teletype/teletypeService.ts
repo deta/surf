@@ -127,7 +127,7 @@ export class TeletypeService {
     // Register local providers
     this.registerProvider(new CurrentQueryProvider(this)) // Local, instant current query
     this.registerProvider(new NavigationProvider(this))
-    // this.registerProvider(new AskProvider(this))
+    this.registerProvider(new AskProvider(this))
 
     if (isDev) {
       // @ts-ignore
