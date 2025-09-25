@@ -1,11 +1,4 @@
 <script lang="ts">
-  // FIX: Some pages cause weird double/triple loading events
-  // i.e. https://www.ciid.dk/pop-up-schools
-  // Use custom throttle but cancel timeout on every user navigation!
-  // FIX: Switching tabs while loading, the loading animation should be stopped
-  // TODO: (maxu): Make it nicer, by waiting a few millis after a navigation
-  // for the title to change before starting the animation / going through with it
-  //
   // https://www.electronjs.org/docs/latest/api/web-contents
   import { useBrowser } from '@deta/services/browser'
   import {
@@ -224,7 +217,8 @@
     //)
     state.textController.t_textBleed.target = 0
     state.textController.t_rasterDensity.target = 1.55
-    state.textController.t_rasterFill.target = 0.45
+    //state.textController.t_rasterFill.target = 0.45
+    state.textController.t_rasterFill.target = 0.6
 
     state.isLoading = false
   }
@@ -275,7 +269,8 @@
       loadingProgress: new Tween(1, { duration: 500, easing: expoOut }),
       textController: new RisoTextController({
         rasterDensity: {
-          start: 10,
+          //start: 10,
+          start: 2,
           duration: 900, // 600
           delay: 0,
           easing: cubicOut
@@ -287,7 +282,8 @@
           easing: cubicOut
         },
         textBleed: {
-          start: 0.54,
+          //start: 0.54,
+          start: 0.4,
           duration: 175,
           delay: 0,
           easing: expoOut
@@ -466,6 +462,7 @@
     }
 
     :global(svg.riso) {
+      opacity: 0.75;
       font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(
         to right,
