@@ -1119,6 +1119,8 @@ export class ContextService {
   private _items: Writable<{ item: ContextItem; scopes: string[] }[]>
   items: Readable<{ item: ContextItem; scopes: string[] }[]>
 
+  defaultContextManager: ContextManager | null = null
+
   constructor(
     ai: AIService,
     tabsManager: TabsService,
@@ -1361,13 +1363,17 @@ export class ContextService {
       })
     }
 
-    return ContextService.createDefault(
+    const contextManager = ContextService.createDefault(
       ctxKey,
       this,
       this.ai,
       this.tabsManager,
       this.resourceManager
     )
+
+    this.defaultContextManager = contextManager
+
+    return contextManager
   }
 
   createWCV() {

@@ -71,12 +71,26 @@ export class ContextItemActiveTab extends ContextItemBase {
         return
       }
 
-      if (!this.currentTabValue || !this.compareTabs(activeTab)) {
+      if (this.compareTabs(activeTab)) {
+        this.log.debug('Active tab is the same as current tab, not updating item')
+        return
+      }
+
+      const viewManager = this.service.defaultContextManager?.viewManager
+      if (
+        viewManager &&
+        viewManager.sidebarViewOpen &&
+        viewManager.activeSidebarView &&
+        [ViewType.NotebookHome, ViewType.Notebook, ViewType.Resource].includes(
+          viewManager.activeSidebarView.typeValue
+        )
+      ) {
         this.loading.set(true)
         this.currentTabUrl.set(activeTab.view.urlValue)
         this.debounceUpdateItem()
       } else {
-        this.log.debug('Active tab is the same as current tab, not updating item')
+        this.log.debug('Sidebar is not open to a notebook or resource, skipping update')
+        this.item.set(null)
       }
     })
   }
@@ -108,7 +122,7 @@ export class ContextItemActiveTab extends ContextItemBase {
       const tab = this.service.tabsManager.activeTabValue
       if (!tab) {
         this.item.set(null)
-        return
+        return null
       }
 
       const existingItem = this.itemValue
@@ -126,7 +140,7 @@ export class ContextItemActiveTab extends ContextItemBase {
         if (!resource) {
           this.log.error('Failed to prepare page tab', tab.id)
           this.item.set(null)
-          return
+          return null
         }
 
         this.log.debug('Prepared page tab', tab.id, resource)
@@ -145,20 +159,22 @@ export class ContextItemActiveTab extends ContextItemBase {
             PageChatUpdateContextEventTrigger.ActiveTabChanged
           )
         }
+
+        return newItem
       } else if (tab.view.typeValue === ViewType.Resource) {
         this.log.debug('Preparing resource tab', tab)
         const resourceId = tab.view.typeDataValue.id
         if (!resourceId) {
           this.log.error('Resource tab has no resource id', tab.id)
           this.item.set(null)
-          return
+          return null
         }
 
         const resource = await this.service.resourceManager.getResource(resourceId)
         if (!resource) {
           this.log.error('Failed to load resource for resource tab', tab.id, resourceId)
           this.item.set(null)
-          return
+          return null
         }
 
         this.log.debug('Prepared resource tab', tab.id, resource)
@@ -176,20 +192,22 @@ export class ContextItemActiveTab extends ContextItemBase {
             PageChatUpdateContextEventTrigger.ActiveTabChanged
           )
         }
+
+        return newItem
       } else if (tab.view.typeValue === ViewType.Notebook) {
         this.log.debug('Preparing notebook tab', tab)
         const notebookId = tab.view.typeDataValue.id
         if (!notebookId) {
           this.log.error('Notebook tab has no notebook id', tab.id)
           this.item.set(null)
-          return
+          return null
         }
 
         const notebook = await this.service.notebookManager.getNotebook(notebookId)
         if (!notebook) {
           this.log.error('Failed to load notebook for notebook tab', tab.id, notebookId)
           this.item.set(null)
-          return
+          return null
         }
 
         this.log.debug('Prepared notebook tab', tab.id, notebook)
@@ -207,35 +225,16 @@ export class ContextItemActiveTab extends ContextItemBase {
             PageChatUpdateContextEventTrigger.ActiveTabChanged
           )
         }
+
+        return newItem
+      } else {
+        this.item.set(null)
+        return null
       }
-      // } else if (tab.type === 'space') {
-      //   this.log.debug('Preparing space tab', tab)
-      //   const space = await this.service.tabsManager.oasis.getSpace(tab.spaceId)
-      //   if (!space) {
-      //     this.item.set(null)
-      //     return
-      //   }
-
-      //   const newItem = new ContextItemSpace(this.service, space, tab)
-      //   this.item.set(newItem)
-
-      //   // Only track if the item is new and a completely different tab
-      //   const showChatSidebar = this.service.ai.showChatSidebarValue
-      //   if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-      //     this.service.telemetry.trackPageChatContextUpdate(
-      //       PageChatUpdateContextEventAction.ActiveChanged,
-      //       0, // TODO: figure out how to get the correct count
-      //       1,
-      //       PageChatUpdateContextItemType.Space,
-      //       PageChatUpdateContextEventTrigger.ActiveTabChanged
-      //     )
-      //   }
-      // } else {
-      //   this.item.set(null)
-      // }
     } catch (error) {
       this.log.error('Error updating active tab', error)
       this.item.set(null)
+      return null
     } finally {
       this.loading.set(false)
     }
@@ -273,8 +272,20 @@ export class ContextItemActiveTab extends ContextItemBase {
         })
       })
     } else {
-      this.log.debug('No item found for active tab')
-      return []
+      const tab = this.service.tabsManager.activeTabValue
+      if (!tab) {
+        this.log.debug('No item found for active tab')
+        return []
+      }
+
+      const item = await this.updateItem()
+      if (!item) {
+        this.log.debug('No item found for active tab')
+        return []
+      }
+
+      this.log.debug('Got item for active tab after update, getting resources', item)
+      return item.getResourceIds(prompt)
     }
   }
 

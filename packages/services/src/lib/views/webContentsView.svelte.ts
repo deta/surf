@@ -1177,8 +1177,12 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
         (tag) => tag.name === ResourceTagsBuiltInKeys.SPACE_SOURCE
       )
 
+      const isCreatedForChat = (bookmarkedResource.tags ?? []).find(
+        (tag) => tag.name === ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
+      )
+
       const isFromLiveSpace = isHideInEverything && isFromSpaceSource
-      const manuallySaved = !isSilent && !isFromLiveSpace
+      const manuallySaved = !isSilent && !isFromLiveSpace && !isCreatedForChat
 
       this.view.setExtractedResourceId(bookmarkedResource.id, manuallySaved)
     } else {
@@ -1863,13 +1867,13 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
               resource.id,
               ResourceTagsBuiltInKeys.CREATED_FOR_CHAT
             )
-          } else if (!hasCreatedForChatTag && createdForChat) {
+          } /* else if (!hasCreatedForChatTag && createdForChat) {
             await this.resourceManager.updateResourceTag(
               resource.id,
               ResourceTagsBuiltInKeys.CREATED_FOR_CHAT,
               'true'
             )
-          }
+          }*/
 
           resolve(resource)
         } catch (e) {
