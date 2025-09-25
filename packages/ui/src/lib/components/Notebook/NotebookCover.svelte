@@ -18,9 +18,11 @@
 
     height = '19ch',
     fontSize = '1rem',
-  
+
     onclick,
-  
+    onpin,
+    onunpin,
+
     ...restProps
   }: {
     readonly?: boolean
@@ -39,8 +41,10 @@
 
     height?: string;
     fontSize?: string;
-  
+
     onclick?: Fn
+    onpin?: Fn
+    onunpin?: Fn
   } = $props();
 
   const scribbleValue = $derived(scribble ?? notebook?.data?.customization?.coverScribble);
@@ -112,21 +116,33 @@
   })
 
   let stickerPos = $state([0.5, 0.5])
+  let isHovered = $state(false)
+
+  const handleHeartClick = (e: MouseEvent) => {
+    e.stopPropagation()
+    if (notebook?.data?.pinned) {
+      onunpin?.()
+    } else {
+      onpin?.()
+    }
+  }
 </script>
 
 <div
   bind:this={ref}
-  class="notebookCover" 
+  class="notebookCover"
   style:--height={height}
   style:--font-size={fontSize}
   style:--color-start={colorValue[0][0]}
   style:--color-start-fallback={colorValue[0][1]}
-  style:--color-end={colorValue[1][0]} 
+  style:--color-end={colorValue[1][0]}
   style:--color-end-fallback={colorValue[1][1]}
-  style:--color-text={colorValue[2][0]} 
-  style:--color-text-fallback={colorValue[2][1]} 
+  style:--color-text={colorValue[2][0]}
+  style:--color-text-fallback={colorValue[2][1]}
   class:canClick={onclick !== undefined}
   {onclick}
+  onmouseenter={() => isHovered = true}
+  onmouseleave={() => isHovered = false}
   {...restProps}
   >
   <div class="cover"
@@ -178,33 +194,30 @@
     {/if}
     <div class="left-band"></div>
     <div class="stickers" bind:this={stickersEl}>
-    <!--<span class="sub-text">foobar</span>-->
-  {#if notebook?.data?.pinned}
-        <NotebookCoverSticker position={[0.875, 0.09]} rotation={10} size="12%" url="" readonly>
-          <svg xmlns="http://www.w3.org/2000/svg" 
-            width="100%"  height="100%"  viewBox="0 0 24 24"  fill="color-mix(in oklch, var(--color-start-fallback), var(--color-end-fallback) 70%)" stroke-width="2" stroke="color-mix(in oklch, var(--color-text-fallback), transparent 20%)">
-            <path d="M6.979 3.074a6 6 0 0 1 4.988 1.425l.037 .033l.034 -.03a6 6 0 0 1 4.733 -1.44l.246 .036a6 6 0 0 1 3.364 10.008l-.18 .185l-.048 .041l-7.45 7.379a1 1 0 0 1 -1.313 .082l-.094 -.082l-7.493 -7.422a6 6 0 0 1 3.176 -10.215z" />
+      <!--<span class="sub-text">foobar</span>-->
+      {#if (onpin || onunpin) && (isHovered || notebook?.data?.pinned)}
+        <div
+          class="heart-sticker"
+          class:pinned={notebook?.data?.pinned}
+          style:color={notebook?.data?.pinned ? "var(--color-text-fallback)" : "var(--color-text-fallback)"}
+          onclick={handleHeartClick}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg"
+            width="100%"
+            height="100%"
+            viewBox="0 0 24 24"
+            stroke="color-mix(in oklch, var(--color-text-fallback), transparent 20%)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path
+              d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"
+              fill={notebook?.data?.pinned ? "white" : "transparent"}
+            />
           </svg>
-        </NotebookCoverSticker>
-      <!--<NotebookCoverSticker position={[0.85, 0.1]} rotation={0} size="13%" url="" readonly={false} onmoved={(e) => {
-          const rect = stickersEl.getBoundingClientRect();
-  
-          // Mouse position relative to the container
-          const x = e.clientX - rect.left;
-          const y = e.clientY - rect.top;
-  
-          // Normalize to 0–1 range
-          const nx = x / rect.width;
-          const ny = y / rect.height;
-  
-          // Clamp values (in case mouse goes slightly outside)
-          const clampedX = Math.max(0, Math.min(1, nx));
-          const clampedY = Math.max(0, Math.min(1, ny));
-  
-          stickerPos[0] = clampedX
-          stickerPos[1] = clampedY
-        }}/>-->
-{/if}
+        </div>
+      {/if}
     </div>
   
   
@@ -394,6 +407,32 @@
       inset: 0;
       z-index: 9;
       pointer-events: none;
+    }
+
+    .heart-sticker {
+      position: absolute;
+      top: 3%;
+      right: 8%;
+      width: 12%;
+      height: 12%;
+      pointer-events: auto;
+      cursor: pointer;
+      transform: rotate(10deg);
+      transition: all 0.15s ease-out;
+      opacity: 0.9;
+
+      &:hover {
+        transform: rotate(10deg) scale(1.1);
+        opacity: 1;
+      }
+
+      &:active {
+        transform: rotate(10deg) scale(0.95);
+      }
+
+      &.pinned {
+        opacity: 1;
+      }
     }
 
     > .left-band {
