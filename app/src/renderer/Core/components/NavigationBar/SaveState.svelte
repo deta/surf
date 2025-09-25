@@ -133,13 +133,15 @@
 
 <OverlayPopover bind:open={isMenuOpen} position="bottom" autofocus>
   {#snippet trigger()}
-    <Button size="md" square>
-      {#if $isSaved}
-        <Icon name="notebook.saved" size="1.485em" />
-      {:else}
-        <Icon name="notebook.unsaved" size="1.485em" />
-      {/if}
-    </Button>
+    <div class="wrapper">
+      <Button size="fill" square>
+        {#if $isSaved}
+          <Icon name="notebook.saved" size="22px" />
+        {:else}
+          <Icon name="notebook.unsaved" size="22px" />
+        {/if}
+      </Button>
+    </div>
   {/snippet}
 
   <div class="list">
@@ -251,6 +253,10 @@
         border-color: rgba(59, 130, 246, 0.3);
       }
     }
+  }
+
+  .wrapper {
+    margin: 0 4px;
   }
 
   .save-section {

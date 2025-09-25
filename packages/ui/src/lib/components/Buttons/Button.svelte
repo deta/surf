@@ -2,7 +2,7 @@
   import { Button } from "bits-ui";
   import type { Snippet } from "svelte"
 
-  type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
+  type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'fill';
 
   let {
     ref = $bindable(),
@@ -139,5 +139,16 @@
   font-size: 14px;
   gap: 0.375rem;
   border-radius: 14px;
+}
+
+:global(.button-fill[data-button-root]) {
+  margin: 0;
+  display: flex;
+  justify-items: center;
+  align-items: center;
+  border-radius: 8px;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }
 </style>

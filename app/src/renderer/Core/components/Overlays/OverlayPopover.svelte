@@ -74,11 +74,18 @@
 
 <style lang="scss">
   .popover-content-wrapper {
+    display: flex;
     //background: white;
     //border: 1px solid #eee;
     border-radius: 12px;
     overflow: hidden;
     height: calc(100vh - 32px);
     // box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .popover-root {
+    display: flex;
+    justify-items: center;
+    align-items: center;
   }
 </style>
