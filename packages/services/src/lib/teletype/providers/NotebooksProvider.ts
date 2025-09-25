@@ -31,7 +31,7 @@ export class NotebooksProvider implements ActionProvider {
         actions.push({
           id: generateUUID(),
           name: 'Drafts',
-          icon: `book`,
+          icon: `notebook`,
           section: 'Your Notebooks',
           priority: 80,
           keywords: ['search', 'notebook', 'note', 'context'],
@@ -53,7 +53,7 @@ export class NotebooksProvider implements ActionProvider {
     return {
       id: generateUUID(),
       name: truncate(notebook.nameValue, 30),
-      icon: `book`,
+      icon: `notebook`,
       section: 'Your Notebooks',
       priority,
       keywords,

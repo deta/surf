@@ -283,7 +283,7 @@
       ...conditionalArrayItem(notebookId === undefined, {
         id: 'notebooks',
         label: 'Notebooks',
-        icon: 'book'
+        icon: 'notebook'
       }),
       {
         id: 'notes',

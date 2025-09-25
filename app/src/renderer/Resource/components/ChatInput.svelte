@@ -445,17 +445,12 @@
       left: calc(50% - 780px / 2);
       right: calc(50% - 780px / 2);
 
-      background:
-        radial-gradient(
+      background: radial-gradient(
           ellipse 400px 60px at 50% 100%,
           rgba(40, 87, 247, 0.15) 0%,
           transparent 70%
         ),
-        radial-gradient(
-          ellipse 300px 45px at 50% 100%,
-          rgba(40, 87, 247, 0.12) 0%,
-          transparent 80%
-        ),
+        radial-gradient(ellipse 300px 45px at 50% 100%, rgba(40, 87, 247, 0.12) 0%, transparent 80%),
         radial-gradient(ellipse 200px 30px at 50% 100%, rgba(40, 87, 247, 0.08) 0%, transparent 90%);
       background-size: 100% 100%;
       background-repeat: no-repeat;

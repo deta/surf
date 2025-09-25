@@ -163,20 +163,28 @@
   onMount(() => {
     document.title = 'Surf'
     notebookManager.loadNotebooks()
-    ;(messagePort.viewMounted.handle(({ location }) => {
-      log.debug('Received view-mounted event', location)
-      viewLocation = location
 
-      if (viewLocation === ViewLocation.Sidebar && hasMentions) {
-        contextManager.getPrompts({ mentions: $mentions })
-      }
-    }),
+    let unsubs = [
+      messagePort.viewMounted.handle(({ location }) => {
+        log.debug('Received view-mounted event', location)
+        viewLocation = location
+
+        if (viewLocation === ViewLocation.Sidebar && hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        }
+      }),
+
       messagePort.activeTabChanged.handle(() => {
         log.debug('Received active-tab-changed event', viewLocation, contextManager)
         if (viewLocation === ViewLocation.Sidebar && hasMentions) {
           contextManager.getPrompts({ mentions: $mentions })
         }
-      }))
+      })
+    ]
+
+    return () => {
+      unsubs.forEach((u) => u())
+    }
   })
 
   const pinnedNotebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))

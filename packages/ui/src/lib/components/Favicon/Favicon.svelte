@@ -42,7 +42,7 @@
   <img bind:this={imgElement} src={url} alt={title} draggable="false" />
 {:else}
   <div class="favicon-fallback">
-    <img bind:this={imgElement} src={SurfIcon} alt={title} draggable="false" />
+    <Icon name="squircle" size="16px" />
   </div>
 {/if}
 

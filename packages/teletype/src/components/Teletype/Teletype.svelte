@@ -25,10 +25,10 @@
 
   function disableScroll() {
     scrollTop = window.pageYOffset || window.document.documentElement.scrollTop
-    ;(scrollLeft = window.pageXOffset || window.document.documentElement.scrollLeft),
+    ;((scrollLeft = window.pageXOffset || window.document.documentElement.scrollLeft),
       (window.onscroll = function () {
         window.scrollTo(scrollLeft, scrollTop)
-      })
+      }))
   }
 
   function enableScroll() {

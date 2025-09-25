@@ -2764,8 +2764,8 @@
       padding-top: 0em;
     }
     :global(
-      .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
-    ) {
+        .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+      ) {
       padding: 0 !important;
     }
   }
@@ -2805,8 +2805,8 @@
   }
 
   :global(
-    .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
-  ) {
+      .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+    ) {
     max-width: 730px;
     margin: auto;
     padding: 2em 2em;

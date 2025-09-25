@@ -135,9 +135,9 @@
   {#snippet trigger()}
     <Button size="md" square>
       {#if $isSaved}
-        <Icon name="bookmarkFilled" size="1.085em" />
+        <Icon name="notebook.saved" size="1.485em" />
       {:else}
-        <Icon name="save" size="1.085em" />
+        <Icon name="notebook.unsaved" size="1.485em" />
       {/if}
     </Button>
   {/snippet}
