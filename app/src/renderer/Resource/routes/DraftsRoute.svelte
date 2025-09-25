@@ -237,13 +237,22 @@
   }
 
   .contents-wrapper {
-    padding-inline: 1.5rem;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    padding-left: calc(50vw - 50%);
+    padding-right: calc(50vw - 50%);
     margin-top: 1rem;
     opacity: 0.5;
     transition: opacity 223ms ease-out;
 
     &:hover {
       opacity: 1;
+    }
+
+    > :global(*) {
+      max-width: 680px;
+      margin: 0 auto;
+      padding-inline: 1.5rem;
     }
   }
 </style>

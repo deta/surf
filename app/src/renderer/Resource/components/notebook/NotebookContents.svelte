@@ -608,6 +608,7 @@
   header {
     margin-bottom: 1rem;
     margin-inline: -0.25rem;
+    padding-bottom: 0.75rem;
   }
 
   .notebook-grid {
