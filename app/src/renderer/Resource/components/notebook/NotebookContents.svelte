@@ -162,8 +162,12 @@
 </script>
 
 {#snippet notesList(visibleItems, allItems)}
-  {#if !(notebookId ? searchQuery : $ttyQuery) || allItems.length > 0}
-    {#if allItems.length <= 0}
+  {#if allItems.length <= 0}
+    {#if (notebookId ? $ttyQuery : searchQuery).length > 0}
+      <section class="empty">
+        <p>Nothing found for "{notebookId ? $ttyQuery : searchQuery}"</p>
+      </section>
+    {:else}
       <div class="px py">
         <section class="empty">
           <h1>What are Surf Notes?</h1>
@@ -181,29 +185,33 @@
           <!-- <Button size="md" onclick={handleUploadFiles}>Import Local Files</Button> -->
         </section>
       </div>
-    {:else}
-      {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
-        <ResourceLoader {resource}>
-          {#snippet children(resource: Resource)}
-            <NotebookSidebarNoteName {resource} sourceNotebookId={notebookId} />
-          {/snippet}
-        </ResourceLoader>
-      {/each}
+    {/if}
+  {:else}
+    {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
+      <ResourceLoader {resource}>
+        {#snippet children(resource: Resource)}
+          <NotebookSidebarNoteName {resource} sourceNotebookId={notebookId} />
+        {/snippet}
+      </ResourceLoader>
+    {/each}
 
-      {#if allItems.length > visibleItems.length}
-        <div style="margin-top: 0.75rem;" onclick={() => (showAll = !showAll)}>
-          <Button size="md"
-            >{#if showAll}Hide{:else}Show All{/if}</Button
-          >
-        </div>
-      {/if}
+    {#if allItems.length > visibleItems.length}
+      <div style="margin-top: 0.75rem;" onclick={() => (showAll = !showAll)}>
+        <Button size="md"
+          >{#if showAll}Hide{:else}Show All{/if}</Button
+        >
+      </div>
     {/if}
   {/if}
 {/snippet}
 
 {#snippet sourcesList(visibleItems, allItems)}
-  {#if !(notebookId ? searchQuery : $ttyQuery) || allItems.length > 0}
-    {#if allItems.length <= 0}
+  {#if allItems.length <= 0}
+    {#if (notebookId ? $ttyQuery : searchQuery).length > 0}
+      <section class="empty">
+        <p>Nothing found for "{notebookId ? $ttyQuery : searchQuery}"</p>
+      </section>
+    {:else}
       <div class="px py">
         <div class="empty">
           <h1>Surf Media</h1>
@@ -231,32 +239,32 @@
           <!-- <Button size="md" onclick={handleUploadFiles}>Import Local Files</Button> -->
         </div>
       </div>
-    {:else}
-      <div class="sources-grid" onwheel={handleMediaWheel}>
-        {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
-          <ResourceLoader {resource}>
-            {#snippet children(resource: Resource)}
-              <SourceCard
-                --width={'5rem'}
-                --max-width={''}
-                {resource}
-                text
-                {onDeleteResource}
-                onclick={(e) => handleResourceClick(resource.id, e)}
-                {@attach contextMenu({
-                  canOpen: true,
-                  items: getSourceCardCtxItems(resource, notebookId)
-                })}
-              />
-            {/snippet}
-          </ResourceLoader>
-        {/each}
+    {/if}
+  {:else}
+    <div class="sources-grid" onwheel={handleMediaWheel}>
+      {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
+        <ResourceLoader {resource}>
+          {#snippet children(resource: Resource)}
+            <SourceCard
+              --width={'5rem'}
+              --max-width={''}
+              {resource}
+              text
+              {onDeleteResource}
+              onclick={(e) => handleResourceClick(resource.id, e)}
+              {@attach contextMenu({
+                canOpen: true,
+                items: getSourceCardCtxItems(resource, notebookId)
+              })}
+            />
+          {/snippet}
+        </ResourceLoader>
+      {/each}
+    </div>
+    {#if resourceRenderCnt < allItems.length}
+      <div style="text-align:center;width:100%;margin-top:1rem;">
+        <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
       </div>
-      {#if resourceRenderCnt < allItems.length}
-        <div style="text-align:center;width:100%;margin-top:1rem;">
-          <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
-        </div>
-      {/if}
     {/if}
   {/if}
 {/snippet}

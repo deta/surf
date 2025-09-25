@@ -282,7 +282,9 @@
     if (!actionType) return
 
     if (actionType === 'ask') {
-      const providerId = ($selectedAction as any).providerId as string
+      const providerId = $selectedAction
+        ? (($selectedAction as any).providerId as string)
+        : undefined
       if (providerId === 'search' || providerId === 'current-query') {
         handleAsk($selectedAction.name)
       } else {
