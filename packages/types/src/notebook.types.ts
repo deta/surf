@@ -37,7 +37,8 @@ export interface NotebookData {
   icon: IconData
   index: number
   pinned: boolean
-  customization: NotebookCustomization
+  onboarding?: boolean
+  customization: Partial<NotebookCustomization>
 }
 
 export const NotebookEntryOrigin = {

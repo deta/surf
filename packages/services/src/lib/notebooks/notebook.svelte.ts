@@ -102,7 +102,7 @@ export class Notebook {
     await this.updateData({ index })
   }
 
-  async fetchContents(opts?: SpaceEntrySearchOptions) {
+  async fetchContents(opts: SpaceEntrySearchOptions = { sort_by: 'resource_updated' }) {
     this.log.debug('getting space contents')
     const result = await this.resourceManager.getSpaceContents(this.id, opts)
 

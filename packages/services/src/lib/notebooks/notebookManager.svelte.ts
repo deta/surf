@@ -355,7 +355,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     //   this.updateMainProcessNotebooksList();
     // });
 
-    return result
+    return spaces
   }
 
   async createNotebook(data: Partial<NotebookData>, isUserAction = false) {

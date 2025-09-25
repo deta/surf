@@ -526,7 +526,7 @@
       extensions: extensions,
       content: content,
       editable: !readOnly,
-      autofocus: !autofocus || readOnly ? false : 'end',
+      autofocus: !autofocus || readOnly ? false : 'start',
       onSelectionUpdate: ({ editor }) => {
         if (enableCaretIndicator && editor.storage.caretIndicator) {
           const extension = editor.storage.caretIndicator

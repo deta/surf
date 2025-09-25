@@ -17,6 +17,7 @@
   import { debugMode } from './stores/debug'
   import AltWindowControls from './components/AltWindowControls.svelte'
   import { Icon } from '@deta/icons'
+  import { checkAndCreateDemoItems } from '@deta/services'
 
   const log = useLogScope('Core')
 
@@ -167,6 +168,8 @@
     })
 
     unsubs.push(handlePreloadEvents())
+
+    await checkAndCreateDemoItems()
 
     wait(500).then(() => {
       if (tabsService.tabs.length <= 0) {

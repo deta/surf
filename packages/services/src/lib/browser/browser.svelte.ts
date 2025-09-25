@@ -76,7 +76,7 @@ export class BrowserService {
 
       this.messagePort.openResource.on(async ({ resourceId, target, offline }, viewId) => {
         if (target === 'auto') {
-          target = this.getViewOpenTarget(viewId)
+          target = await this.getViewOpenTarget(viewId, true)
         }
 
         this.openResource(resourceId, { target, offline })
@@ -84,7 +84,7 @@ export class BrowserService {
 
       this.messagePort.openNotebook.on(async ({ notebookId, target }, viewId) => {
         if (target === 'auto') {
-          target = this.getViewOpenTarget(viewId)
+          target = await this.getViewOpenTarget(viewId)
         }
 
         this.navigateToUrl(`surf://surf/notebook/${notebookId}`, { target })
@@ -174,7 +174,7 @@ export class BrowserService {
       }
 
       if (data.preview === 'auto') {
-        data.preview = this.getViewOpenTarget(viewId)
+        data.preview = await this.getViewOpenTarget(viewId)
       }
       this.log.debug('Determined citation open target:', data.preview)
 
@@ -317,7 +317,7 @@ export class BrowserService {
     viewId?: string
   ) {
     if (target === 'auto') {
-      target = viewId ? this.getViewOpenTarget(viewId) : 'tab'
+      target = viewId ? await this.getViewOpenTarget(viewId) : 'tab'
     }
 
     this.navigateToUrl(url, { target })
@@ -861,20 +861,33 @@ export class BrowserService {
     }
   }
 
-  getViewOpenTarget(viewId: string) {
+  async getViewOpenTarget(viewId: string, rerouteOnboarding = false) {
     const view = this.viewManager.getViewById(viewId)
-    const viewType = view?.typeValue ?? ViewType.Page
+    const viewTypeData = view?.typeDataValue
     const viewLocation = this.getViewLocation(viewId) ?? 'tab'
 
-    this.log.debug('Determining open target for view', viewId, viewType, viewLocation)
+    this.log.debug('Determining open target for view', viewId, viewTypeData, viewLocation)
 
-    if (viewType === ViewType.Resource) {
+    if (viewTypeData?.type === ViewType.Resource) {
       if (viewLocation === 'sidebar') {
         return 'tab'
       } else if (viewLocation === 'tab') {
+        // when you click a resource link in the onboarding note we want to open it in the same tab
+        if (rerouteOnboarding) {
+          const resource = await this.resourceManager.getResource(viewTypeData.id || '')
+          if (
+            (resource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.ONBOARDING)
+          ) {
+            return 'active_tab'
+          }
+        }
+
         return 'sidebar'
       }
-    } else if (viewType === ViewType.NotebookHome || viewType === ViewType.Notebook) {
+    } else if (
+      viewTypeData?.type === ViewType.NotebookHome ||
+      viewTypeData?.type === ViewType.Notebook
+    ) {
       if (viewLocation === 'sidebar') {
         return 'sidebar'
       } else if (viewLocation === 'tab') {

@@ -49,7 +49,8 @@ export enum ResourceTagsBuiltInKeys {
   DATA_STATE = 'dataState', // state of the resource data (e.g. 'partial', 'complete')
   SURFLET_PROTOCOL_VERSION = 'surfletProtocolVersion', // version of the surflet protocol used to save the resource
   PRELOADED_RESOURCE = 'preloadedResource', // resource was preloaded (e.g. from a web clipper)
-  EMPTY_RESOURCE = 'emptyResource' // resource was created as an empty resource (e.g. new note)
+  EMPTY_RESOURCE = 'emptyResource', // resource was created as an empty resource (e.g. new note)
+  ONBOARDING = 'onboarding' // resource is part of the onboarding flow
 }
 
 export interface ResourceTagsBuiltIn {
@@ -78,6 +79,7 @@ export interface ResourceTagsBuiltIn {
   [ResourceTagsBuiltInKeys.SURFLET_PROTOCOL_VERSION]: string
   [ResourceTagsBuiltInKeys.PRELOADED_RESOURCE]: boolean
   [ResourceTagsBuiltInKeys.EMPTY_RESOURCE]: boolean
+  [ResourceTagsBuiltInKeys.ONBOARDING]: boolean
 }
 
 export type UserViewPrefsTagValue = {

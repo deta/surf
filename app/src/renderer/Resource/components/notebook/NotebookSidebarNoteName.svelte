@@ -48,7 +48,7 @@
             })
             if (!confirmed) return
 
-            notebookManager.removeResources(resourceId, sourceNotebookId ?? undefined, true)
+            notebookManager.deleteResourcesFromSurf(resourceId, true)
           },
           onRemove: !sourceNotebookId ? undefined : () => handleRemoveFromNotebook(sourceNotebookId)
         })

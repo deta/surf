@@ -427,7 +427,6 @@
 
       // Scroll to top after DOM has updated and Editor is mounted
       await tick()
-      scrollToTop()
 
       // Add event listeners for surflet events
       const handleCreateSurfletEvent = (e: CustomEvent) => {
@@ -2234,13 +2233,6 @@
 
   const handleScroll = () => {
     disableAutoscroll = true
-  }
-
-  const scrollToTop = () => {
-    if (editorElem?.scrollToTop) {
-      editorElem.scrollToTop()
-      log.debug('Scrolled to top using TipTap native API')
-    }
   }
 
   // Function to handle inserting an onboarding mention into the editor

@@ -129,6 +129,10 @@ export class ResourceTag {
   static emptyResource(value: boolean = true) {
     return { name: ResourceTagsBuiltInKeys.EMPTY_RESOURCE, value: `${value}` }
   }
+
+  static onboarding(value: string) {
+    return { name: ResourceTagsBuiltInKeys.ONBOARDING, value: `${value}` }
+  }
 }
 
 /**
@@ -232,6 +236,10 @@ export class SearchResourceTags {
 
   static EmptyResource(value: boolean = true): SFFSResourceTag {
     return { name: ResourceTagsBuiltInKeys.EMPTY_RESOURCE, value: `${value}`, op: 'eq' }
+  }
+
+  static Onboarding(value: string): SFFSResourceTag {
+    return { name: ResourceTagsBuiltInKeys.ONBOARDING, value: `${value}`, op: 'eq' }
   }
 
   static NonHiddenDefaultTags(opts?: { excludeAnnotations?: boolean }): SFFSResourceTag[] {
