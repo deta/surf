@@ -12,8 +12,9 @@
 
   let {
     open = $bindable(),
-    teletypeService = useTeletypeService()
-  }: { open: boolean; teletypeService: TeletypeService } = $props()
+    teletypeService = useTeletypeService(),
+    hideNavigation = false
+  }: { open: boolean; teletypeService: TeletypeService; hideNavigation: boolean } = $props()
   let teletypeProvider: TeletypeProvider
 
   let actionsArray = $state([])
@@ -73,6 +74,10 @@
     }
   })
 
+  $effect(() => {
+    teletypeService.setHideNavigation(hideNavigation)
+  })
+
   onMount(() => {
     return teletypeService.actions.subscribe((actions) => {
       log.debug('Received actions update:', actions)
@@ -100,6 +105,7 @@
       on:create-note={handleCreateNote}
       on:clear={handleClear}
       on:search-web={handleSearchWeb}
+      {hideNavigation}
     >
       <svelte:fragment slot="tools">
         <div class="controls-list">

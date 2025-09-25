@@ -1,12 +1,5 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store'
-import {
-  getFileKind,
-  isDev,
-  prependProtocol,
-  truncate,
-  useDebounce,
-  useLogScope
-} from '@deta/utils'
+import { isDev, useLogScope, useThrottle } from '@deta/utils'
 import type {
   ActionProvider,
   TeletypeAction,
@@ -15,7 +8,6 @@ import type {
   ToolEnhancementHandler,
   ToolEnhancement
 } from './types'
-import { SearchProvider } from './providers/SearchProvider'
 import { NavigationProvider } from './providers/NavigationProvider'
 import { AskProvider } from './providers/AskProvider'
 import { CurrentQueryProvider } from './providers/CurrentQueryProvider'
@@ -56,6 +48,7 @@ export class TeletypeService {
   public readonly remoteActions: Writable<TeletypeAction[]>
   public readonly tools: Writable<ToolsMap>
   public readonly filterOutSection: Writable<string | null>
+  public readonly hideNavigation: Writable<boolean>
 
   public readonly isLoading: Readable<boolean>
   public readonly actions: Readable<TeletypeAction[]>
@@ -68,8 +61,8 @@ export class TeletypeService {
 
   constructor(options: TeletypeServiceOptions = {}) {
     this.options = {
-      debounceMsLocal: 15,
-      debounceMsRemote: 50,
+      debounceMsLocal: 100,
+      debounceMsRemote: 350,
       maxActionsPerProvider: 3,
       enabledProviders: [],
       ...options
@@ -88,6 +81,7 @@ export class TeletypeService {
     this.localActions = writable<TeletypeAction[]>([])
     this.remoteActions = writable<TeletypeAction[]>([])
     this.filterOutSection = writable(null)
+    this.hideNavigation = writable(false)
 
     this.tools = writable(new Map())
 
@@ -104,11 +98,11 @@ export class TeletypeService {
     )
 
     // Setup debounced searches with different timings
-    this.debouncedLocalSearch = useDebounce(
+    this.debouncedLocalSearch = useThrottle(
       this.performLocalSearch.bind(this),
       this.options.debounceMsLocal
     )
-    this.debouncedRemoteSearch = useDebounce(
+    this.debouncedRemoteSearch = useThrottle(
       this.performRemoteSearch.bind(this),
       this.options.debounceMsRemote
     )
@@ -118,9 +112,11 @@ export class TeletypeService {
       this.query.subscribe((query) => {
         this.searchState.update((state) => ({ ...state, query }))
 
-        // Trigger both searches independently
-        this.debouncedLocalSearch(query)
-        this.debouncedRemoteSearch(query)
+        if (!this.hideNavigationValue) {
+          // Trigger both searches independently
+          this.debouncedLocalSearch(query)
+          this.debouncedRemoteSearch(query)
+        }
       })
     )
 
@@ -150,6 +146,10 @@ export class TeletypeService {
 
   get remoteActionsValue() {
     return get(this.remoteActions)
+  }
+
+  get hideNavigationValue() {
+    return get(this.hideNavigation)
   }
 
   attachTeletype(teletype: TeletypeSystem) {
@@ -239,6 +239,10 @@ export class TeletypeService {
     // Re-run the last search to update results based on new filter
     this.debouncedLocalSearch(this.queryValue)
     this.debouncedRemoteSearch(this.queryValue)
+  }
+
+  setHideNavigation(hide: boolean): void {
+    this.hideNavigation.set(hide)
   }
 
   /**

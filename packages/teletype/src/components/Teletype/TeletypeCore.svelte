@@ -28,10 +28,12 @@
 
   let {
     tools,
-    key
+    key,
+    hideNavigation = false
   }: {
     tools: Snippet
     key?: string | undefined
+    hideNavigation?: boolean
   } = $props()
 
   const teletype = useTeletype(key)
@@ -65,7 +67,6 @@
   let editorComponent: Editor
   let hasMentions = $state(false)
   let isInMentionMode = $state(false)
-  let hideNavigation = $state(false)
 
   // Focus the input field on open (used when capturing keys)
   const handleOpen = async () => {
@@ -371,11 +372,6 @@
   }
 
   onMount(() => {
-    const notebookId = window.location.pathname.split('/')[2]
-    if (notebookId) {
-      hideNavigation = true
-    }
-
     $showActionPanel = false
     const handler = (e: KeyboardEvent) => handleActionOptionsKeyDown(e)
     document.addEventListener('keydown', handler)

@@ -180,7 +180,7 @@
               />
             </h1>
           </div>
-          <TeletypeEntry open={true} />
+          <TeletypeEntry open={true} hideNavigation />
         </div>
         <section class="contents-wrapper">
           <NotebookContents {notebookId} />

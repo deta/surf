@@ -69,7 +69,7 @@
   <main>
     <div class="tty-wrapper">
       <h1>Drafts</h1>
-      <TeletypeEntry open={true} />
+      <TeletypeEntry open={true} hideNavigation />
     </div>
     <section class="contents-wrapper">
       <NotebookContents notebookId="drafts" />

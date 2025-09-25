@@ -5,6 +5,8 @@
   import Notifications from './Notifications.svelte'
   import { createEventDispatcher } from 'svelte'
 
+  let { hideNavigation = false }: { hideNavigation?: boolean } = $props()
+
   const teletype = useTeletype()
 
   const open = teletype.isOpen
@@ -54,7 +56,15 @@
 
 <div class="inner-wrapper">
   <Notifications {teletype} />
-  <TeletypeCore on:input on:actions-rendered on:ask on:create-note on:clear on:search-web>
+  <TeletypeCore
+    {hideNavigation}
+    on:input
+    on:actions-rendered
+    on:ask
+    on:create-note
+    on:clear
+    on:search-web
+  >
     <slot name="header" slot="header" />
 
     <svelte:fragment slot="tools" let:disabled>
