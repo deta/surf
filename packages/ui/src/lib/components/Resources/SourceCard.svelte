@@ -112,6 +112,7 @@
   {:else}
     <article
       onclick={handleClick}
+      onauxclick={handleClick}
       role="none"
       data-resource-id={resource.id}
     {...props}

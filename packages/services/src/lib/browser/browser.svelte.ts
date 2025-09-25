@@ -926,6 +926,41 @@ export class BrowserService {
     return viewLocation
   }
 
+  async cloneAndOpenView(
+    view: WebContentsView,
+    opts?: { historyOffset?: number; target?: OpenResourceOptions['target'] }
+  ) {
+    this.log.debug('Opening clone of view:', view.id, opts)
+
+    const navigationEntries = view.navigationHistoryValue
+    const navigationIndex = view.navigationHistoryIndexValue
+
+    this.log.debug('View navigation history:', navigationEntries, navigationIndex)
+
+    const newHistoryIndex = Math.min(
+      Math.max(0, navigationIndex + (opts?.historyOffset ?? 0)),
+      navigationEntries.length - 1
+    )
+    const newNavigationEntry = navigationEntries[newHistoryIndex]
+
+    this.log.debug('Target view navigation entry:', newNavigationEntry, newHistoryIndex)
+    if (!newNavigationEntry) {
+      this.log.error('No navigation entry found for cloned view')
+      return null
+    }
+
+    const newView = await this.viewManager.create(
+      {
+        url: newNavigationEntry.url,
+        navigationHistory: navigationEntries,
+        navigationHistoryIndex: newHistoryIndex
+      },
+      true
+    )
+
+    return this.openView(newView, opts)
+  }
+
   onDestroy() {
     this._unsubs.forEach((unsub) => unsub())
 

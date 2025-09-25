@@ -7,7 +7,7 @@
   import { type Snippet } from 'svelte'
   import NavigationBarGroup from './NavigationBarGroup.svelte'
   import SaveState from './SaveState.svelte'
-  import { isInternalRendererURL } from '@deta/utils'
+  import { isInternalRendererURL, isModKeyPressed } from '@deta/utils'
   import { Resource, useResourceManager } from '@deta/services/resources'
   import { useViewManager, ViewType, type WebContentsView } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
@@ -72,14 +72,54 @@
 
   let isEditingUrl = $state(false)
 
-  function onGoBack() {
+  function cloneAndOpenView(offset: number, background: boolean) {
+    browser.cloneAndOpenView(view, {
+      historyOffset: offset,
+      target: background ? 'background_tab' : 'tab'
+    })
+  }
+
+  function onGoBack(e: MouseEvent) {
+    if (isModKeyPressed(e) || e.button === 1) {
+      cloneAndOpenView(-1, !e.shiftKey)
+      return
+    }
+
     view.webContents.goBack()
   }
-  function onGoForward() {
+  function onGoForward(e: MouseEvent) {
+    if (isModKeyPressed(e)) {
+      cloneAndOpenView(1, !e.shiftKey)
+      return
+    }
+
     view.webContents.goForward()
   }
   function onReload(e: MouseEvent) {
+    if (isModKeyPressed(e)) {
+      cloneAndOpenView(0, !e.shiftKey)
+      return
+    }
+
     view.webContents.reload(e.shiftKey)
+  }
+
+  function onGoBackAux(e: MouseEvent) {
+    if (e.button === 1) {
+      cloneAndOpenView(-1, !e.shiftKey)
+    }
+  }
+
+  function onGoForwardAux(e: MouseEvent) {
+    if (e.button === 1) {
+      cloneAndOpenView(1, !e.shiftKey)
+    }
+  }
+
+  function onReloadAux(e: MouseEvent) {
+    if (e.button === 1) {
+      cloneAndOpenView(0, !e.shiftKey)
+    }
   }
 
   async function handleAskInSidebar() {
@@ -97,14 +137,20 @@
   {#if !hideNavigationControls}
     <NavigationBarGroup>
       <NavigationBarGroup slim>
-        <Button size="md" square onclick={onGoBack} disabled={!canGoBack}>
+        <Button size="md" square onclick={onGoBack} onauxclick={onGoBackAux} disabled={!canGoBack}>
           <Icon name="arrow.left" size="1.2em" />
         </Button>
-        <Button size="md" square onclick={onGoForward} disabled={!canGoForward}>
+        <Button
+          size="md"
+          square
+          onclick={onGoForward}
+          onauxclick={onGoForwardAux}
+          disabled={!canGoForward}
+        >
           <Icon name="arrow.right" size="1.2em" />
         </Button>
       </NavigationBarGroup>
-      <Button size="md" square onclick={onReload} disabled={!canReload}>
+      <Button size="md" square onclick={onReload} onauxclick={onReloadAux} disabled={!canReload}>
         <Icon name="reload" size="1.085em" />
       </Button>
     </NavigationBarGroup>

@@ -1569,7 +1569,7 @@
   }
 
   const handleLinkClick: LinkClickHandler = async (e, href) => {
-    const backgroundTab = isModKeyPressed(e) && !e.shiftKey
+    const backgroundTab = (isModKeyPressed(e) && !e.shiftKey) || (e.type === 'auxclick' && e.button === 1)
     const target = backgroundTab
       ? 'background_tab'
       : isModKeyPressed(e)

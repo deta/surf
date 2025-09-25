@@ -105,7 +105,10 @@
     items: CTX_MENU_ITEMS
   })}
   onclick={(e) => {
-    resource ? handleResourceClick(resource.id, e) : onclick?.()
+    resource ? handleResourceClick(resource.id, e) : onclick?.(e)
+  }}
+  onauxclick={(e) => {
+    resource ? handleResourceClick(resource.id, e) : onclick?.(e)
   }}
 >
   {#if resource}

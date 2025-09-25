@@ -376,7 +376,7 @@
             {notebook}
             height="17.25ch"
             fontSize="0.85rem"
-            onclick={(e) => openNotebook(notebook.id, { target: 'auto' })}
+            onclick={(e) => handleNotebookClick(notebook.id, e)}
             onpin={() => handlePinNotebook(notebook.id)}
             onunpin={() => handleUnPinNotebook(notebook.id)}
             {@attach contextMenu({

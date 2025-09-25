@@ -23,6 +23,14 @@ export const openNotebook = (notebookId: string, opts?: Partial<OpenNotebookOpti
 }
 
 export const determineClickOpenTarget = (e: MouseEvent): OpenTarget => {
+  if (e.type === 'auxclick') {
+    if (e.button === 1) {
+      return 'background_tab'
+    }
+
+    return 'auto'
+  }
+
   const backgroundTab = isModKeyPressed(e) && !e.shiftKey
   const sidebarTab = e.shiftKey
   return backgroundTab

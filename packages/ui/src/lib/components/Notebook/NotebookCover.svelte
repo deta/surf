@@ -141,6 +141,11 @@
   style:--color-text-fallback={colorValue[2][1]}
   class:canClick={onclick !== undefined}
   {onclick}
+  onauxclick={(e) => {
+    if (onclick) {
+      onclick(e)
+    }
+  }}
   onmouseenter={() => isHovered = true}
   onmouseleave={() => isHovered = false}
   {...restProps}

@@ -1543,6 +1543,12 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   get uiLocationValue() {
     return get(this.uiLocation)
   }
+  get historyStackIdsValue() {
+    return get(this.historyStackIds)
+  }
+  get historyStackIndexValue() {
+    return get(this.historyStackIndex)
+  }
 
   setExtractedResourceId(resourceId: string | null, createdByUser?: boolean) {
     this.extractedResourceId.set(resourceId)

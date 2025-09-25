@@ -23,6 +23,14 @@
     e.preventDefault()
     e.stopImmediatePropagation()
 
+    if (e.type === 'auxclick') {
+      if (e.button === 1){
+        dispatchClick('new-background-tab')
+      }
+  
+      return
+    }
+
     if (isModKeyPressed(e)) {
       if (e.shiftKey) {
         dispatchClick('new-tab')
@@ -40,7 +48,7 @@
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<span {...$$restProps} on:click={handleClick}>
+<span {...$$restProps} on:click={handleClick} on:auxclick={handleClick}>
   {#if faviconURL}
     <Favicon url={faviconURL} title={label} />
     <div class="label-wrapper">

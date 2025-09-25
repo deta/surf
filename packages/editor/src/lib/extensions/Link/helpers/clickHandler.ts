@@ -12,7 +12,7 @@ type ClickHandlerOptions = {
 
 export function clickHandler(options: ClickHandlerOptions): Plugin {
   const handleClick = (view: EditorView, event: MouseEvent) => {
-    if (event.button !== 0) {
+    if (event.button !== 0 && event.button !== 1) {
       return false
     }
 
@@ -61,6 +61,9 @@ export function clickHandler(options: ClickHandlerOptions): Plugin {
     props: {
       handleDOMEvents: {
         click: (view, event) => {
+          return handleClick(view, event)
+        },
+        auxclick: (view, event) => {
           return handleClick(view, event)
         }
       }
