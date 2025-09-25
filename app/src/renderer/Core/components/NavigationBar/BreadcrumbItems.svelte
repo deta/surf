@@ -15,9 +15,10 @@
   const notebookManager = useNotebookManager()
 
   const activeLocation = $derived(view.url ?? writable(''))
-
   const activeHistory = $derived(view.navigationHistory)
   const activeHistoryIndex = $derived(view.navigationHistoryIndex)
+  const extractedResourceId = $derived(view.extractedResourceId)
+  const resourceCreatedByUser = $derived(view.resourceCreatedByUser)
 
   let breadcrumbs = $state([])
   $effect(
@@ -26,7 +27,9 @@
         notebookManager,
         [...$activeHistory, { title: 'active', url: $activeLocation }],
         $activeHistoryIndex,
-        view
+        view,
+        $extractedResourceId,
+        $resourceCreatedByUser
       ))
   )
 

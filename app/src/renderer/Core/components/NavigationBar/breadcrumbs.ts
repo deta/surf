@@ -1,8 +1,9 @@
 import type { Fn } from '@deta/types'
-import { getViewType, isInternalRendererURL, getViewTypeData } from '@deta/utils/formatting'
+import { getViewType, getViewTypeData } from '@deta/utils/formatting'
 import { type NotebookManager } from '@deta/services/notebooks'
 import { type WebContentsView, ViewType } from '@deta/services/views'
 import { useLogScope } from '@deta/utils/io'
+import { wait } from '@deta/utils'
 
 const log = useLogScope('Breadcrumbs')
 
@@ -21,19 +22,13 @@ async function getNotebookDisplayName(
   return notebook.nameValue
 }
 
-async function getResourceName(
-  notebookManager: NotebookManager,
-  resourceId: string
-): Promise<string> {
-  const resource = await notebookManager.resourceManager.getResource(resourceId)
-  return resource?.metadata?.name || 'Untitled'
-}
-
 export async function constructBreadcrumbs(
   notebookManager: NotebookManager,
   history: { url: string; title: string }[],
   currHistoryIndex: number,
-  view: WebContentsView
+  view: WebContentsView,
+  extractedResourceId: string | null,
+  resourceCreatedByUser: boolean
 ): Promise<BreadcrumbData[]> {
   try {
     if (!history) return []
@@ -87,70 +82,51 @@ export async function constructBreadcrumbs(
               )
             })
           }
-
-          // Add resource breadcrumb
-          // breadcrumbs.push({
-          //   title: resource.metadata?.name || 'Untitled',
-          //   url: new URL(`surf://surf/resource/${resourceId}`).toString(),
-          //   navigationIdx: currentHistory.findIndex(entry => entry.url.includes(`/resource/${resourceId}`))
-          // })
         }
       }
-      // } else if (viewType === ViewType.Notebook) {
-      //   const notebookId = viewData?.id
-      //   if (notebookId) {
-      //     if (notebookId === 'drafts') {
-      //       breadcrumbs.push({
-      //         title: 'Drafts',
-      //         url: new URL('surf://surf/notebook/drafts').toString(),
-      //         navigationIdx: currentHistory.findIndex(entry => entry.url.includes('/notebook/drafts'))
-      //       })
-      //     } else {
-      //       const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
-      //       breadcrumbs.push({
-      //         title: notebookName,
-      //         url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
-      //         navigationIdx: currentHistory.findIndex(entry => entry.url.includes(`/notebook/${notebookId}`))
-      //       })
-      //     }
-      //   }
     } else if (viewType === ViewType.Page) {
-      // For web pages, check if we're in a notebook context
-      const lastNotebookEntry = currentHistory.findLast((entry) => {
-        const type = getViewType(entry.url)
-        return type === ViewType.Notebook || type === ViewType.NotebookHome
-      })
+      const savedByUser = extractedResourceId && resourceCreatedByUser
+      if (savedByUser) {
+        // HACK: we need a small delay to ensure the resource spaceIds list is updated
+        await wait(200)
 
-      if (lastNotebookEntry) {
-        const viewTypeData = getViewTypeData(lastNotebookEntry.url)
-        if (viewTypeData.type === ViewType.Notebook) {
-          if (viewTypeData.id === 'drafts') {
-            breadcrumbs.push({
-              title: 'Drafts',
-              url: lastNotebookEntry.url,
-              navigationIdx: currentHistory.findIndex(
-                (entry) => entry.url === lastNotebookEntry.url
-              )
-            })
-          } else if (viewTypeData.id) {
-            const notebookName = await getNotebookDisplayName(notebookManager, viewTypeData.id)
-            breadcrumbs.push({
-              title: notebookName,
-              url: lastNotebookEntry.url,
-              navigationIdx: currentHistory.findIndex(
-                (entry) => entry.url === lastNotebookEntry.url
-              )
-            })
-          }
+        const resource = await notebookManager.resourceManager.getResource(extractedResourceId)
+
+        const spaceIds = resource?.spaceIdsValue || []
+
+        const lastNotebookEntry = currentHistory.findLast((entry) => {
+          const type = getViewType(entry.url)
+          return type === ViewType.Notebook
+        })
+
+        const viewTypeData = lastNotebookEntry && getViewTypeData(lastNotebookEntry.url)
+        if (lastNotebookEntry && spaceIds.length > 0 && spaceIds.includes(viewTypeData?.id)) {
+          const notebookName = await getNotebookDisplayName(notebookManager, viewTypeData.id)
+          breadcrumbs.push({
+            title: notebookName,
+            url: lastNotebookEntry.url,
+            navigationIdx: currentHistory.findIndex((entry) => entry.url === lastNotebookEntry.url)
+          })
+        } else if (spaceIds.length === 1) {
+          const notebookId = spaceIds[0]
+          const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
+          breadcrumbs.push({
+            title: notebookName,
+            url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
+            navigationIdx: currentHistory.findIndex((entry) =>
+              entry.url.includes(`/notebook/${notebookId}`)
+            )
+          })
+        } else if (spaceIds.length === 0) {
+          breadcrumbs.push({
+            title: 'Drafts',
+            url: 'surf://surf/notebook/drafts',
+            navigationIdx: currentHistory.findIndex(
+              (entry) => entry.url === 'surf://surf/notebook/drafts'
+            )
+          })
         }
       }
-
-      // Add the page title as the last breadcrumb
-      // breadcrumbs.push({
-      //   title: view.titleValue || 'Untitled Page',
-      //   url: view.urlValue,
-      //   navigationIdx: currHistoryIndex
-      // })
     }
 
     log.debug('Final breadcrumbs:', breadcrumbs)

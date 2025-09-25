@@ -1668,6 +1668,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
       }
     }
 
+    await tick()
+
     this.emit(ResourceManagerEvents.NotebookAddResources, space_id, resourceIds)
     return res
   }
