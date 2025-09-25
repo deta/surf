@@ -12,15 +12,15 @@ import {
 } from '@deta/utils'
 
 import {
+  type Fn,
   PageChatUpdateContextEventAction,
   PageChatUpdateContextItemType,
-  WebContentsViewContextManagerActionType,
   type PageChatUpdateContextEventTrigger
 } from '@deta/types'
 import { ResourceTagsBuiltInKeys } from '@deta/types'
 
-import type { Resource, ResourceManager } from '../resources'
-import type { TabItem, TabsService } from '../tabs'
+import { ResourceJSON, type Resource, type ResourceManager } from '../resources'
+import { TabsServiceEmitterNames, type TabItem, type TabsService } from '../tabs'
 import type { Telemetry } from '../telemetry'
 
 import {
@@ -50,11 +50,16 @@ import {
 } from '../constants/chat'
 import { MentionItemType, type MentionItem } from '@deta/editor'
 import { ContextItemBrowsingHistory } from './context/history'
-import type { SearchResultLink } from '@deta/web-parser'
+import { WebParser, type SearchResultLink } from '@deta/web-parser'
 import { ContextItemWebSearch } from './context/web'
 import { ContextManagerWCV } from './contextManagerWCV'
 import { Notebook, NotebookManager, useNotebookManager } from '../notebooks'
 import { useViewManager, ViewManager, ViewType } from '../views'
+import { useMessagePortPrimary } from '../messagePort'
+import {
+  type GeneratePromptsPayload,
+  WebContentsViewContextManagerActionType
+} from '../messagePort/contextManagerEvents'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -68,6 +73,8 @@ export class ContextManager {
   key: string
 
   private _storage: ReturnType<typeof useLocalStorage<StoredContextItem[]>>
+  private unsubs: Fn[] = []
+
   generatingPrompts: Writable<boolean>
   generatedPrompts: Writable<ChatPrompt[]>
 
@@ -216,85 +223,95 @@ export class ContextManager {
   }
 
   async initListeners() {
-    // @ts-ignore
-    window.api.onWebContentsViewContextManagerEvent(async ({ type, payload }) => {
-      this.log.debug('Received WebContentsViewContextManagerEvent', type, payload)
-      // Handle the event
+    const messagePort = useMessagePortPrimary()
 
-      if (type === WebContentsViewContextManagerActionType.GET_ITEMS) {
-        const activeTab = this.tabsManager.activeTabValue
-        const numContextItems = this.itemsValue.length
+    this.unsubs.push(
+      messagePort.contextManagerAction.handle(async ({ type, payload }) => {
+        if (type === WebContentsViewContextManagerActionType.GET_ITEMS) {
+          const activeTab = this.tabsManager.activeTabValue
+          const numContextItems = this.itemsValue.length
 
-        if (
-          numContextItems === 0 &&
-          this.viewManager.sidebarViewOpen &&
-          this.viewManager.activeSidebarView?.typeValue === ViewType.Resource &&
-          activeTab
-        ) {
-          const viewData = activeTab.view.typeDataValue
-          if (viewData.type === ViewType.Page) {
-            this.log.debug(
-              'External URL detected:',
-              activeTab.view.urlValue,
-              'adding tab to context',
-              activeTab
-            )
+          if (
+            numContextItems === 0 &&
+            this.viewManager.sidebarViewOpen &&
+            this.viewManager.activeSidebarView?.typeValue === ViewType.Resource &&
+            activeTab
+          ) {
+            const viewData = activeTab.view.typeDataValue
+            if (viewData.type === ViewType.Page) {
+              this.log.debug(
+                'External URL detected:',
+                activeTab.view.urlValue,
+                'adding tab to context',
+                activeTab
+              )
 
-            await this.onlyUseTabInContext(activeTab)
-            await wait(200)
-          } else if (viewData.type === ViewType.Notebook && viewData.id) {
-            this.log.debug(
-              'Internal notebook URL detected, adding notebook to context',
-              viewData.id
-            )
-            const notebook = await this.notebookManager.getNotebook(viewData.id)
-            if (notebook) {
-              await this.onlyUseNotebookInContext(notebook)
+              await this.onlyUseTabInContext(activeTab)
               await wait(200)
+            } else if (viewData.type === ViewType.Notebook && viewData.id) {
+              this.log.debug(
+                'Internal notebook URL detected, adding notebook to context',
+                viewData.id
+              )
+              const notebook = await this.notebookManager.getNotebook(viewData.id)
+              if (notebook) {
+                await this.onlyUseNotebookInContext(notebook)
+                await wait(200)
+              }
+            } else {
+              this.log.debug('Other internal URL detected:', activeTab.view.urlValue)
             }
-          } else {
-            this.log.debug('Other internal URL detected:', activeTab.view.urlValue)
           }
+
+          const resourceIds = await this.getResourceIds(payload?.prompt)
+          this.log.debug('Got resource ids from context items', resourceIds)
+
+          const inlineImages = await this.getInlineImages()
+          this.log.debug('Got inline images from context items', inlineImages)
+
+          return {
+            resourceIds,
+            inlineImages
+          }
+        } else if (type === WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT) {
+          await this.addWebSearchContext(payload.results)
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT) {
+          await this.addTab(payload.id)
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT) {
+          await this.addTabs(this.tabsManager.tabsValue.map((x) => x.id))
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT) {
+          await this.addActiveTab()
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT) {
+          await this.addNotebook(payload.id)
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT) {
+          await this.addResource(payload.id)
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM) {
+          await this.removeContextItem(payload.id)
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT) {
+          await this.clear()
+          return null
+        } else if (type === WebContentsViewContextManagerActionType.GENERATE_PROMPTS) {
+          const prompts = await this.generatePrompts(payload)
+          return prompts
+        } else {
+          this.log.error('Unknown WebContentsViewContextManagerActionType', type)
+          return null as any
         }
+      })
+    )
 
-        const resourceIds = await this.getResourceIds(payload.prompt)
-        this.log.debug('Got resource ids from context items', resourceIds)
-
-        const inlineImages = await this.getInlineImages()
-        this.log.debug('Got inline images from context items', inlineImages)
-
-        return {
-          resourceIds,
-          inlineImages
-        }
-      } else if (type === WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT) {
-        await this.addWebSearchContext(payload.results)
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT) {
-        await this.addTab(payload.id)
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT) {
-        await this.addTabs(this.tabsManager.tabsValue.map((x) => x.id))
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT) {
-        await this.addActiveTab()
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT) {
-        await this.addNotebook(payload.id)
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT) {
-        await this.addResource(payload.id)
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM) {
-        await this.removeContextItem(payload.id)
-        return null
-      } else if (type === WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT) {
-        await this.clear()
-        return null
-      } else {
-        this.log.error('Unknown WebContentsViewContextManagerActionType', type)
-      }
-    })
+    this.unsubs.push(
+      this.tabsManager.on(TabsServiceEmitterNames.DELETED, (tabId) => {
+        this.cachedItemPrompts.delete(tabId)
+      })
+    )
   }
 
   async restoreItems() {
@@ -928,6 +945,91 @@ export class ContextManager {
     return [...new Set(imageItems.flat())]
   }
 
+  async generatePrompts(payload?: GeneratePromptsPayload) {
+    try {
+      this.generatingPrompts.set(true)
+
+      this.log.debug('Generating simple prompts with', payload)
+
+      const generatePayload = {
+        title: '',
+        url: '',
+        content: ''
+      }
+
+      let cacheKey: string | null = null
+
+      if (
+        !payload?.mentions ||
+        payload.mentions.length === 0 ||
+        payload.mentions.findIndex((x) => x.type === MentionItemType.ACTIVE_TAB) !== -1
+      ) {
+        const activeTab = this.tabsManager.activeTabValue
+        if (!activeTab) {
+          this.log.debug('No active tab found, returning empty prompts')
+          this.generatedPrompts.set([])
+          return []
+        }
+
+        if (activeTab.view.typeValue !== ViewType.Page) {
+          this.log.debug(
+            'Active tab is not a page, returning empty prompts',
+            activeTab.view.typeValue
+          )
+          this.generatedPrompts.set([])
+          return []
+        }
+
+        const cachedPrompts = this.cachedItemPrompts.get(activeTab.id)
+        if (cachedPrompts && cachedPrompts.length > 0) {
+          this.log.debug('Using cached prompts for active tab', cachedPrompts)
+          this.generatedPrompts.set(cachedPrompts)
+          return cachedPrompts
+        }
+
+        cacheKey = activeTab.id
+        generatePayload.title = activeTab.view.titleValue ?? ''
+        generatePayload.url = activeTab.view.urlValue ?? ''
+
+        if (activeTab.view.extractedResourceIdValue) {
+          this.log.debug('Extracted resource ID found, fetching resource')
+          const resource = await this.resourceManager.getResource(
+            activeTab.view.extractedResourceIdValue
+          )
+
+          if (resource && resource instanceof ResourceJSON) {
+            const data = await resource.getParsedData()
+            const parsed = WebParser.getResourceContent(resource.type, data)
+            generatePayload.content = parsed.plain ?? parsed.html ?? ''
+          }
+        }
+      } else if (payload.mentions && payload.mentions.length === 1) {
+        const mention = payload.mentions[0]
+        generatePayload.title = mention.label
+      }
+
+      this.log.debug('Generating prompts with', generatePayload)
+      const prompts = await this.ai.generatePrompts(generatePayload)
+
+      this.log.debug('Generated prompts with', prompts)
+      this.generatedPrompts.set(prompts ?? [])
+
+      if (cacheKey) {
+        this.cachedItemPrompts.set(cacheKey, prompts ?? [])
+      }
+
+      return prompts ?? []
+    } catch (error) {
+      this.log.error('Error generating simple prompts', error)
+      return []
+    } finally {
+      this.generatingPrompts.set(false)
+    }
+  }
+
+  /**
+   * @deprecated Use `generateActiveTabPrompts` instead
+   */
   async getPrompts(forceGenerate = false) {
     try {
       this.generatingPrompts.set(true)
@@ -998,6 +1100,11 @@ export class ContextManager {
       })
     )
     this.persistItems()
+  }
+
+  onDestroy() {
+    this.log.debug('Destroying context manager')
+    this.unsubs.forEach((unsub) => unsub())
   }
 }
 
@@ -1085,7 +1192,7 @@ export class ContextService {
   }
 
   async getActivePrompts(forceGenerate?: boolean) {
-    const activeContextManager = this.ai.contextManager
+    const activeContextManager = this.ai.contextManager as ContextManager
     if (activeContextManager) {
       return activeContextManager.getPrompts(forceGenerate)
     }

@@ -44,10 +44,44 @@ export class MessagePortService<IsPrimary extends boolean> {
     string,
     Map<string, (event: MessagePortEventPrimary) => void>
   >()
+  private messageQueue = new Map<string, Array<{ payload: any; portId?: string }>>()
 
   private primaryMode: IsPrimary
   private primaryPostMessage: ((portId: string, payload: any) => void) | undefined
   private clientPostMessage: ((payload: any) => void) | undefined
+
+  private flushMessageQueue(type: string, handler: any, portId?: string) {
+    const queuedMessages = this.messageQueue.get(type)
+    if (queuedMessages && queuedMessages.length > 0) {
+      this.log.debug(`Flushing ${queuedMessages.length} queued messages for type: ${type}`)
+
+      // Process all queued messages
+      while (queuedMessages.length > 0) {
+        const message = queuedMessages.shift()
+        if (!message) continue
+
+        // For primary mode, only process messages for the specified port
+        if (this.primaryMode && portId && message.portId !== portId) {
+          continue
+        }
+
+        try {
+          if (this.primaryMode) {
+            handler({ payload: message.payload, portId: message.portId! })
+          } else {
+            handler(message.payload)
+          }
+        } catch (error) {
+          console.error(`Error processing queued message of type ${type}:`, error)
+        }
+      }
+
+      // Clean up the queue if empty
+      if (queuedMessages.length === 0) {
+        this.messageQueue.delete(type)
+      }
+    }
+  }
 
   constructor(onMessage: (callback: any) => void, postMessage: any, primaryMode: IsPrimary) {
     this.log = useLogScope(`MessagePortService ${primaryMode ? 'Primary' : 'Client'}`)
@@ -71,14 +105,27 @@ export class MessagePortService<IsPrimary extends boolean> {
         // Then check regular handlers
         // First check port-specific handlers
         const portCallbacks = this.portCallbacks.get(event.portId)
-        if (portCallbacks) {
-          portCallbacks.forEach((callback) => callback(event))
-        }
-
-        // Then check handlers for all ports
         const allPortsCallbacks = this.portCallbacks.get('*')
-        if (allPortsCallbacks) {
-          allPortsCallbacks.forEach((callback) => callback(event))
+
+        if (portCallbacks || allPortsCallbacks) {
+          if (portCallbacks) {
+            portCallbacks.forEach((callback) => callback(event))
+          }
+          if (allPortsCallbacks) {
+            allPortsCallbacks.forEach((callback) => callback(event))
+          }
+        } else {
+          // Queue the message if no handlers are registered
+          this.log.debug(
+            `Queueing message of type: ${event.payload.type} for port: ${event.portId}`
+          )
+          if (!this.messageQueue.has(event.payload.type)) {
+            this.messageQueue.set(event.payload.type, [])
+          }
+          this.messageQueue.get(event.payload.type)?.push({
+            payload: event.payload,
+            portId: event.portId
+          })
         }
       })
     } else {
@@ -130,8 +177,12 @@ export class MessagePortService<IsPrimary extends boolean> {
             })
           }
         } else {
-          console.warn(`No handler registered for message type: ${payload.type}`)
-          return
+          // Queue the message if no handler is registered
+          this.log.debug(`Queueing message of type: ${payload.type}`)
+          if (!this.messageQueue.has(payload.type)) {
+            this.messageQueue.set(payload.type, [])
+          }
+          this.messageQueue.get(payload.type)?.push({ payload })
         }
       })
     }
@@ -202,6 +253,9 @@ export class MessagePortService<IsPrimary extends boolean> {
         },
         handle: (handler: (payload: T) => void) => {
           this.handlers.set(name, handler)
+
+          // Flush any queued messages for this event type
+          this.flushMessageQueue(name, (payload: any) => handler(payload.data))
 
           return () => {
             this.handlers.delete(name)
@@ -300,6 +354,9 @@ export class MessagePortService<IsPrimary extends boolean> {
             }
             callbacks.add(wrappedHandler)
 
+            // Flush any queued messages for this event type
+            this.flushMessageQueue(name, wrappedHandler)
+
             return () => {
               const callbacks = this.portCallbacks.get(allPortsKey)
               if (callbacks) {
@@ -342,6 +399,9 @@ export class MessagePortService<IsPrimary extends boolean> {
         },
         handle: (handler: ClientHandleHandler<T>) => {
           this.handlers.set(name, handler)
+
+          // Flush any queued messages for this event type
+          this.flushMessageQueue(name, (payload: any) => handler(payload.data))
 
           return () => {
             this.handlers.delete(name)

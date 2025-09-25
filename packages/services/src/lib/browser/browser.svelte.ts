@@ -2,7 +2,7 @@ import { useLogScope } from '@deta/utils/io'
 
 import { Resource, ResourceNote, useResourceManager } from '../resources'
 import { useViewManager, WebContentsView } from '../views'
-import { type CreateTabOptions, type TabItem, useTabs } from '../tabs'
+import { type CreateTabOptions, type TabItem, TabsServiceEmitterNames, useTabs } from '../tabs'
 import { formatAIQueryToTitle } from './utils'
 import { MentionItemType, type MentionItem } from '@deta/editor'
 import {
@@ -70,6 +70,10 @@ export class BrowserService {
         this.handleSidebarChange(isOpen, view)
       }),
 
+      this.tabsManager.on(TabsServiceEmitterNames.ACTIVATED, (tab) => {
+        this.handleActiveTabChange(tab)
+      }),
+
       this.messagePort.trackEvent.on(async ({ eventName, eventProperties }) => {
         this.resourceManager.telemetry.trackEvent(eventName, eventProperties)
       }),
@@ -104,6 +108,10 @@ export class BrowserService {
             target = this.getViewLocation(viewId) ?? 'tab'
           }
 
+          if (isNewTabPage && target === 'tab') {
+            target = 'active_tab'
+          }
+
           this.log.debug(`Creating note from ${viewId} in ${target}:`, content)
 
           await this.createAndOpenNote(
@@ -114,7 +122,7 @@ export class BrowserService {
             }
           )
 
-          if (isNewTabPage) {
+          if (isNewTabPage && target === 'sidebar') {
             this.closeNewTab()
           }
         }
@@ -153,6 +161,22 @@ export class BrowserService {
 
       this.log.debug('Focusing active tab after sidebar closed', activeTab)
       activeTab?.view.webContents?.focus()
+    }
+  }
+
+  async handleActiveTabChange(tab: TabItem) {
+    this.log.debug('Active tab changed:', tab)
+    if (
+      this.viewManager.sidebarViewOpen &&
+      this.viewManager.activeSidebarView?.typeValue &&
+      [ViewType.Resource, ViewType.NotebookHome, ViewType.Notebook].includes(
+        this.viewManager.activeSidebarView?.typeValue
+      )
+    ) {
+      this.messagePort.activeTabChanged.send(this.viewManager.activeSidebarView.id, {
+        tabId: tab.id,
+        url: tab.view.urlValue ?? ''
+      })
     }
   }
 
@@ -262,7 +286,7 @@ export class BrowserService {
         notebookId
       )
 
-      if (payload.mentions.length === 1 && payload.mentions[0].id === 'active_tab') {
+      if (payload.mentions.length === 1) {
         payload.mentions[0] = {
           ...payload.mentions[0],
           data: {
@@ -462,7 +486,7 @@ export class BrowserService {
         }
       }
 
-      if (opts?.notebookId) {
+      if (opts?.notebookId && opts.notebookId !== 'drafts') {
         this.log.debug(`Adding note to notebook ${opts.notebookId}`)
         await this.notebookManager.addResourcesToNotebook(opts.notebookId, [resource.id])
       }
@@ -533,7 +557,7 @@ export class BrowserService {
         true
       )
 
-      if (opts?.notebookId) {
+      if (opts?.notebookId && opts.notebookId !== 'drafts') {
         this.log.debug(`Adding created note to notebook ${opts.notebookId}`)
         await this.notebookManager.addResourcesToNotebook(opts.notebookId, [note.id])
       }
@@ -648,6 +672,10 @@ export class BrowserService {
     } else {
       return this.tabsManager.changeActiveTabURL(`surf://surf/resource/${resource.id}`)
     }
+  }
+
+  async openNotebookInCurrentTab(notebookId: string) {
+    return this.tabsManager.changeActiveTabURL(`surf://surf/notebook/${notebookId}`)
   }
 
   async openResource(

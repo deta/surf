@@ -15,6 +15,7 @@ import { WebParser } from '@deta/web-parser'
 
 import { Resource, type ResourceManager } from './resources/resources.svelte'
 import { type MentionItem, MentionItemType } from '@deta/editor'
+import { useNotebookManager } from './notebooks'
 
 const log = useLogScope('mediaImporter')
 
@@ -600,8 +601,9 @@ export const promptUserToSelectFiles = async (
   return files
 }
 
-export const promptForFilesAndTurnIntoResourceMentions = async (
-  resourceManager: ResourceManager
+export const promptForFilesAndTurnIntoResources = async (
+  resourceManager: ResourceManager,
+  notebookId?: string
 ) => {
   const files = await promptUserToSelectFiles({
     title: 'Select File to Use as Context',
@@ -623,6 +625,24 @@ export const promptForFilesAndTurnIntoResourceMentions = async (
   }
 
   log.debug('Resources created:', resources)
+
+  if (notebookId && notebookId !== 'drafts') {
+    log.debug(`Adding resources to notebook ${notebookId}`)
+    const notebookManager = useNotebookManager()
+    await notebookManager.addResourcesToNotebook(
+      notebookId,
+      resources.map((r) => r.id)
+    )
+  }
+
+  return resources
+}
+
+export const promptForFilesAndTurnIntoResourceMentions = async (
+  resourceManager: ResourceManager
+) => {
+  const resources = await promptForFilesAndTurnIntoResources(resourceManager)
+  if (!resources) return []
 
   return resources.map((resource) => {
     const url = resource.url

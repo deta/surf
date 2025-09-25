@@ -34,6 +34,7 @@
   export let firstLine: boolean = false
   export let disabled: boolean = false
   export let editor: Editor | undefined = undefined
+  export let hideEmptyPrompts: boolean = false
 
   // TODO: THis should use svelte getContext() api instead
   export let contextManager: ContextManager
@@ -76,19 +77,11 @@
 
   const usedPrompts = writable<PromptPillItem[]>([])
 
-  const showExamplePrompts = derived([userConfigSettings], ([userConfigSettings]) => {
-    if (!userConfigSettings.automatic_chat_prompt_generation) {
-      return false
-    }
-
-    // const tab = tabsInContext.find((tab) => tab.id === activeTabId)
-
-    // if (!tab || tab.type !== 'page') {
-    //   return false
-    // }
-
-    return true
-  })
+  $: showExamplePrompts = !(
+    hideEmptyPrompts &&
+    $generatedPrompts.length === 0 &&
+    !$generatingPrompts
+  )
 
   const filteredExamplePrompts = derived(
     [generatedPrompts, responses],
@@ -279,7 +272,7 @@
   <header>
     <PromptPills
       promptItems={$suggestedPrompts}
-      hide={$isEditorEmpty || !$showExamplePrompts || $contextManagementDialogOpen}
+      hide={$isEditorEmpty || !showExamplePrompts || $contextManagementDialogOpen}
       direction={activeState === 'bottom' ? 'horizontal' : 'vertical'}
       on:click={handleClickPrompt}
     />
@@ -355,6 +348,7 @@
     {mentionItemsFetcher}
     on:submit={handleSubmit}
     on:blur
+    on:update
   >
     {#if !disabled}
       <div class="submit-btn" use:startingClass={{}}>
@@ -451,12 +445,17 @@
       left: calc(50% - 780px / 2);
       right: calc(50% - 780px / 2);
 
-      background: radial-gradient(
+      background:
+        radial-gradient(
           ellipse 400px 60px at 50% 100%,
           rgba(40, 87, 247, 0.15) 0%,
           transparent 70%
         ),
-        radial-gradient(ellipse 300px 45px at 50% 100%, rgba(40, 87, 247, 0.12) 0%, transparent 80%),
+        radial-gradient(
+          ellipse 300px 45px at 50% 100%,
+          rgba(40, 87, 247, 0.12) 0%,
+          transparent 80%
+        ),
         radial-gradient(ellipse 200px 30px at 50% 100%, rgba(40, 87, 247, 0.08) 0%, transparent 90%);
       background-size: 100% 100%;
       background-repeat: no-repeat;

@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
 
   import { useLogScope } from '@deta/utils/io'
-  import { TelemetryCreateTabSource, ViewType, type Fn } from '@deta/types'
+  import { TelemetryCreateTabSource, ViewLocation, ViewType, type Fn } from '@deta/types'
 
   import { ShortcutActions } from '@deta/services/shortcuts'
   import { initServices } from '@deta/services/helpers'
@@ -28,7 +28,8 @@
     tabsService,
     keyboardManager,
     shortcutsManager,
-    browser
+    browser,
+    ai
   } = initServices()
 
   const activeTabView = $derived(tabsService.activeTab?.view)
@@ -184,6 +185,7 @@
     viewManager.onDestroy()
     tabsService.onDestroy()
     browser.onDestroy()
+    ai.onDestroy()
   })
 
   $inspect(tabsService.tabs).with((...e) => {
@@ -241,6 +243,7 @@
             <WebContentsView
               view={tabsService.tabs[idx].view}
               active={tabsService.activeTab?.id === tab.id}
+              location={ViewLocation.Tab}
             />
           {/if}
         {/each}

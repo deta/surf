@@ -32,10 +32,7 @@ export class NotebookMentionProvider implements MentionProvider {
           id: notebook.id,
           type: MentionTypes.NOTEBOOK,
           name: notebook.data.name || (notebook.data as any).folderName,
-          icon:
-            notebook.data.icon && notebook.data.icon.type
-              ? notebook.iconString
-              : notebook.data.icon,
+          icon: 'book',
           priority: 50,
           keywords: ['notebook'],
           metadata: {

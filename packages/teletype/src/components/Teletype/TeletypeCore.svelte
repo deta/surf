@@ -64,6 +64,7 @@
   let editorComponent: Editor
   let hasMentions = $state(false)
   let isInMentionMode = $state(false)
+  let hideNavigation = $state(false)
 
   // Focus the input field on open (used when capturing keys)
   const handleOpen = async () => {
@@ -93,7 +94,10 @@
   })
 
   const placeholder = $derived(
-    $currentAction && $currentAction.placeholder ? $currentAction.placeholder : $placeholderText
+    hideNavigation
+      ? 'Search the notebook or ask a question...'
+      : 'Search the web, your notebooks, enter a URL or ask a question...'
+    // $currentAction && $currentAction.placeholder ? $currentAction.placeholder : $placeholderText
   )
 
   // Since providers handle filtering, we just pass through the actions
@@ -296,6 +300,11 @@
   }
 
   onMount(() => {
+    const notebookId = window.location.pathname.split('/')[2]
+    if (notebookId) {
+      hideNavigation = true
+    }
+
     $showActionPanel = false
     const handler = (e: KeyboardEvent) => handleActionOptionsKeyDown(e)
     document.addEventListener('keydown', handler)
@@ -421,8 +430,8 @@
               size="18"
               color="--(text)"
             />
-          {:else if isInMentionMode}
-            <Icon name="message" size="18" color="--(text)" />
+          {:else if hideNavigation}
+            <Icon name="face" size="18" color="--(text)" />
           {:else}
             <Icon name="search" size="18" color="--(text)" />
           {/if}
@@ -510,7 +519,42 @@
         ></slot>
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
-          {#if $selectedAction?.id === 'ask-action' || isInMentionMode || hasMentions}
+          {#if hideNavigation}
+            {#if $inputValue && $inputValue.length > 0}
+              <Button
+                size="md"
+                onclick={handleCreateNote}
+                class="secondary-button"
+                disabled={!$inputValue || $inputValue.length === 0}
+              >
+                Create Note
+              </Button>
+            {/if}
+            <!--{:else}
+            <Button
+              size="md"
+              onclick={handleAsk}
+              class="secondary-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
+              Ask Surf <ShortcutVisualizer
+                shortcut={{ mac: ['cmd', 'return'], win: ['ctrl', 'return'] }}
+                size="tiny"
+                color="#e4e7ff"
+              />
+            </Button>
+          {/if}
+
+          {#if isInMentionMode || hasMentions}-->
+            <Button
+              size="md"
+              onclick={handleAsk}
+              class="send-button"
+              disabled={!$inputValue || $inputValue.length === 0}
+            >
+              Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
+            </Button>
+          {:else if $selectedAction?.id === 'ask-action' || isInMentionMode || hasMentions}
             <Button
               size="md"
               onclick={handleCreateNote}
@@ -532,32 +576,31 @@
                 color="#e4e7ff"
               />
             </Button>
-          {/if}
-
-          {#if isInMentionMode || hasMentions}
-            <Button
-              size="md"
-              onclick={handleAsk}
-              class="send-button"
-              disabled={!$inputValue || $inputValue.length === 0}
-            >
-              Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            </Button>
-          {:else}
-            <Button
-              size="md"
-              onclick={() => handleSubmit(false)}
-              class="send-button"
-              disabled={!$inputValue || $inputValue.length === 0}
-            >
-              {$selectedAction?.buttonText || 'Search'}
-              <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
-            </Button>
+            {#if isInMentionMode || hasMentions}
+              <Button
+                size="md"
+                onclick={handleAsk}
+                class="send-button"
+                disabled={!$inputValue || $inputValue.length === 0}
+              >
+                Ask Surf <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
+              </Button>
+            {:else}
+              <Button
+                size="md"
+                onclick={() => handleSubmit(false)}
+                class="send-button"
+                disabled={!$inputValue || $inputValue.length === 0}
+              >
+                {$selectedAction?.buttonText || 'Search'}
+                <ShortcutVisualizer shortcut={['return']} size="tiny" color="#6076f4" />
+              </Button>
+            {/if}
           {/if}
         </div>
       </div>
       {#if $open && !isModal}
-        {#if $filteredResult && Array.isArray($filteredResult) && $filteredResult.length > 0 && $inputValue && $inputValue.length > 0 && !hasMentions && !isInMentionMode}
+        {#if $filteredResult && Array.isArray($filteredResult) && $filteredResult.length > 0 && $inputValue && $inputValue.length > 0 && !hasMentions && !isInMentionMode && !hideNavigation}
           <ActionList
             actions={$filteredResult}
             bind:resetActiveIndex={resetActionList}
@@ -609,7 +652,7 @@
 <style lang="scss">
   .box {
     font-family: 'Inter';
-    max-height: min(calc(75vh - 6rem), 225px);
+    //max-height: min(calc(75vh - 6rem), 225px);
     color: var(--text);
     border-radius: var(--border-radius);
     display: flex;

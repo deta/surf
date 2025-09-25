@@ -842,6 +842,10 @@ export class AIService {
     return quotas
   }
 
+  onDestroy() {
+    this.fallbackContextManager?.onDestroy()
+  }
+
   static provide(resourceManager: ResourceManager, config: ConfigService, global?: boolean) {
     const service = new AIService(resourceManager, config, global)
 

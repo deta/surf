@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte'
-  import { type Resource, ResourceManagerEvents } from '@deta/services/resources'
   import { useNotebookManager, type Notebook, NotebookManagerEvents } from '@deta/services/notebooks'
-  import { ResourceTagsBuiltInKeys, type Option, type SFFSResourceTag, type SFFSSearchParameters, type SFFSSearchResult } from '@deta/types'
+  import { ResourceTagsBuiltInKeys, type Option, type SFFSResourceTag, type SFFSSearchParameters } from '@deta/types'
   import { type ResourceSearchResult, useResourceManager } from '@deta/services/resources'
-  import { SearchResourceTags, useDebounce, useThrottle } from '@deta/utils'
+  import { SearchResourceTags, useCancelableDebounce, useLogScope, useThrottle } from '@deta/utils'
 
   interface Search {
     query: string
@@ -28,6 +27,7 @@
     error?: Snippet<[unknown]>
   } = $props()
 
+  const log = useLogScope('NotebookLoader')
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
 
@@ -60,54 +60,79 @@
   let notebook: Notebook = $state()
   let searchResults: Option<ResourceSearchResult> = $state()
   let searching: boolean = $state(false)
+  let isLoading = $state(false)
+  
+  const { execute: runQuery, cancel: cancelQuery } = useCancelableDebounce(async (search: Search) => {
+    try {
+      searching = true
 
-    const runQuery = useDebounce((search: Search) => {
-    searching = true
-      resourceManager.searchResources(search.query, [
-          ...SearchResourceTags.NonHiddenDefaultTags({
-            excludeAnnotations: true
-          }),
-          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
-          ...(search.tags ?? [])
-        ], {
-          ...search.parameters,
-          spaceId: notebookId,
-        }).then(results => {
-          searchResults = results.resources
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-            // Map to NoteobokEntry format for compatability with the contents directly
-            .map((entry, i) => ({
-              id: i,
-              entry_id: entry.resource.id,
-              resource_type: entry.resource.type
-            }))
-          searching = false
-        })
+      const results = await resourceManager.searchResources(search.query, [
+        ...SearchResourceTags.NonHiddenDefaultTags({
+          excludeAnnotations: true
+        }),
+        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
+        ...(search.tags ?? [])
+      ], {
+        ...search.parameters,
+        spaceId: notebookId,
+      })
+
+      searchResults = results.resources
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        // Map to NoteobokEntry format for compatability with the contents directly
+        .map((entry, i) => ({
+          id: i,
+          entry_id: entry.resource.id,
+          resource_type: entry.resource.type
+        }))
+    } catch (error) {
+      log.error('Error running notebook search', error)
+    } finally {
+      searching = false
+      isLoading = false
+    }
   }, 250)
 
   $effect(() => {
     if (search && search.query) {
       runQuery(search)
     } else {
+      cancelQuery()
       searchResults = undefined
       searching = false
     }
   })
 
-  const load = useThrottle(() => {
-    if (search && search.query) runQuery(search)
-    else {
-      notebookManager.getNotebook(notebookId)
-      .then((_notebook: Notebook) => {
-        if (fetchContents) _notebook.fetchContents({
+  const load = useThrottle(async () => {
+    try {
+      isLoading = true
+      const _notebook = await notebookManager.getNotebook(notebookId)
+      if (fetchContents) {
+        _notebook.fetchContents({
           sort_by: 'resource_updated',
           order: 'desc',
         })
-        notebook = _notebook
-      })
+      }
+
+      notebook = _notebook
+    } catch (error) {
+      log.error('Error loading notebook', error)
+    } finally {
+      isLoading = false
     }
   }, 250)
-  load()
+
+  const init = async () => {
+    isLoading = true
+    
+    if (search && search.query) {
+      runQuery(search)
+    } else {
+      await load()
+    }
+  }
+
+  init()
 
   onMount(() => {
     const unsubs = [
@@ -135,10 +160,10 @@
   {@render error?.(error)}
 {/await}
 -->
-{#if notebook}
-  {@render children?.([notebook, searchResults, searching])}
-{:else}
+{#if isLoading}
   {@render loading?.()}
+{:else if notebook}
+  {@render children?.([notebook, searchResults, searching])}
 {/if}
 
 {#snippet failed(error, reset)}

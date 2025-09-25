@@ -1,18 +1,19 @@
 <script lang="ts">
   import { TeletypeProvider, Teletype } from '@deta/teletype'
   import { DynamicIcon } from '@deta/icons'
-  import { useTeletypeService } from '@deta/services'
+  import { type TeletypeService, useTeletypeService } from '@deta/services'
   import type { MentionItem } from '@deta/editor'
   import { useLogScope } from '@deta/utils/io'
   import { onMount } from 'svelte'
   import ToolsList from './ToolsList.svelte'
   import { AddToContextMenu } from '@deta/ui'
 
-  const teletypeService = useTeletypeService()
   const log = useLogScope('TeletypeEntry')
 
-  let { open = $bindable() }: { open: boolean } = $props()
-
+  let {
+    open = $bindable(),
+    teletypeService = useTeletypeService()
+  }: { open: boolean; teletypeService: TeletypeService } = $props()
   let teletypeProvider: TeletypeProvider
 
   let actionsArray = $state([])

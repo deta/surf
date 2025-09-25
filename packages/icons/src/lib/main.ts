@@ -140,6 +140,7 @@ import Note from './Icons/Note.svelte'
 import FolderOpen from './Icons/FolderOpen.svelte'
 import Heart from './Icons/Heart.svelte'
 import HeartOff from './Icons/HeartOff.svelte'
+import Book from './Icons/Book.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -287,7 +288,8 @@ export const icons = {
   note: Note,
   'folder.open': FolderOpen,
   heart: Heart,
-  'heart.off': HeartOff
+  'heart.off': HeartOff,
+  book: Book
 }
 
 export type Icons = keyof typeof icons
@@ -437,5 +439,6 @@ export {
   Note,
   FolderOpen,
   Heart,
-  HeartOff
+  HeartOff,
+  Book
 }

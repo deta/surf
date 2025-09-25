@@ -68,6 +68,7 @@
     PromptType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
+    ViewLocation,
     WEB_RESOURCE_TYPES,
     type CitationClickData,
     type CitationInfo
@@ -190,6 +191,8 @@
   const isFirstLine = writable<boolean>(true)
   const isTitleFocused = writable<boolean>(false)
 
+  let viewLocation: ViewLocation
+
   const handleLastLineVisibilityChanged = (e: CustomEvent<boolean>) => {
     lastLineVisible.set(e.detail)
   }
@@ -281,7 +284,7 @@
   const handleNoteRunQuery = async (payload: AIQueryPayload) => {
     try {
       if (payload.query) {
-        log.debug('Found ask query param:', payload.query, payload.mentions)
+        log.debug('Found ask query param:', payload)
 
         generateTitle(payload.query)
 
@@ -292,7 +295,7 @@
         let showPrompt = true
         if (payload.mentions.length === 1 && payload.mentions[0]?.data?.insertIntoEditor) {
           showPrompt = false
-          insertMention(payload.mentions[0], payload.query)
+          insertMention(payload.mentions[0], payload?.queryLabel || payload.query)
         }
 
         tools.update((tools) =>
@@ -486,6 +489,24 @@
       messagePort.noteRefreshContent.handle(() => {
         log.debug('Received note-refresh-content event')
         refreshContent()
+      }),
+
+      messagePort.viewMounted.handle(({ location }) => {
+        log.debug('Received view-mounted event', location)
+        viewLocation = location
+
+        if (viewLocation === ViewLocation.Sidebar && contextManager) {
+          const mentions = editorElem.getMentions()
+          contextManager.getPrompts({ mentions })
+        }
+      }),
+
+      messagePort.activeTabChanged.handle(() => {
+        log.debug('Received active-tab-changed event', viewLocation, contextManager)
+        if (viewLocation === ViewLocation.Sidebar && contextManager) {
+          const mentions = editorElem.getMentions()
+          contextManager.getPrompts({ mentions })
+        }
       })
     )
 
@@ -1999,7 +2020,14 @@
         prompt.label ? prompt.label.toLowerCase() : undefined
       )
 
-      runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: true })
+      // insert prompt at current position if first line
+      if ($isFirstLine) {
+        const editor = editorElem.getEditor()
+        editor.commands.insertContent(prompt.label + ' ', { updateSelection: false })
+        editor.commands.focus()
+      }
+
+      runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: !$isFirstLine })
     } catch (e) {
       log.error('Error doing magic', e)
     }
@@ -2007,12 +2035,11 @@
 
   export const runPrompt = async (prompt: ChatPrompt, opts?: Partial<ChatSubmitOptions>) => {
     try {
-      log.debug('Handling prompt submit', prompt)
+      const mentions = editorElem.getMentions()
+      log.debug('Handling prompt submit', prompt, mentions)
 
       // Prevent starting a new generation if one is already running
       if (checkIfAlreadyRunning('run prompt')) return
-
-      const mentions = editorElem.getMentions()
 
       telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
 
@@ -2511,6 +2538,23 @@
     )
       return
     telemetry.trackNoteUpdate()
+
+    const mentions = editorElem.getMentions()
+    if (mentions.length > 0) {
+      contextManager.getPrompts({ mentions })
+    } else {
+      contextManager.resetPrompts()
+    }
+  }, 500)
+
+  const handleChatInputContentUpdated = useDebounce(() => {
+    if (get(isGeneratingAI)) return
+    const mentions = chatInputEditorElem.getMentions()
+    if (mentions.length > 0) {
+      contextManager.getPrompts({ mentions })
+    } else {
+      contextManager.resetPrompts()
+    }
   }, 500)
 
   onDestroy(() => {
@@ -2557,6 +2601,7 @@
         state={$isTitleFocused ? 'bottom' : $lastLineVisible ? 'floaty' : 'bottom'}
         firstLine={$isFirstLine && !escapeFirstLineChat}
         disabled={(showCaretPopover && editorFocused && !$isFirstLine) || $isTitleFocused}
+        hideEmptyPrompts={viewLocation !== ViewLocation.Sidebar}
         {mentionItemsFetcher}
         {onFileSelect}
         {onMentionSelect}
@@ -2566,6 +2611,7 @@
         on:cancel-completion={handleStopGeneration}
         on:blur={handleChatInputBlur}
         on:autocomplete={handleCaretPopoverAutocomplete}
+        on:update={handleChatInputContentUpdated}
       />
     {/if}
 
@@ -2718,8 +2764,8 @@
       padding-top: 0em;
     }
     :global(
-        .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
-      ) {
+      .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+    ) {
       padding: 0 !important;
     }
   }
@@ -2759,8 +2805,8 @@
   }
 
   :global(
-      .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
-    ) {
+    .notes-editor-wrapper > .editor-container > .editor > .editor-wrapper > div > div.tiptap
+  ) {
     max-width: 730px;
     margin: auto;
     padding: 2em 2em;

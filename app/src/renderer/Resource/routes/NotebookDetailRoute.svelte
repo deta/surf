@@ -19,6 +19,7 @@
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
+  import NotebookContents from '../components/notebook/NotebookContents.svelte'
 
   let {
     route,
@@ -135,9 +136,7 @@
     }}
     fetchContents
   >
-    {#snippet loading()}
-      loading
-    {/snippet}
+    {#snippet loading()}{/snippet}
 
     {#snippet children([notebook, _])}
       <main>
@@ -183,11 +182,14 @@
           </div>
           <TeletypeEntry open={true} />
         </div>
+        <section class="contents-wrapper">
+          <NotebookContents {notebookId} />
+        </section>
       </main>
     {/snippet}
   </NotebookLoader>
 
-  <NotebookSidebar {title} {notebookId} bind:open={resourcesPanelOpen} />
+  <!-- <NotebookSidebar {title} {notebookId} bind:open={resourcesPanelOpen} /> -->
 </NotebookLayout>
 
 <style lang="scss">
@@ -205,7 +207,6 @@
   section {
     padding-inline: 12px;
 
-    opacity: 1;
     transform: translateY(0px);
     transition:
       opacity 223ms ease-out,
@@ -304,4 +305,15 @@
   //    display: block;
   //  }
   //}
+
+  .contents-wrapper {
+    padding-inline: 1.5rem;
+    margin-top: 1rem;
+    opacity: 0.5;
+    transition: opacity 223ms ease-out;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 </style>

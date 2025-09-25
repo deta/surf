@@ -6,7 +6,6 @@ declare global {
   interface Window {
     RENDERER_TYPE: RendererType
     electron: ElectronAPI
-    electronMessagePort: MessagePort | undefined
     api: API
     preloadEvents: PreloadEventHandlers
     backend: {

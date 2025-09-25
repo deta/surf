@@ -2,7 +2,7 @@
   import { writable } from 'svelte/store'
   import { onDestroy, onMount } from 'svelte'
 
-  import { type Fn } from '@deta/types'
+  import { ViewLocation, type Fn } from '@deta/types'
 
   import { useLogScope } from '@deta/utils/io'
   import { wait } from '@deta/utils/data'
@@ -11,6 +11,7 @@
 
   export let active: boolean = true
   export let view: WebContentsView
+  export let location: ViewLocation = ViewLocation.Tab
 
   const log = useLogScope('WebContents')
 
@@ -32,7 +33,7 @@
 
     await wait(200)
 
-    await view.mount(webContentsWrapper, { activate: active })
+    await view.mount(webContentsWrapper, { activate: active }, location)
 
     unsubs.push(
       view.screenshot.subscribe((screenshot) => {

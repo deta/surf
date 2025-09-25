@@ -11,14 +11,9 @@ import {
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs,
-  WebContentsViewContextManagerAction,
-  WebContentsViewContextManagerActionOutputs,
-  WebContentsViewContextManagerActionPayloads,
-  WebContentsViewContextManagerActionType,
   type WebViewSendEvents,
   WebViewEventSendNames,
   WebContentsViewEvent,
-  TelemetryEventTypes,
   RendererType
 } from '@deta/types'
 import {
@@ -164,18 +159,6 @@ const api = {
     >
   },
 
-  webContentsViewContextManagerAction: <T extends WebContentsViewContextManagerActionType>(
-    type: T,
-    ...args: WebContentsViewContextManagerActionPayloads[T] extends undefined
-      ? []
-      : [payload: WebContentsViewContextManagerActionPayloads[T]]
-  ) => {
-    const action = { type, payload: args[0] } as WebContentsViewContextManagerAction
-    return IPC_EVENTS_RENDERER.webContentsViewContextManagerAction.invoke(action) as Promise<
-      WebContentsViewContextManagerActionOutputs[T]
-    >
-  },
-
   fetchMentions: (query: string) => {
     return IPC_EVENTS_RENDERER.fetchMentions.invoke({ query })
   },
@@ -256,31 +239,4 @@ window.addEventListener('click', (event: MouseEvent) => {
     clientX: event.clientX,
     clientY: event.clientY
   })
-})
-
-function handlePortMessage(event) {
-  console.log('Received message from messagePort:', event.data)
-}
-
-ipcRenderer.on('port', (event) => {
-  try {
-    console.log('Received port event:', event)
-
-    const port = event.ports[0]
-
-    const postMessage = (data) => {
-      port.postMessage(data)
-    }
-
-    port.onmessage = handlePortMessage
-
-    if (process.contextIsolated) {
-      contextBridge.exposeInMainWorld('electronMessagePort', {
-        postMessage
-      })
-    } else {
-      // @ts-ignore (define in dts)
-      window.electronMessagePort = port
-    }
-  } catch (err) {}
 })

@@ -5,15 +5,21 @@
   import { onMount } from 'svelte'
   import { type Notebook } from '@deta/services/notebook'
   import { MaskedScroll, openDialog, contextMenu, NotebookCover } from '@deta/ui'
-  import { truncate, useDebounce } from '@deta/utils'
+  import { conditionalArrayItem, truncate, useDebounce, useLogScope } from '@deta/utils'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
   import { openNotebook, openResource } from '../handlers/notebookOpenHandlers'
-  import { type Fn, SpaceEntryOrigin } from '@deta/types'
+  import { type ChatPrompt, type Fn, ViewLocation } from '@deta/types'
   import { useResourceManager } from '@deta/services/resources'
+  import { provideAI } from '@deta/services/ai'
+  import { useMessagePortClient } from '@deta/services/messagePort'
+  import { BUILT_IN_PAGE_PROMPTS } from '@deta/services/constants'
+  import { useConfig } from '@deta/services'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
   import { useTeletypeService } from '../../../../../packages/services/src/lib'
+  import NotebookContents from '../components/notebook/NotebookContents.svelte'
+  import PromptPills from '../components/PromptPills.svelte'
 
   let {
     onopensidebar,
@@ -24,12 +30,55 @@
   let isRenamingNotebook: string | undefined = $state(undefined)
   let newNotebookName: string | undefined = $state(undefined)
   let isCustomizingNotebook = $state(null)
+  let viewLocation = $state<ViewLocation | null>(null)
 
+  const log = useLogScope('IndexRoute')
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
+  const config = useConfig()
+  const ai = provideAI(resourceManager, config, false)
   const teletype = useTeletypeService()
+  const messagePort = useMessagePortClient()
+
+  const contextManager = ai.contextManager
+  const { generatedPrompts, generatingPrompts } = contextManager
   const ttyQuery = teletype.query
-  const notebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))
+  const mentions = teletype.mentions
+
+  let hasMentions = $derived($mentions.length > 0)
+  let mentionsHash = $derived(JSON.stringify($mentions))
+
+  let prevMentionsHash = $state('')
+
+  const notebooks = $derived.by(() => {
+    return notebookManager.sortedNotebooks
+      .filter((e) => ($ttyQuery || showAll ? true : e.data.pinned))
+      .filter((e) => {
+        if (!$ttyQuery) return true
+        return e.nameValue.toLowerCase().includes($ttyQuery.toLowerCase())
+      })
+  })
+
+  const suggestedPrompts = $derived.by(() => {
+    if ($generatingPrompts) {
+      return [
+        {
+          label: 'Analyzing Page',
+          prompt: '',
+          loading: true
+        }
+      ]
+    }
+
+    return [
+      ...BUILT_IN_PAGE_PROMPTS.filter((p) =>
+        $generatedPrompts.every((gp) => gp.label !== p.label && gp.label !== 'Summary')
+      ),
+      ...$generatedPrompts
+        .slice(0, 4)
+        .sort((a, b) => (a.label?.length ?? 0) - (b.label?.length ?? 0))
+    ]
+  })
 
   const handleCreateNotebook = async () => {
     //if (newNotebookName === undefined || newNotebookName.length < 1) {
@@ -93,9 +142,42 @@
     notebookManager.updateNotebookData(notebookId, { pinned: false })
   }
 
+  const handleRunPrompt = (e: CustomEvent<ChatPrompt>) => {
+    const prompt = e.detail
+    log.debug('Running prompt', prompt)
+    teletype.ask(prompt.prompt, undefined, prompt.label)
+  }
+
+  $effect(() => {
+    if (
+      viewLocation === ViewLocation.Sidebar &&
+      hasMentions &&
+      mentionsHash !== prevMentionsHash &&
+      !$generatingPrompts
+    ) {
+      prevMentionsHash = mentionsHash
+      contextManager.getPrompts({ mentions: $mentions })
+    }
+  })
+
   onMount(() => {
     document.title = 'Surf'
     notebookManager.loadNotebooks()
+
+    ;(messagePort.viewMounted.handle(({ location }) => {
+      log.debug('Received view-mounted event', location)
+      viewLocation = location
+
+      if (viewLocation === ViewLocation.Sidebar && hasMentions) {
+        contextManager.getPrompts({ mentions: $mentions })
+      }
+    }),
+      messagePort.activeTabChanged.handle(() => {
+        log.debug('Received active-tab-changed event', viewLocation, contextManager)
+        if (viewLocation === ViewLocation.Sidebar && hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        }
+      }))
   })
 
   const pinnedNotebooks = $derived(notebookManager.sortedNotebooks.filter((e) => e.data.pinned))
@@ -118,60 +200,21 @@
       <TeletypeEntry open={true} />
     </div>
     {#if $ttyQuery.length <= 0}
-      <section>
-        <div class="notebook-grid">
-          {#each pinnedNotebooks as notebook, i (notebook.id + i)}
-            <NotebookCover
-              {notebook}
-              height="17.25ch"
-              fontSize="0.84rem"
-              onclick={(e) => openNotebook(notebook.id, { target: 'auto' })}
-              {@attach contextMenu({
-                canOpen: true,
-                items: [
-                  !notebook.data.pinned
-                    ? {
-                        type: 'action',
-                        text: 'Add to Favorites',
-                        icon: 'heart',
-                        action: () => handlePinNotebook(notebook.id)
-                      }
-                    : {
-                        type: 'action',
-                        text: 'Remove from Favorites',
-                        icon: 'heart.off',
-                        action: () => handleUnPinNotebook(notebook.id)
-                      },
-                  /*{
-                  type: 'action',
-                  text: 'Rename',
-                  icon: 'edit',
-                  action: () => (isRenamingNotebook = notebook.id)
-                },*/
-                  {
-                    type: 'action',
-                    text: 'Customize',
-                    icon: 'edit',
-                    action: () => (isCustomizingNotebook = notebook)
-                  },
-
-                  {
-                    type: 'action',
-                    kind: 'danger',
-                    text: 'Delete',
-                    icon: 'trash',
-                    action: () => handleDeleteNotebook(notebook)
-                  }
-                ]
-              })}
-            />
-          {/each}
-        </div>
+      <section class="contents-wrapper">
+        <NotebookContents />
       </section>
+    {:else if viewLocation === ViewLocation.Sidebar && hasMentions}
+      <div class="prompts-wrapper">
+        <PromptPills
+          promptItems={suggestedPrompts}
+          direction="vertical"
+          on:click={handleRunPrompt}
+        />
+      </div>
     {/if}
   </main>
 
-  <NotebookSidebar title="Surf" bind:open={resourcesPanelOpen} />
+  <!-- <NotebookSidebar title="Surf" bind:open={resourcesPanelOpen} /> -->
 </NotebookLayout>
 
 <style lang="scss">
@@ -189,7 +232,6 @@
       flex-shrink: 1;
       padding-inline: 0.5rem;
 
-      opacity: 1;
       transform: translateY(0px);
       transition:
         opacity 223ms ease-out,
@@ -264,5 +306,20 @@
     flex-wrap: wrap;
     //justify-content: space-between;
     justify-items: center;
+  }
+
+  .contents-wrapper {
+    padding-inline: 1.5rem;
+    margin-top: 1rem;
+    opacity: 0.5;
+    transition: opacity 223ms ease-out;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .prompts-wrapper {
+    padding-left: 1.25rem;
   }
 </style>

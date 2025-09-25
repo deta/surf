@@ -123,7 +123,7 @@
     {:else if $activeViewType === ViewType.Resource}
       <ResourceLoader resource={$activeViewTypeData?.id}>
         {#snippet children(resource: Resource)}
-          {#if [ResourceTypes.DOCUMENT_SPACE_NOTE, ResourceTypes.PDF].includes(resource.type)}
+          {#if resource && [ResourceTypes.DOCUMENT_SPACE_NOTE, ResourceTypes.PDF].includes(resource.type)}
             {#key $activeViewTypeData.id}
               <SaveState {view} />
             {/key}

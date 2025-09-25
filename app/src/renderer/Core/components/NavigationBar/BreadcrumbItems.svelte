@@ -3,8 +3,8 @@
   import { useNotebookManager } from '@deta/services/notebooks'
   import Breadcrumb from './Breadcrumb.svelte'
   import { truncate } from '@deta/utils'
-  import WebContentsView from '../WebContentsView.svelte'
   import { writable } from 'svelte/store'
+  import type { WebContentsView } from '@deta/services/views'
 
   let {
     view

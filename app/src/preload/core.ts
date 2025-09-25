@@ -532,21 +532,6 @@ const eventHandlers = {
     >
   },
 
-  onWebContentsViewContextManagerEvent: <T extends WebContentsViewManagerActionType>(
-    callback: (
-      event: WebContentsViewManagerActionPayloads[T]
-    ) => WebContentsViewManagerActionOutputs[T]
-  ) => {
-    return IPC_EVENTS_RENDERER.webContentsViewContextManagerAction.handle((payload) => {
-      console.log('webContentsViewContextManagerAction core preload', payload)
-      try {
-        return callback(payload)
-      } catch (error) {
-        return null
-      }
-    })
-  },
-
   onFetchMentions: (callback: (data: { query: string }) => void) => {
     return IPC_EVENTS_RENDERER.fetchMentions.handle((data) => {
       try {

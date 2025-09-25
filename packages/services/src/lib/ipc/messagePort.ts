@@ -17,21 +17,38 @@ import type { MessagePortCallbackClient, MessagePortCallbackPrimary } from '../m
  */
 export function setupMessagePortClient() {
   let port: MessagePort | undefined = undefined
+  let queue: any[] = []
+  let storedCallback: MessagePortCallbackClient | undefined = undefined
+
+  ipcRenderer.on('port', (event, payload) => {
+    try {
+      console.log('received messagePort', payload)
+      port = event.ports[0]
+
+      port.onmessage = (event) => {
+        console.log('received messagePort message', event)
+        if (storedCallback) {
+          storedCallback(event.data)
+        } else {
+          queue.push(event.data)
+        }
+      }
+    } catch (error) {
+      // noop
+    }
+  })
 
   const onMessage = (callback: MessagePortCallbackClient) => {
-    ipcRenderer.on('port', (event, payload) => {
-      try {
-        console.log('received messagePort', payload)
-        port = event.ports[0]
+    storedCallback = callback
 
-        port.onmessage = (event) => {
-          console.log('received messagePort message', event)
-          callback(event.data)
-        }
-      } catch (error) {
-        // noop
-      }
-    })
+    // flush queue
+    if (queue.length > 0) {
+      queue.forEach((item) => {
+        callback(item)
+      })
+
+      queue = []
+    }
   }
 
   const postMessage = (payload: any) => {

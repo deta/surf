@@ -2,11 +2,7 @@ import { writable, type Writable } from 'svelte/store'
 
 import { useLogScope, wait } from '@deta/utils'
 
-import {
-  PageChatUpdateContextItemType,
-  WebContentsViewContextManagerActionType,
-  type PageChatUpdateContextEventTrigger
-} from '@deta/types'
+import { PageChatUpdateContextItemType, type PageChatUpdateContextEventTrigger } from '@deta/types'
 
 import type { Resource, ResourceManager } from '../resources'
 import type { TabItem } from '../tabs'
@@ -31,6 +27,13 @@ import {
   TABS_MENTION,
   WIKIPEDIA_SEARCH_MENTION
 } from '../constants/chat'
+import { useMessagePortClient } from '../messagePort'
+import {
+  type GeneratePromptsPayload,
+  type WebContentsViewContextManagerActionOutputs,
+  type WebContentsViewContextManagerActionPayloads,
+  WebContentsViewContextManagerActionType
+} from '../messagePort/contextManagerEvents'
 
 export type AddContextItemOptions = {
   trigger?: PageChatUpdateContextEventTrigger
@@ -52,6 +55,7 @@ export class ContextManagerWCV {
   resourceManager: ResourceManager
   telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
+  messagePort = useMessagePortClient()
 
   constructor(key: string, ai: AIService, resourceManager: ResourceManager) {
     this.key = key
@@ -63,6 +67,18 @@ export class ContextManagerWCV {
     this.cachedItemPrompts = new Map()
     this.generatingPrompts = writable(false)
     this.generatedPrompts = writable([])
+  }
+
+  sendContextManagerActionEvent<T extends WebContentsViewContextManagerActionType>(
+    type: T,
+    ...args: WebContentsViewContextManagerActionPayloads[T] extends undefined
+      ? []
+      : [payload: WebContentsViewContextManagerActionPayloads[T]]
+  ) {
+    return this.messagePort.contextManagerAction.request({
+      type,
+      payload: args[0] || {}
+    } as any) as Promise<WebContentsViewContextManagerActionOutputs[T]>
   }
 
   getUpdateEventItemType(item: ContextItem): PageChatUpdateContextItemType | undefined {
@@ -96,10 +112,9 @@ export class ContextManagerWCV {
   async removeContextItem(id: string, trigger?: PageChatUpdateContextEventTrigger) {
     this.log.debug('Removing context item', id)
 
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM,
-      { id: id }
+      { id }
     )
 
     this.log.debug('Removed context item', result)
@@ -111,8 +126,7 @@ export class ContextManagerWCV {
   }
 
   async addResource(resourceId: string, opts?: AddContextItemOptions) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT,
       { id: resourceId }
     )
@@ -121,8 +135,7 @@ export class ContextManagerWCV {
   }
 
   async addNotebook(notebookId: string, opts?: AddContextItemOptions) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT,
       { id: notebookId }
     )
@@ -131,9 +144,8 @@ export class ContextManagerWCV {
   }
 
   async addTab(tabId: string, opts?: AddContextItemOptions) {
-    this.log.debug('Adding tab context via webContentsViewContextManagerAction', tabId)
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    this.log.debug('Adding tab context', tabId)
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT,
       { id: tabId }
     )
@@ -142,10 +154,8 @@ export class ContextManagerWCV {
   }
 
   async addTabs(trigger?: PageChatUpdateContextEventTrigger) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
-      WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT,
-      undefined
+    const result = await this.sendContextManagerActionEvent(
+      WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT
     )
 
     this.log.debug('Added tabs context', result)
@@ -157,10 +167,8 @@ export class ContextManagerWCV {
   }
 
   async addActiveTab(opts?: AddContextItemOptions) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
-      WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT,
-      undefined
+    const result = await this.sendContextManagerActionEvent(
+      WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT
     )
 
     this.log.debug('Added active tab context', result)
@@ -213,8 +221,7 @@ export class ContextManagerWCV {
   }
 
   async addWebSearchContext(resultLinks: SearchResultLink[], opts?: AddContextItemOptions) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT,
       { results: resultLinks }
     )
@@ -292,8 +299,7 @@ export class ContextManagerWCV {
   }
 
   async clear(trigger?: PageChatUpdateContextEventTrigger) {
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT
     )
 
@@ -312,8 +318,7 @@ export class ContextManagerWCV {
 
     await wait(500)
 
-    // @ts-ignore
-    const result = await window.api.webContentsViewContextManagerAction(
+    const result = await this.sendContextManagerActionEvent(
       WebContentsViewContextManagerActionType.GET_ITEMS,
       { prompt }
     )
@@ -330,53 +335,37 @@ export class ContextManagerWCV {
     return []
   }
 
-  async getPrompts(forceGenerate = false) {
-    // try {
-    //   this.generatingPrompts.set(true)
-    //   this.log.debug('Getting chat prompts', this.itemsValue)
-    //   const model = this.ai.selectedModelValue
-    //   const supportsJsonFormat = model.supports_json_format
-    //   if (!supportsJsonFormat) {
-    //     this.log.debug('Model does not support JSON format', model)
-    //     this.generatedPrompts.set([])
-    //     return []
-    //   }
-    //   const activeTabItem = get(this.activeTabContextItem)
-    //   if (!activeTabItem) {
-    //     this.log.debug('No active tab item found, returning empty prompts')
-    //     this.generatedPrompts.set([])
-    //     return []
-    //   }
-    //   const item = activeTabItem.itemValue
-    //   this.log.debug('Getting prompts for active tab item', item)
-    //   if (!item) {
-    //     this.log.debug('No item found for active tab, returning empty prompts')
-    //     this.generatedPrompts.set([])
-    //     return []
-    //   }
-    //   const cacheKey = item instanceof ContextItemResource ? item.data.id : item.id
-    //   const storedPrompts = this.cachedItemPrompts.get(cacheKey)
-    //   this.log.debug('Cached prompts for item', cacheKey, storedPrompts)
-    //   if (storedPrompts && storedPrompts.length > 0 && !forceGenerate) {
-    //     this.generatedPrompts.set(storedPrompts)
-    //     return storedPrompts
-    //   }
-    //   const generatedPrompts = await item.generatePrompts()
-    //   this.log.debug('Got chat prompts for contextItem', item, generatedPrompts)
-    //   this.cachedItemPrompts.set(cacheKey, generatedPrompts)
-    //   this.generatedPrompts.set(generatedPrompts)
-    //   return generatedPrompts
-    // } catch (err) {
-    //   this.log.error('Error getting prompts for item', err)
-    //   return []
-    // } finally {
-    //   this.generatingPrompts.set(false)
-    // }
+  async getPrompts(payload?: GeneratePromptsPayload) {
+    try {
+      this.generatingPrompts.set(true)
+      this.log.debug('Getting prompts')
+
+      const prompts = await this.sendContextManagerActionEvent(
+        WebContentsViewContextManagerActionType.GENERATE_PROMPTS,
+        payload
+      )
+
+      this.log.debug('Got prompts from main process', prompts)
+
+      this.generatedPrompts.set(prompts || [])
+
+      return prompts || []
+    } catch (err) {
+      this.log.error('Error getting prompts for context manager', err)
+      this.generatedPrompts.set([])
+      return []
+    } finally {
+      this.generatingPrompts.set(false)
+    }
   }
 
   resetPrompts() {
-    // this.log.debug('Resetting prompts for context manager', this.key)
-    // this.generatedPrompts.set([])
-    // this.generatingPrompts.set(false)
+    this.log.debug('Resetting prompts for context manager', this.key)
+    this.generatedPrompts.set([])
+    this.generatingPrompts.set(false)
+  }
+
+  onDestroy() {
+    this.log.debug('Destroying context manager')
   }
 }

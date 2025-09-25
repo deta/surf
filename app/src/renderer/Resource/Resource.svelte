@@ -27,9 +27,10 @@
   const teletypeService = createTeletypeService()
 
   let resourcesPanelOpen = $state(
+    false /*
     localStorage.getItem('notebook_resourcePanelOpen')
       ? localStorage.getItem('notebook_resourcePanelOpen') === 'true'
-      : false
+      : false*/
   )
 
   let title = $derived(
@@ -50,17 +51,27 @@
   })
 
   onMount(() => {
-    const unsub = messagePort.navigateURL.handle(({ url }) => {
-      try {
-        console.log('Received navigateURL message:', url)
-        router.goto(url)
-      } catch (error) {
-        console.error('Error navigating to URL:', error)
-      }
-    })
+    const unsubs = [
+      messagePort.navigateURL.handle(({ url }) => {
+        try {
+          console.log('Received navigateURL message:', url)
+          router.goto(url)
+        } catch (error) {
+          console.error('Error navigating to URL:', error)
+        }
+      }),
+
+      messagePort.viewMounted.handle(({ location }) => {
+        try {
+          console.log('Received viewMounted message:', location)
+        } catch (error) {
+          console.error('Error handling viewMounted message:', error)
+        }
+      })
+    ]
 
     return () => {
-      unsub()
+      unsubs.forEach((unsub) => unsub())
     }
   })
 

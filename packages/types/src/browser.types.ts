@@ -146,3 +146,8 @@ export type ViewTypeData = {
    */
   raw?: boolean
 }
+
+export enum ViewLocation {
+  Tab = 'tab',
+  Sidebar = 'sidebar'
+}

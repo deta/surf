@@ -12,7 +12,7 @@
   import { isInternalRendererURL, useDebounce } from '@deta/utils'
   import { useResourceManager } from '@deta/services/resources'
   import { writable } from 'svelte/store'
-  import { NotebookDefaults } from '@deta/types'
+  import { NotebookDefaults, ViewLocation } from '@deta/types'
 
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
@@ -152,7 +152,11 @@
           </NavigationBar>
           <div style="position:relative;height:100%;">
             {#key viewManager.activeSidebarView.id}
-              <WebContentsView view={viewManager.activeSidebarView} active />
+              <WebContentsView
+                view={viewManager.activeSidebarView}
+                location={ViewLocation.Sidebar}
+                active
+              />
             {/key}
           </div>
         {/if}

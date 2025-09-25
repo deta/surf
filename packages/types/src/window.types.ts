@@ -4,6 +4,7 @@ import type {
   Result,
   WebContentsWillNavigateEventParams
 } from 'electron'
+import type { ChatPrompt } from './ai.types'
 
 export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'advanced' | 'extensions'
 
@@ -299,57 +300,3 @@ export type WebContentsViewEventListenerTyped<T extends WebContentsViewEventType
 export type WebContentsViewEventListener = {
   [K in WebContentsViewEventType]: WebContentsViewEventListenerTyped<K>
 }[WebContentsViewEventType]
-
-// --- WebContentsViewContextManager Actions ---
-export enum WebContentsViewContextManagerActionType {
-  GET_ITEMS = 'get-items',
-  ADD_TABS_CONTEXT = 'add-tabs-context',
-  ADD_WEB_SEARCH_CONTEXT = 'add-web-search-context',
-  ADD_TAB_CONTEXT = 'add-tab-context',
-  ADD_ACTIVE_TAB_CONTEXT = 'add-active-tab-context',
-  ADD_RESOURCE_CONTEXT = 'add-resource-context',
-  ADD_NOTEBOOK_CONTEXT = 'add-notebook-context',
-  REMOVE_CONTEXT_ITEM = 'remove-context-item',
-  CLEAR_ALL_CONTEXT = 'clear-all-context'
-}
-
-export interface WebContentsViewContextManagerActionPayloads {
-  [WebContentsViewContextManagerActionType.GET_ITEMS]: { prompt: string }
-  [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: undefined
-  [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: { results: SearchResultLink[] }
-  [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: { id: string }
-  [WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT]: undefined
-  [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: { id: string }
-  [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: { id: string }
-  [WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM]: { id: string }
-  [WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT]: undefined
-}
-
-export interface WebContentsViewContextManagerActionOutputs {
-  [WebContentsViewContextManagerActionType.GET_ITEMS]: {
-    resources: string[]
-    inlineImages: string[]
-  } | null
-  [WebContentsViewContextManagerActionType.ADD_TABS_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.ADD_WEB_SEARCH_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.ADD_TAB_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.ADD_ACTIVE_TAB_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.ADD_RESOURCE_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.ADD_NOTEBOOK_CONTEXT]: null
-  [WebContentsViewContextManagerActionType.REMOVE_CONTEXT_ITEM]: null
-  [WebContentsViewContextManagerActionType.CLEAR_ALL_CONTEXT]: null
-}
-
-export type WebContentsViewContextManagerAction = {
-  [K in WebContentsViewContextManagerActionType]: WebContentsViewActionTyped<
-    K,
-    WebContentsViewContextManagerActionPayloads
-  >
-}[WebContentsViewContextManagerActionType]
-
-export type WebContentsViewContextManagerActionEvent = {
-  [K in WebContentsViewContextManagerActionType]: {
-    payload: WebContentsViewActionTyped<K, WebContentsViewContextManagerActionPayloads>
-    output: WebContentsViewContextManagerActionOutputs[K]
-  }
-}[WebContentsViewContextManagerActionType]

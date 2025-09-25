@@ -47,7 +47,7 @@ export class TeletypeService {
   private readonly resourceManager = useResourceManager()
 
   private unsubs: Fn[] = []
-  teletype: TeletypeSystem
+  teletype!: TeletypeSystem
 
   // Public reactive stores
   public readonly query: Writable<string>
@@ -55,9 +55,11 @@ export class TeletypeService {
   public readonly localActions: Writable<TeletypeAction[]>
   public readonly remoteActions: Writable<TeletypeAction[]>
   public readonly tools: Writable<ToolsMap>
+  public readonly filterOutSection: Writable<string | null>
 
   public readonly isLoading: Readable<boolean>
   public readonly actions: Readable<TeletypeAction[]>
+  public readonly hasActiveTabMention: Readable<boolean>
 
   private debouncedLocalSearch: (query: string) => void
   private debouncedRemoteSearch: (query: string) => void
@@ -85,6 +87,7 @@ export class TeletypeService {
     this.mentions = writable<MentionItem[]>([])
     this.localActions = writable<TeletypeAction[]>([])
     this.remoteActions = writable<TeletypeAction[]>([])
+    this.filterOutSection = writable(null)
 
     this.tools = writable(new Map())
 
@@ -96,6 +99,9 @@ export class TeletypeService {
     // Derived stores
     this.isLoading = derived(this.searchState, ($state) => $state.isLoading)
     this.actions = derived(this.searchState, ($state) => $state.actions)
+    this.hasActiveTabMention = derived(this.mentions, ($mentions) =>
+      $mentions.some((m) => m.type === MentionItemType.ACTIVE_TAB)
+    )
 
     // Setup debounced searches with different timings
     this.debouncedLocalSearch = useDebounce(
@@ -227,6 +233,14 @@ export class TeletypeService {
     this.mentions.set(mentions)
   }
 
+  setFilterOutSection(section: string | null): void {
+    this.filterOutSection.set(section)
+
+    // Re-run the last search to update results based on new filter
+    this.debouncedLocalSearch(this.queryValue)
+    this.debouncedRemoteSearch(this.queryValue)
+  }
+
   /**
    * Clear current search and actions
    */
@@ -240,15 +254,19 @@ export class TeletypeService {
     })
   }
 
-  async ask(query: string, mentions: MentionItem[]): Promise<void> {
+  async ask(query: string, mentions?: MentionItem[], queryLabel?: string): Promise<void> {
     this.log.debug('Asking question:', query, mentions)
+
+    if (!mentions) {
+      mentions = this.mentionsValue
+    }
 
     const tools = {
       websearch: this.isToolActive('websearch'),
       surflet: this.isToolActive('surflet')
     }
 
-    await this.messagePort.teletypeAsk.send({ query, mentions, tools })
+    await this.messagePort.teletypeAsk.send({ query, queryLabel, mentions, tools })
     this.clear()
   }
 
@@ -411,6 +429,10 @@ export class TeletypeService {
    * Update results and state
    */
   private updateResults(actions: TeletypeAction[], isComplete: boolean): void {
+    if (get(this.filterOutSection)) {
+      actions = actions.filter((action) => action.section !== get(this.filterOutSection))
+    }
+
     this.searchState.update((state) => ({
       ...state,
       actions,

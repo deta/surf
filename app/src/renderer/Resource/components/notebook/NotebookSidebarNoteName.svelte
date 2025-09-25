@@ -11,8 +11,16 @@
   let {
     resource,
     sourceNotebookId,
-    onclick
-  }: { resource: Resource; sourceNotebookId?: string; onclick?: Fn } = $props()
+    onclick,
+    fallbackIcon = 'add',
+    fallbackText = 'Create new Note'
+  }: {
+    resource: Resource
+    sourceNotebookId?: string
+    onclick?: Fn
+    fallbackIcon?: string
+    fallbackText?: string
+  } = $props()
 
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
@@ -50,7 +58,10 @@
 
             notebookManager.deleteResourcesFromSurf(resourceId, true)
           },
-          onRemove: !sourceNotebookId ? undefined : () => handleRemoveFromNotebook(sourceNotebookId)
+          onRemove:
+            !sourceNotebookId || sourceNotebookId === 'drafts'
+              ? undefined
+              : () => handleRemoveFromNotebook(sourceNotebookId)
         })
       : []
   )
@@ -204,14 +215,14 @@
     </div>
     <div class="details">
       <span>{resource.metadata.name}</span>
-      <span class="small"><small>{formatFriendlyDate(new Date(resource.updatedAt))}</small></span>
+      <span class="small">{formatFriendlyDate(new Date(resource.updatedAt))}</span>
     </div>
   {:else}
     <div class="note empty">
-      <Icon name="add" size="1em" />
+      <Icon name={fallbackIcon} size="1em" />
     </div>
     <div class="details">
-      <span style="color: rgba(0,0,0,0.75);">Create new Note</span>
+      <span style="color: rgba(0,0,0,0.75);">{fallbackText}</span>
     </div>
   {/if}
 </li>
@@ -232,6 +243,7 @@
 
     .details {
       //padding-block: 0.2rem;
+      font-size: 0.9em;
     }
 
     span {
@@ -258,7 +270,8 @@
 
       &.small {
         opacity: 0.25;
-        margin-top: 0.1rem;
+        margin-top: 0.2rem;
+        font-size: 0.95em;
       }
     }
 

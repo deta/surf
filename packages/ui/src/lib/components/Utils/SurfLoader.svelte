@@ -2,15 +2,15 @@
   import { onMount, type Snippet } from 'svelte'
   import { type Resource } from '@deta/services/resources'
   import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
-  import { ResourceTagsBuiltInKeys, ResourceTypes, type Option, type SFFSResourceTag, type SFFSSearchParameters, type SFFSSearchResult } from '@deta/types'
-  import { type ResourceSearchResult, useResourceManager, ResourceManagerEvents} from '@deta/services/resources'
-  import { SearchResourceTags, useDebounce, useThrottle } from '@deta/utils'
+  import { ResourceTagsBuiltInKeys, type Option, type SFFSResourceTag, type SFFSSearchParameters } from '@deta/types'
+  import { type ResourceSearchResult, useResourceManager} from '@deta/services/resources'
+  import { SearchResourceTags, useCancelableDebounce, useThrottle } from '@deta/utils'
   import { NotebookManagerEvents } from '@deta/services/notebooks'
 
   interface Search {
     query: string
     tags?: SFFSResourceTag[],
-    parameters?: Omit<SFFSSearchParameters, 'spaceId'>
+    parameters?: SFFSSearchParameters
   }
 
   let {
@@ -59,60 +59,85 @@
   // NOTE: This makes them reactive, so that in the children snippets, it doesn't
   // re-render the entire snippet but only the items further down the chain if the
   // notebook or the search results change!
-  let resources: Resource[] = $state()
-  let searchResults: Option<ResourceSearchResult> = $state()
+  let resources: Resource[] = $state([])
+  let searchResults: Option<ResourceSearchResult> = $state([])
   let searching: boolean = $state(false)
+  let isLoading: boolean = $state(false)
 
-  const runQuery = useDebounce((search: Search) => {
-    searching = true
-    resourceManager.searchResources(search.query, [
-        ...SearchResourceTags.NonHiddenDefaultTags({
-          excludeAnnotations: true
-        }),
-        SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
-        ...(search.tags ?? [])
-      ], {
-        ...search.parameters,
-        spaceId: undefined
-      }).then(results => {
-        searchResults = results.resources
-          .sort((a, b) => new Date(b.resource.updatedAt).getTime() - new Date(a.resource.updatedAt).getTime())
-          .map(e => e.resource)
-          .filter((e) => {
-            if (excludeWithinSpaces && resources !== undefined) {
-              return resources.find(item => item.id === e.id)
-            }
-            return e
-          })
-        searching = false
-      })
+  const { execute: runQuery, cancel: cancelQuery } = useCancelableDebounce((search: Search) => {
+    try {
+      searching = true
+      isLoading = true
+      resourceManager.searchResources(search.query, [
+          ...SearchResourceTags.NonHiddenDefaultTags({
+            excludeAnnotations: true
+          }),
+          SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
+          ...(search.tags ?? [])
+        ], {
+          ...search.parameters,
+          spaceId: undefined
+        }).then(results => {
+          searchResults = results.resources
+            .sort((a, b) => new Date(b.resource.updatedAt).getTime() - new Date(a.resource.updatedAt).getTime())
+            .map(e => e.resource)
+            .filter((e) => {
+              if (excludeWithinSpaces && resources !== undefined) {
+                return resources.find(item => item.id === e.id)
+              }
+              return e
+            })
+          searching = false
+        })
+    } catch(e) {
+      console.error(e)
+    }finally {
+      searching = false
+      isLoading = false
+    }
   }, 250)
   
   $effect(() => {
     if (search && search.query) {
       runQuery(search)
     } else {
+      cancelQuery()
       searchResults = undefined
       searching = false
     }
   })
 
-  // TODO: Use everything contents for reactivity?
-  const load = useThrottle(() => {
-    if (search && search.query) runQuery(search)
-    else {
-      resourceManager.listResourcesByTags([
+  const load = useThrottle(async () => {
+    try {
+      isLoading = true
+
+      const result = await resourceManager.listResourcesByTags([
         ...SearchResourceTags.NonHiddenDefaultTags({
           excludeAnnotations: true
         }),
         SearchResourceTags.NotExists(ResourceTagsBuiltInKeys.EMPTY_RESOURCE),
         ...(tags ?? [])
-      ], { includeAnnotations: false, excludeWithinSpaces }).then(result => {
-        resources = result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      })
+      ], { includeAnnotations: false, excludeWithinSpaces })
+
+      resources = result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    } catch (error) {
+      console.error('Error loading notebook', error)
+    } finally {
+      isLoading = false
     }
   }, 250)
-  load()
+
+  const init = async () => {
+    isLoading = true
+
+    await load()
+
+    if (search && search.query) {
+      runQuery(search)
+    }
+  }
+  
+  init()
 
   onMount(() => {
     const unsubs =  [
@@ -143,9 +168,9 @@
   {@render error?.(error)}
 {/await}
 -->
-{#if resources}
-  {@render children?.([resources, searchResults, searching])}
-{:else}
+{#if isLoading}
   {@render loading?.()}
+{:else}
+  {@render children?.([resources, searchResults, searching])}
 {/if}
 

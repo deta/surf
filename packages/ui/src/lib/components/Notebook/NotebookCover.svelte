@@ -221,7 +221,7 @@
           {/each}
         </div>
       </div>
-    {:else}
+    {:else if !readonly}
       <div
         class="scribble-container absolute w-full h-full"
         use:signature={{ ondraw, oncomplete }}

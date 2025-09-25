@@ -1376,7 +1376,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
   async unmarkResourceAsEmpty(resourceId: string) {
     try {
-      this.log.trace('Unmarking resource as empty', resourceId)
+      this.log.debug('Unmarking resource as empty', resourceId)
       await this.deleteResourceTag(resourceId, ResourceTagsBuiltInKeys.EMPTY_RESOURCE)
     } catch (error) {
       this.log.error('failed to unmark resource as empty', resourceId, error)

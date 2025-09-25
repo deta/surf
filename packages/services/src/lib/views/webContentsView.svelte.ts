@@ -30,7 +30,8 @@ import {
   WEB_CONTENTS_ERRORS,
   type WebContentsErrorParsed,
   type ResourceDataPDF,
-  type Download
+  type Download,
+  ViewLocation
 } from '@deta/types'
 import {
   useLogScope,
@@ -135,6 +136,8 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     if (this.view.typeValue === ViewType.Page && url !== 'about:blank') {
       this.runAppDetection()
     }
+
+    this.notifyAboutMount()
   }
 
   private handleDOMReady() {
@@ -731,6 +734,20 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   async triggerRefreshNoteContent() {
     this.log.debug('Triggering refresh note content')
     return this.manager.messagePort.noteRefreshContent.send(this.view.id)
+  }
+
+  async notifyAboutMount(location?: ViewLocation) {
+    const uiLocation = location || this.view.uiLocationValue
+    if (!uiLocation) return
+
+    if (
+      ![ViewType.Resource, ViewType.Notebook, ViewType.NotebookHome].includes(this.view.typeValue)
+    ) {
+      return
+    }
+
+    this.log.debug('Notifying about mount', uiLocation)
+    this.manager.messagePort.viewMounted.send(this.id, { location: uiLocation })
   }
 
   getBoundingClientRect = (): DOMRect | null => {
@@ -1330,6 +1347,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   title: Writable<string>
   faviconURL: Writable<string>
   permanentlyActive: Writable<boolean>
+  uiLocation: Writable<ViewLocation | null>
 
   historyStackIds: Writable<string[]>
   historyStackIndex: Writable<number>
@@ -1379,6 +1397,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     this.backgroundColor = writable(null)
     this.faviconURL = writable(data.faviconUrl || '')
     this.permanentlyActive = writable(data.permanentlyActive || false)
+    this.uiLocation = writable<ViewLocation | null>(null)
 
     this.historyStackIds = writable([])
     this.historyStackIndex = writable(-1)
@@ -1517,6 +1536,9 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
   get dataValue() {
     return get(this.data)
   }
+  get uiLocationValue() {
+    return get(this.uiLocation)
+  }
 
   setExtractedResourceId(resourceId: string | null, createdByUser?: boolean) {
     this.extractedResourceId.set(resourceId)
@@ -1552,7 +1574,11 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
    * 3. Sets up event handlers and IPC communication
    * 4. Activates the view if specified
    */
-  async mount(domElement: HTMLElement, opts: Partial<WebContentsViewCreateOptions> = {}) {
+  async mount(
+    domElement: HTMLElement,
+    opts: Partial<WebContentsViewCreateOptions> = {},
+    location: ViewLocation = ViewLocation.Tab
+  ) {
     this.log.debug('Mounting view with options:', opts, domElement)
 
     const options = {
@@ -1597,10 +1623,14 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       throw new Error('Failed to create webContents')
     }
 
+    this.uiLocation.set(location)
+
     const webContents = new WebContents(this, webContentsId, options, domElement)
     this.webContents = webContents
 
+    this.webContents.notifyAboutMount(location)
     this.emit(WebContentsViewEmitterNames.MOUNTED, webContents)
+
     this.log.debug('View rendered successfully:', this.id, webContents)
 
     this.manager.postMountedWebContents(this.id, webContents, options.activate)

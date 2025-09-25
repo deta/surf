@@ -283,10 +283,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   ),
   webContentsViewAction:
     ipcService.addEventWithReturn<WebContentsViewActionEvent>('webcontentsview-action'),
-  webContentsViewContextManagerAction:
-    ipcService.addEventWithReturn<WebContentsViewContextManagerActionEvent>(
-      'webcontentsview-context-manager-action'
-    ),
   fetchMentions: ipcService.addEventWithReturn<MentionSearch>('fetch-mentions')
 })
 

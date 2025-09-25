@@ -63,7 +63,11 @@ export class ResourcesProvider implements ActionProvider {
           'Undefined',
         30
       ),
-      icon: url ? `favicon;;${url}` : `file;;${getFileKind(resource.type)}`,
+      icon: url
+        ? `favicon;;${url}`
+        : resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
+          ? 'note'
+          : `file;;${getFileKind(resource.type)}`,
       section: resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ? 'Your Notes' : 'Saved Sources',
       priority,
       keywords,

@@ -6,8 +6,15 @@ import type {
   OpenNotebookOptions,
   OpenResourceOptions,
   OpenTarget,
-  TelemetryEventTypes
+  TelemetryEventTypes,
+  ViewLocation
 } from '@deta/types'
+
+import type {
+  WebContentsViewContextManagerActionOutputs,
+  WebContentsViewContextManagerActionPayloads,
+  WebContentsViewContextManagerActionType
+} from './contextManagerEvents'
 
 export interface TeletypeActionSerialized {
   id: string
@@ -22,6 +29,7 @@ export interface TeletypeActionSerialized {
 
 export type AIQueryPayload = {
   query: string
+  queryLabel?: string
   mentions: MentionItem[]
   tools?: {
     websearch?: boolean
@@ -129,6 +137,29 @@ export interface MPExternStateNotebooksChanged extends MessagePortEvent {
   payload: { notebookIds: string[] }
 }
 
+export interface MPViewMounted extends MessagePortEvent {
+  payload: {
+    location: ViewLocation
+  }
+}
+
+export interface MPActiveTabChanged extends MessagePortEvent {
+  payload: {
+    tabId: string
+    url: string
+  }
+}
+
+export type MPContextManagerAction = {
+  [K in WebContentsViewContextManagerActionType]: {
+    payload: {
+      type: K
+      payload: WebContentsViewContextManagerActionPayloads[K]
+    }
+    output: WebContentsViewContextManagerActionOutputs[K]
+  }
+}[WebContentsViewContextManagerActionType]
+
 type MessagePortEventRegistry = {
   extern_state_resourceCreated: MPExternStateResourceCreated
   extern_state_resourceDeleted: MPExternStateResourceDeleted
@@ -151,6 +182,9 @@ type MessagePortEventRegistry = {
   openResource: MPOpenResource
   openNotebook: MPOpenNotebook
   citationClick: MPCitationClick
+  activeTabChanged: MPActiveTabChanged
+  viewMounted: MPViewMounted
+  contextManagerAction: MPContextManagerAction
 }
 
 const createMessagePortEvents = <IsPrimary extends boolean>(
@@ -199,7 +233,11 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     changePageQuery: messagePortService.addEvent<MPChangePageQuery>('change-page-query'),
     openResource: messagePortService.addEvent<MPOpenResource>('open-resource'),
     openNotebook: messagePortService.addEvent<MPOpenNotebook>('open-notebook'),
-    citationClick: messagePortService.addEvent<MPCitationClick>('citation-click')
+    citationClick: messagePortService.addEvent<MPCitationClick>('citation-click'),
+    activeTabChanged: messagePortService.addEvent<MPActiveTabChanged>('active-tab-changed'),
+    viewMounted: messagePortService.addEvent<MPViewMounted>('view-mounted'),
+    contextManagerAction:
+      messagePortService.addEventWithReturn<MPContextManagerAction>('context-manager-action')
   })
 }
 
