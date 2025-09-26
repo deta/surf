@@ -119,6 +119,7 @@
 
       p {
         font-size: 1.1rem;
+        opacity: 0.6;
         color: var(--color-text-muted);
       }
     }

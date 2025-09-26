@@ -216,16 +216,24 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--color-background-light);
-    border: 1px solid var(--color-border);
-    border-radius: 1rem;
+    background: radial-gradient(
+      290.88% 100% at 50% 0%,
+      rgba(237, 246, 255, 0.96) 0%,
+      rgba(246, 251, 255, 0.93) 100%
+    );
+    border: 0.5px solid rgba(255, 255, 255, 0.8);
+    border-radius: 11px;
     padding: 1rem 1.25rem;
-    transition: all 0.2s ease;
-
-    &:hover {
-      border-color: var(--color-border-dark);
-      background-color: var(--color-background);
-    }
+    box-shadow:
+      0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
+      0 1px 1px 0 #fff inset,
+      0 3px 3px 0 rgba(62, 71, 80, 0.02),
+      0 1px 2px 0 rgba(62, 71, 80, 0.02),
+      0 1px 1px 0 rgba(0, 0, 0, 0.05),
+      0 0 1px 0 rgba(0, 0, 0, 0.09);
+    transition:
+      background-color 90ms ease-out,
+      box-shadow 90ms ease-out;
 
     .extension-info {
       flex: 1;
