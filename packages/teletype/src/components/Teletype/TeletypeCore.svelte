@@ -549,8 +549,8 @@
             <Editor
               bind:this={editorComponent}
               bind:content={$inputValue}
-              placeholder={$placeholderText}
-              placeholderNewLine={$placeholderText}
+              {placeholder}
+              placeholderNewLine={placeholder}
               submitOnEnter={true}
               autofocus={true}
               parseMentions={true}
