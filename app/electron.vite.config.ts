@@ -65,7 +65,6 @@ const customObfuscator = (options?: Partial<ObfuscatorOptions>) => {
       console.warn(`⚠️Obfuscation failed for ${chunk.fileName}, skipping...`)
       console.warn(`📝 Error: ${error}`)
       console.warn(`🔄 Returning original code unchanged`)
-
       return {
         code: code,
         map: null

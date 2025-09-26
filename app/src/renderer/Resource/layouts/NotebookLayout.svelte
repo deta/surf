@@ -1,6 +1,5 @@
 <div class="notebook">
   <div class="bg"></div>
-
   <slot></slot>
 </div>
 

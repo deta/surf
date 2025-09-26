@@ -14,6 +14,7 @@
   } from '@deta/types'
   import SettingsOption from './components/SettingsOption.svelte'
   import DefaultSearchEnginePicker from './components/DefaultSearchEnginePicker.svelte'
+  import TeletypeDefaultActionPicker from './components/TeletypeDefaultActionPicker.svelte'
   import AppStylePicker from './components/AppStylePicker.svelte'
   import ModelSettings, { type ModelUpdate } from './components/ModelSettings.svelte'
   import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
@@ -381,6 +382,13 @@
           <div class="search-wrapper">
             <DefaultSearchEnginePicker
               bind:value={userConfigSettings.search_engine}
+              on:update={() => handleSettingsUpdate()}
+            />
+          </div>
+
+          <div class="teletype-wrapper">
+            <TeletypeDefaultActionPicker
+              bind:value={userConfigSettings.teletype_default_action}
               on:update={() => handleSettingsUpdate()}
             />
           </div>
@@ -776,7 +784,8 @@
   }
 
   .dev-wrapper,
-  .search-wrapper {
+  .search-wrapper,
+  .teletype-wrapper {
     width: 100%;
     display: flex;
     align-items: center;

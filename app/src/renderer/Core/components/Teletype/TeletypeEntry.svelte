@@ -18,6 +18,7 @@
   let teletypeProvider: TeletypeProvider
 
   let actionsArray = $state([])
+  let preferredActionIndex = $state<number | null>(null)
 
   const handleTeletypeInput = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     log.debug('Teletype input received:', event.detail)
@@ -79,11 +80,20 @@
   })
 
   onMount(() => {
-    return teletypeService.actions.subscribe((actions) => {
+    const unsubActions = teletypeService.actions.subscribe((actions) => {
       log.debug('Received actions update:', actions)
       actionsArray = actions || []
-      // teletype?.setActions(actionsArray)
     })
+
+    const unsubPreferredIndex = teletypeService.preferredActionIndex.subscribe((index) => {
+      log.debug('Received preferred action index update:', index)
+      preferredActionIndex = index
+    })
+
+    return () => {
+      unsubActions()
+      unsubPreferredIndex()
+    }
   })
 </script>
 
@@ -100,6 +110,7 @@
     }}
   >
     <Teletype
+      {preferredActionIndex}
       on:input={handleTeletypeInput}
       on:ask={handleAsk}
       on:create-note={handleCreateNote}
@@ -115,6 +126,8 @@
       </svelte:fragment>
     </Teletype>
   </TeletypeProvider>
+
+  <!-- <IntentDebug inputText={currentQuery} /> -->
 {/if}
 
 <style lang="scss">

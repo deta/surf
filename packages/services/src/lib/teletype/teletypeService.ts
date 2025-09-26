@@ -1,5 +1,16 @@
 import { writable, derived, get, type Writable, type Readable } from 'svelte/store'
-import { isDev, useLogScope, useThrottle } from '@deta/utils'
+import {
+  getFileKind,
+  isDev,
+  prependProtocol,
+  truncate,
+  useDebounce,
+  useLogScope,
+  useThrottle
+} from '@deta/utils'
+import { decideIntent } from '../ai/intentClassifier'
+import type { ClassificationResultWithRoute } from '../ai/intentClassifier.types'
+import { useConfig, type ConfigService } from '../config'
 import type {
   ActionProvider,
   TeletypeAction,
@@ -37,6 +48,7 @@ export class TeletypeService {
   private readonly log = useLogScope('TeletypeService')
   private messagePort = useMessagePortClient()
   private readonly resourceManager = useResourceManager()
+  private readonly configService: ConfigService
 
   private unsubs: Fn[] = []
   teletype!: TeletypeSystem
@@ -48,6 +60,8 @@ export class TeletypeService {
   public readonly remoteActions: Writable<TeletypeAction[]>
   public readonly tools: Writable<ToolsMap>
   public readonly filterOutSection: Writable<string | null>
+  public readonly currentIntent: Writable<ClassificationResultWithRoute | null>
+  public readonly preferredActionIndex: Writable<number | null>
   public readonly hideNavigation: Writable<boolean>
 
   public readonly isLoading: Readable<boolean>
@@ -62,11 +76,13 @@ export class TeletypeService {
   constructor(options: TeletypeServiceOptions = {}) {
     this.options = {
       debounceMsLocal: 100,
-      debounceMsRemote: 350,
+      debounceMsRemote: 200,
       maxActionsPerProvider: 3,
       enabledProviders: [],
       ...options
     }
+
+    this.configService = useConfig()
 
     // Initialize stores
     this.searchState = writable<SearchState>({
@@ -81,6 +97,8 @@ export class TeletypeService {
     this.localActions = writable<TeletypeAction[]>([])
     this.remoteActions = writable<TeletypeAction[]>([])
     this.filterOutSection = writable(null)
+    this.currentIntent = writable(null)
+    this.preferredActionIndex = writable(null)
     this.hideNavigation = writable(false)
 
     this.tools = writable(new Map())
@@ -298,6 +316,8 @@ export class TeletypeService {
         actions: [],
         isLoading: false
       }))
+      this.currentIntent.set(null)
+      this.preferredActionIndex.set(null)
       return
     }
 
@@ -305,6 +325,11 @@ export class TeletypeService {
     const mentions = this.mentionsValue
 
     try {
+      // Get intent classification for the query
+      const intentResult = await decideIntent(query.trim())
+      this.currentIntent.set(intentResult)
+      this.log.debug(`Intent classification:`, intentResult)
+
       // Get local actions immediately
       const localActions = await this.getLocalActions(query, mentions)
       this.log.debug(`Got local actions:`, localActions)
@@ -315,6 +340,11 @@ export class TeletypeService {
       const allActions = [...localActions, ...this.remoteActionsValue].sort(
         (a, b) => (b.priority || 0) - (a.priority || 0)
       )
+
+      // Calculate preferred action index based on intent
+      const preferredIndex = this.calculatePreferredActionIndex(allActions, intentResult)
+      this.preferredActionIndex.set(preferredIndex)
+      this.log.debug(`Preferred action index:`, preferredIndex)
 
       // Update final results
       this.updateResults(allActions, false)
@@ -343,6 +373,12 @@ export class TeletypeService {
         (a, b) => (b.priority || 0) - (a.priority || 0)
       )
 
+      // Recalculate preferred action index with updated actions
+      const intentResult = get(this.currentIntent)
+      const preferredIndex = this.calculatePreferredActionIndex(allActions, intentResult)
+      this.preferredActionIndex.set(preferredIndex)
+      this.log.debug(`Updated preferred action index:`, preferredIndex)
+
       this.log.debug('Combined actions:', allActions)
 
       // If there is a action with providerId 'hostname-search', remove the action with providerId 'navigation' if the url matches
@@ -370,6 +406,71 @@ export class TeletypeService {
     } catch (error) {
       this.log.error('Remote search failed:', error)
     }
+  }
+
+  /**
+   * Calculate the preferred action index based on user setting and intent classification
+   */
+  private calculatePreferredActionIndex(
+    actions: TeletypeAction[],
+    intentResult: ClassificationResultWithRoute | null
+  ): number | null {
+    if (actions.length === 0) {
+      return null
+    }
+
+    // Get user preference for default action
+    const userSettings = this.configService?.settingsValue
+    const defaultAction = userSettings?.teletype_default_action || 'auto'
+
+    this.log.debug(`User preference for default action: ${defaultAction}`)
+
+    // Handle user preference overrides
+    if (defaultAction === 'always_ask') {
+      // Always prefer Ask actions
+      for (let i = 0; i < actions.length; i++) {
+        if (actions[i].providerId === 'ask') {
+          this.log.debug(`Always Ask mode: Found Ask action at index ${i}:`, actions[i].name)
+          return i
+        }
+      }
+    } else if (defaultAction === 'always_search') {
+      // Always prefer Search actions
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i]
+        if (
+          action.providerId === 'current-query' ||
+          action.providerId === 'search' ||
+          action.providerId === 'hostname-search'
+        ) {
+          this.log.debug(`Always Search mode: Found Search action at index ${i}:`, action.name)
+          return i
+        }
+      }
+    } else if (defaultAction === 'auto' && intentResult) {
+      // Use intelligent intent-based selection
+      for (let i = 0; i < actions.length; i++) {
+        const action = actions[i]
+
+        if (intentResult.intent === 'llm' && action.providerId === 'ask') {
+          this.log.debug(`Auto mode: Found LLM-matching action at index ${i}:`, action.name)
+          return i
+        }
+
+        if (
+          intentResult.intent === 'search' &&
+          (action.providerId === 'current-query' ||
+            action.providerId === 'search' ||
+            action.providerId === 'hostname-search')
+        ) {
+          this.log.debug(`Auto mode: Found search-matching action at index ${i}:`, action.name)
+          return i
+        }
+      }
+    }
+
+    this.log.debug('No matching action found, using default selection (index 0)')
+    return null // Fallback to default selection (index 0)
   }
 
   /**

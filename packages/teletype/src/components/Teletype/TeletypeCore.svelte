@@ -30,10 +30,12 @@
   let {
     tools,
     key,
+    preferredActionIndex = null,
     hideNavigation = false
   }: {
     tools: Snippet
     key?: string | undefined
+    preferredActionIndex?: number | null
     hideNavigation?: boolean
   } = $props()
 
@@ -665,6 +667,7 @@
             on:execute={handleActionClick}
             on:selected={handleSelectedAction}
             freeze={$showActionPanel}
+            {preferredActionIndex}
           />
         {/if}
         {#if !$filteredResult || !Array.isArray($filteredResult) || $filteredResult.length <= 0}

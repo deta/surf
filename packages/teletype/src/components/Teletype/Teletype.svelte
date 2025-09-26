@@ -5,7 +5,10 @@
   import Notifications from './Notifications.svelte'
   import { createEventDispatcher } from 'svelte'
 
-  let { hideNavigation = false }: { hideNavigation?: boolean } = $props()
+  let {
+    preferredActionIndex = null,
+    hideNavigation = false
+  }: { preferredActionIndex?: number | null; hideNavigation?: boolean } = $props()
 
   const teletype = useTeletype()
 
@@ -27,10 +30,10 @@
 
   function disableScroll() {
     scrollTop = window.pageYOffset || window.document.documentElement.scrollTop
-    ;((scrollLeft = window.pageXOffset || window.document.documentElement.scrollLeft),
+    ;(scrollLeft = window.pageXOffset || window.document.documentElement.scrollLeft),
       (window.onscroll = function () {
         window.scrollTo(scrollLeft, scrollTop)
-      }))
+      })
   }
 
   function enableScroll() {
@@ -57,6 +60,7 @@
 <div class="inner-wrapper">
   <Notifications {teletype} />
   <TeletypeCore
+    {preferredActionIndex}
     {hideNavigation}
     on:input
     on:actions-rendered

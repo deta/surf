@@ -48,6 +48,7 @@ export type UserSettings = {
   auto_toggle_pip: boolean
   enable_custom_prompts: boolean
   tab_bar_visible: boolean
+  teletype_default_action: 'auto' | 'always_ask' | 'always_search'
 
   /**
    * @deprecated use individual feature flags instead

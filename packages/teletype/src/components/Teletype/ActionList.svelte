@@ -14,11 +14,13 @@
   let {
     actions,
     freeze = false,
-    isOption = false
+    isOption = false,
+    preferredActionIndex = null
   }: {
     actions: Action[]
     freeze?: boolean
     isOption?: boolean
+    preferredActionIndex?: number | null
   } = $props()
 
   const log = useLogScope('ActionList')
@@ -84,12 +86,27 @@
   })
 
   let activeActionIndex = $state(0)
+  let userHasNavigated = $state(false)
   const activeAction = $derived(parsedActions[activeActionIndex])
 
   $effect(() => {
-    // Always select the first item when actions are populated
-    if (parsedActions.length > 0) {
-      activeActionIndex = 0
+    actions
+    userHasNavigated = false
+    log.debug('Actions changed, resetting userHasNavigated flag')
+  })
+
+  $effect(() => {
+    // Select preferred action index if available, otherwise select first item
+    // Only apply preferred index if user hasn't manually navigated
+    if (parsedActions.length > 0 && !userHasNavigated) {
+      const preferredIndex = preferredActionIndex
+      if (preferredIndex !== null && preferredIndex >= 0 && preferredIndex < parsedActions.length) {
+        log.debug(`Using preferred action index: ${preferredIndex}`)
+        activeActionIndex = preferredIndex
+      } else {
+        log.debug('Using default action index: 0')
+        activeActionIndex = 0
+      }
     }
   })
 
@@ -132,6 +149,8 @@
 
   export const resetActiveIndex = () => {
     activeActionIndex = 0
+    userHasNavigated = false
+    log.debug('Resetting active index and userHasNavigated flag')
   }
 
   const executeAction = async (action: Action, e: MouseEvent | KeyboardEvent) => {
@@ -164,6 +183,9 @@
 
     if ((e.key === 'ArrowUp' && !e.shiftKey) || (e.shiftKey && e.key === 'Tab')) {
       e.preventDefault()
+      userHasNavigated = true
+      log.debug('User navigated up, setting userHasNavigated = true')
+
       if (activeActionIndex === 0) {
         activeActionIndex = parsedActions.length - 1
         keepActiveActionVisible()
@@ -174,6 +196,9 @@
       keepActiveActionVisible()
     } else if ((e.key === 'ArrowDown' && !e.shiftKey) || e.key === 'Tab') {
       e.preventDefault()
+      userHasNavigated = true
+      log.debug('User navigated down, setting userHasNavigated = true')
+
       if (activeActionIndex >= parsedActions.length - 1) {
         activeActionIndex = 0
         keepActiveActionVisible()
@@ -284,7 +309,11 @@
             {action}
             {isOption}
             on:execute
-            on:selected={() => (activeActionIndex = getActionIndex(action.id))}
+            on:selected={() => {
+              activeActionIndex = getActionIndex(action.id)
+              userHasNavigated = true
+              log.debug('User clicked action, setting userHasNavigated = true')
+            }}
             active={getActionIndex(action.id) === activeActionIndex}
           />
         {/if}
