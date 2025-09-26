@@ -1,45 +1,57 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import SurfIcon from './surf.ico'
+  import { useLogScope } from '@deta/utils'
 
   export let url: string
   export let title: string = ''
 
+  const log = useLogScope('Favicon')
+
   let error = false
   let loaded = false
-  let imgElement: HTMLImageElement
 
   // Reset states when faviconURL changes
   $: if (url) {
+    log.debug('Loading favicon for URL:', url)
     error = false
     loaded = false
     preloadImage()
   }
 
+  let currentImg: HTMLImageElement | null = null
+
   const preloadImage = () => {
     if (!url) return
-    
+
+    if (currentImg) {
+      currentImg.onload = null
+      currentImg.onerror = null
+    }
+
     const img = new Image()
+    currentImg = img
+
     img.onload = () => {
-      // generic fallback
-      if (img.naturalWidth <= 16 && img.naturalHeight <= 16) {
-        error = true
-        loaded = false
-      } else {
+      if (img === currentImg) {
         loaded = true
         error = false
       }
     }
-    img.onerror = () => {
-      error = true
-      loaded = false
+
+    img.onerror = (imgError) => {
+      if (img === currentImg) {
+        log.warn('Failed to load favicon, using fallback icon: ', imgError)
+        error = true
+        loaded = false
+      }
     }
+
     img.src = url
   }
 </script>
 
 {#if loaded && !error && url}
-  <img bind:this={imgElement} src={url} alt={title} draggable="false" />
+  <img bind:this={currentImg} src={url} alt={title} draggable="false" />
 {:else}
   <div class="favicon-fallback">
     <Icon name="squircle" size="16px" />
@@ -55,7 +67,7 @@
     user-select: none;
     border-radius: 2px;
   }
-  
+
   .favicon-fallback {
     min-width: 16px;
     min-height: 16px;
