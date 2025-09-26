@@ -28,7 +28,7 @@ export class ResourceMentionProvider implements MentionProvider {
         return []
       }
 
-      const mentionItems: MentionItem[] = resources.slice(0, 5).map((resource) => {
+      const mentionItems: MentionItem[] = resources.slice(0, 8).map((resource) => {
         const url = resource.url
         const data = (resource as ResourceJSON<any>).parsedData
 

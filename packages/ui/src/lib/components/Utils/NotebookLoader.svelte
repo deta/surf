@@ -57,7 +57,7 @@
   // NOTE: This makes them reactive, so that in the children snippets, it doesn't
   // re-render the entire snippet but only the items further down the chain if the
   // notebook or the search results change!
-  let notebook: Notebook = $state()
+  let notebook: Notebook | undefined = $state(undefined)
   let searchResults: Option<ResourceSearchResult> = $state()
   let searching: boolean = $state(false)
   let isLoading = $state(false)
@@ -65,6 +65,8 @@
   const { execute: runQuery, cancel: cancelQuery } = useCancelableDebounce(async (search: Search) => {
     try {
       searching = true
+
+      log.debug('Running notebook search', search)
 
       const results = await resourceManager.searchResources(search.query, [
         ...SearchResourceTags.NonHiddenDefaultTags({
@@ -77,6 +79,8 @@
         spaceId: notebookId,
       })
 
+      log.debug('Notebook search results', results)
+
       searchResults = results.resources
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         // Map to NoteobokEntry format for compatability with the contents directly
@@ -85,6 +89,8 @@
           entry_id: entry.resource.id,
           resource_type: entry.resource.type
         }))
+
+      log.debug('Mapped notebook search results', searchResults)
     } catch (error) {
       log.error('Error running notebook search', error)
     } finally {
@@ -106,6 +112,7 @@
   const load = useThrottle(async () => {
     try {
       isLoading = true
+      log.debug('Loading notebook', notebookId)
       const _notebook = await notebookManager.getNotebook(notebookId)
       if (fetchContents) {
         _notebook.fetchContents({
@@ -113,6 +120,8 @@
           order: 'desc',
         })
       }
+
+      log.debug('Loaded notebook', _notebook)
 
       notebook = _notebook
     } catch (error) {
@@ -126,10 +135,10 @@
     isLoading = true
     
     if (search && search.query) {
-      runQuery(search)
-    } else {
-      await load()
+      await runQuery(search)
     }
+
+    await load()
   }
 
   init()
@@ -162,7 +171,7 @@
 -->
 {#if isLoading}
   {@render loading?.()}
-{:else if notebook}
+{:else}
   {@render children?.([notebook, searchResults, searching])}
 {/if}
 

@@ -36,7 +36,7 @@ export class MentionService {
   constructor(tabsService?: TabsService, options: MentionServiceOptions = {}) {
     this.options = {
       debounceMs: 500,
-      maxItemsPerProvider: 5,
+      maxItemsPerProvider: 6,
       enabledProviders: [],
       enabledTypes: Object.values(MentionTypes),
       ...options

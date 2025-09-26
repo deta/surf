@@ -14,7 +14,9 @@ import { useBrowser } from '../../browser'
 
 export class ResourcesProvider implements ActionProvider {
   readonly name = 'resources-search'
-  readonly isLocal = false // Async Google suggestions API calls
+  readonly isLocal = false
+  readonly maxActions = 9
+
   private readonly log = useLogScope('ResourcesProvider')
   private readonly resourceManager = useResourceManager()
   private readonly browser = useBrowser()
@@ -31,7 +33,18 @@ export class ResourcesProvider implements ActionProvider {
 
     try {
       const resources = await this.searchResources(trimmedQuery)
+      let noteCount = 0
+      let otherCount = 0
+
       resources.forEach((resource, index) => {
+        if (resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
+          if (noteCount >= 3) return
+          noteCount++
+        } else {
+          if (otherCount >= 6) return
+          otherCount++
+        }
+
         actions.push(
           this.createSearchAction(resource, 80 - index, ['search', 'suggestion', 'google'])
         )

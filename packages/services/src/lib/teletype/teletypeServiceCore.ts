@@ -184,7 +184,7 @@ export class TeletypeServiceCore {
         this.log.debug(`Got actions from provider: ${provider.name}`, providerActions)
 
         const limitedActions = providerActions
-          .slice(0, this.options.maxActionsPerProvider)
+          .slice(0, provider.maxActions ?? this.options.maxActionsPerProvider)
           .map((action) => ({
             ...action,
             provider

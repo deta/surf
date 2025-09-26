@@ -16,6 +16,7 @@
   import { Button } from '@deta/ui'
   import { ShortcutVisualizer } from '@deta/ui'
   import '@deta/editor/src/editor.scss'
+  import { parseStringIntoBrowserLocation } from '@deta/utils/formatting'
 
   const dispatch = createEventDispatcher<{
     clear: void
@@ -239,7 +240,7 @@
     teletype.showAction('teletype-helper')
   }
 
-  type ActionType = 'ask' | 'create-note' | 'search-web' | 'selected'
+  type ActionType = 'ask' | 'create-note' | 'search-web' | 'selected' | 'navigate'
 
   let ttyActions = $derived.by(() => {
     let actions: { primary: ActionType | null; secondary: ActionType | null } = {
@@ -248,6 +249,17 @@
     }
 
     if (hideNavigation) {
+      const canNavigate =
+        $inputValue &&
+        $inputValue.trim().length > 0 &&
+        !!parseStringIntoBrowserLocation($inputValue)
+      if (canNavigate) {
+        actions.primary = 'navigate'
+        actions.secondary = 'ask'
+
+        return actions
+      }
+
       actions.primary = 'ask'
 
       if ($inputValue && $inputValue.length > 0) {
@@ -297,6 +309,8 @@
       handleSearchWeb()
     } else if (actionType === 'selected' && $selectedAction) {
       callAction($selectedAction)
+    } else if (actionType === 'navigate') {
+      dispatch('search-web', { query: $inputValue })
     } else {
       console.warn('No action defined', actionType)
     }
@@ -633,6 +647,8 @@
               Create Note
             {:else if ttyActions.primary === 'search-web'}
               Search Web
+            {:else if ttyActions.primary === 'navigate'}
+              Navigate
             {:else if ttyActions.primary === 'selected'}
               {$selectedAction?.buttonText || 'Search'}
             {/if}

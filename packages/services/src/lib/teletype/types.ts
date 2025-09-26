@@ -35,6 +35,8 @@ export interface ActionProvider {
    */
   readonly isLocal: boolean
 
+  readonly maxActions?: number // Optional limit on max actions to return
+
   /**
    * Get actions for the given query
    */
