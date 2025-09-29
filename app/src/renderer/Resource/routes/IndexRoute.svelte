@@ -20,6 +20,7 @@
   import { useTeletypeService } from '../../../../../packages/services/src/lib'
   import NotebookContents from '../components/notebook/NotebookContents.svelte'
   import PromptPills from '../components/PromptPills.svelte'
+  import { MentionItemType } from '@deta/editor'
 
   let {
     onopensidebar,
@@ -31,6 +32,7 @@
   let newNotebookName: string | undefined = $state(undefined)
   let isCustomizingNotebook = $state(null)
   let viewLocation = $state<ViewLocation | null>(null)
+  let isTtyInitializing = $state(true)
 
   const log = useLogScope('IndexRoute')
   const resourceManager = useResourceManager()
@@ -79,6 +81,11 @@
         .sort((a, b) => (a.label?.length ?? 0) - (b.label?.length ?? 0))
     ]
   })
+
+  const shouldMentionActiveTab = () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get('mention_active_tab') === 'true'
+  }
 
   const handleCreateNotebook = async () => {
     //if (newNotebookName === undefined || newNotebookName.length < 1) {
@@ -164,6 +171,22 @@
     document.title = 'Surf'
     notebookManager.loadNotebooks()
 
+    if (shouldMentionActiveTab()) {
+      // NOTE: we still need a timeout here to let the tty component init
+      // otherwise the editor focuses at the start of the mention for some reason :)
+      setTimeout(() => {
+        teletype.insertMention({
+          id: 'active_tab',
+          label: 'Active Tab',
+          type: MentionItemType.ACTIVE_TAB,
+          icon: 'sparkles'
+        })
+        isTtyInitializing = false
+      }, 50)
+    } else {
+      isTtyInitializing = false
+    }
+
     let unsubs = [
       messagePort.viewMounted.handle(({ location }) => {
         log.debug('Received view-mounted event', location)
@@ -206,11 +229,11 @@
       </h1>-->
       <TeletypeEntry open={true} />
     </div>
-    {#if $ttyQuery.length <= 0}
+    {#if $ttyQuery.length <= 0 && !isTtyInitializing}
       <section class="contents-wrapper">
         <NotebookContents />
       </section>
-    {:else if viewLocation === ViewLocation.Sidebar && hasMentions}
+    {:else if viewLocation === ViewLocation.Sidebar && hasMentions && !isTtyInitializing}
       <div class="prompts-wrapper">
         <PromptPills
           promptItems={suggestedPrompts}

@@ -838,39 +838,7 @@ export class BrowserService {
   }
 
   async openAskInSidebar() {
-    // const view = await this.viewManager.openNewHomepage()
-    // if (!view) {
-    //   this.log.error('Failed to open new homepage view')
-    //   return
-    // }
-
-    //const view = await this.createAndOpenNote(
-    //  {},
-    //  {
-    //    target: 'sidebar'
-    //  }
-    //)
-    //if (!view) {
-    //  this.log.error('Failed to create and open note view')
-    //  return
-    //}
-
-    this.navigateToUrl(`surf://surf/notebook`, { target: 'sidebar' })
-
-    const webContents = await this.viewManager.activeSidebarView?.waitForWebContentsReady()
-    if (!webContents) {
-      this.log.error('Failed to wait for web contents to be ready')
-      return
-    }
-
-    await wait(300)
-
-    await webContents.insertNoteMentionQuery({
-      id: 'active_tab',
-      label: 'Active Tab',
-      type: MentionItemType.ACTIVE_TAB,
-      icon: 'sparkles'
-    })
+    this.navigateToUrl(`surf://surf/notebook?mention_active_tab=true`, { target: 'sidebar' })
   }
 
   /**
