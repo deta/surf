@@ -1,8 +1,11 @@
 <script lang="ts">
-  import { onMount, tick } from 'svelte'
+  import { onMount, tick, setContext } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import { useLogScope } from '@deta/utils/io'
+  import { getHostname } from '@deta/utils'
   import { DuckDuckGoAPI } from '@deta/web-parser'
+  import HeadlessCitationItem from './HeadlessCitationItem.svelte'
+  import { Icon } from '@deta/icons'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
 
   // NOTE: created by tiptap but not needed
@@ -148,13 +151,17 @@
   }
 
   $: statusText = (() => {
-    if ($isSearching) return 'Searching...'
+    if ($isSearching) return 'Searching the web...'
     if ($error) return 'Error'
     if ($doneSearching && $searchResults.length > 0) {
-      return `${$searchResults.length} result${$searchResults.length !== 1 ? 's' : ''}`
+      const hostnames = $searchResults.map((result) => {
+        const hostname = getHostname(result.url)
+        return hostname ? hostname.replace('www.', '') : result.url
+      })
+      return `Read though ${hostnames.join(', ')}`
     }
     if ($doneSearching && $searchResults.length === 0) return 'No results'
-    return 'Ready'
+    return 'Web search'
   })()
 
   onMount(async () => {
@@ -222,102 +229,35 @@
     </div>
   </div>
 {:else}
-  <div class="websearch-container">
-    <div class="websearch-header">
-      <div class="websearch-title-section">
-        <div class="websearch-title-row">
-          <div class="websearch-icon">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-          </div>
-          <h3 class="websearch-title no-drag-handle">{$searchTitle}</h3>
-          <div class="websearch-status">
-            {#if $isSearching}
-              <div class="websearch-loading-spinner-small"></div>
-            {/if}
-            <span class="websearch-status-text" class:searching={$isSearching} class:error={$error}>
-              {statusText}
-            </span>
-          </div>
-          <button
-            class="websearch-collapse-button"
-            class:rotated={!$isCollapsed}
-            on:click={toggleCollapse}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </button>
-        </div>
-        <div class="websearch-query">
-          <span class="websearch-query-label">Query:</span>
-          <span class="websearch-query-text">"{query}"</span>
-        </div>
+  <div class="websearch-container" class:expanded={!$isCollapsed}>
+    <div class="websearch-header" on:click={toggleCollapse}>
+      <div class="websearch-simple-row">
+        <span class="websearch-status-text" class:searching={$isSearching} class:error={$error}>
+          {statusText}
+        </span>
+        <button class="websearch-collapse-button" class:rotated={!$isCollapsed}>
+          <Icon name="chevron.right" />
+        </button>
       </div>
     </div>
 
     <div class="websearch-content" class:collapsed={$isCollapsed}>
-      {#if $isSearching}
-        <div class="websearch-loading">
-          <div class="websearch-loading-spinner"></div>
-          <p>Searching for <strong>"{query}"</strong>...</p>
+      <div class="websearch-query-section">
+        <span class="websearch-query-text">"{query}"</span>
+      </div>
+
+      <!-- Citation items shown when expanded and results exist -->
+      {#if $doneSearching && $searchResults.length > 0}
+        <div class="websearch-citations">
+          {#each $searchResults as result, index}
+            <div class="citation" on:click={(e) => onLinkClick(e, result.url)}>
+              <HeadlessCitationItem url={result.url} title={result.title} maxTitleLength={40} />
+            </div>
+          {/each}
         </div>
-      {:else if $doneSearching && $searchResults.length > 0}
-        <div class="websearch-results">
-          <div class="websearch-results-header">
-            <h4>Found {$searchResults.length} result{$searchResults.length !== 1 ? 's' : ''}</h4>
-          </div>
-          <div class="websearch-results-list">
-            {#each $searchResults as result, index}
-              <div class="websearch-result-item">
-                <div class="websearch-result-number">{index + 1}</div>
-                <div class="websearch-result-content">
-                  <h5 class="websearch-result-title">
-                    {result.title}
-                  </h5>
-                  <p class="websearch-result-url no-drag-handle">{result.url}</p>
-                </div>
-                <div class="websearch-result-actions">
-                  <button
-                    class="websearch-visit-button"
-                    on:click={(e) => onLinkClick(e, result.url)}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                      <polyline points="15,3 21,3 21,9" />
-                      <line x1="10" y1="14" x2="21" y2="3" />
-                    </svg>
-                    Visit
-                  </button>
-                </div>
-              </div>
-            {/each}
-          </div>
-        </div>
-      {:else if $doneSearching && $searchResults.length === 0}
+      {/if}
+
+      {#if $doneSearching && $searchResults.length === 0}
         <div class="websearch-no-results">
           <div class="websearch-no-results-icon">
             <svg
@@ -356,169 +296,186 @@
 {/if}
 
 <style lang="scss">
-  :global(body) {
-    --websearch-bg: #fff;
-    --websearch-border: #e1e5e9;
-    --websearch-shadow: rgba(0, 0, 0, 0.06);
-    --websearch-shadow-hover: rgba(0, 0, 0, 0.1);
-    --websearch-header-bg: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    --websearch-header-bg-hover: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    --websearch-text-primary: #1e293b;
-    --websearch-text-secondary: #64748b;
-    --websearch-text-muted: #94a3b8;
-    --websearch-accent: #60a5fa;
-    --websearch-accent-hover: #3b82f6;
-    --websearch-result-bg: #f8fafc;
-    --websearch-result-bg-hover: #f1f5f9;
-    --websearch-result-border: #e1e5e9;
-    --websearch-accent-bg: rgba(59, 130, 246, 0.1);
-    --websearch-error-bg: #fef2f2;
-    --websearch-error-border: #fecaca;
-    --websearch-error-text: #dc2626;
-    --websearch-error-text-light: #7f1d1d;
-    --websearch-button-bg: #ffffff;
-  }
-  :global(body.dark) {
-    --websearch-bg: #1e293b;
-    --websearch-border: #334155;
-    --websearch-shadow: rgba(0, 0, 0, 0.3);
-    --websearch-shadow-hover: rgba(0, 0, 0, 0.4);
-    --websearch-header-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    --websearch-header-bg-hover: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    --websearch-text-primary: #f1f5f9;
-    --websearch-text-secondary: #cbd5e1;
-    --websearch-text-muted: #94a3b8;
-    --websearch-accent: #60a5fa;
-    --websearch-accent-hover: #3b82f6;
-    --websearch-result-bg: #0f172a;
-    --websearch-result-bg-hover: #1e293b;
-    --websearch-result-border: #334155;
-    --websearch-accent-bg: rgba(96, 165, 250, 0.15);
-    --websearch-error-bg: #431a1a;
-    --websearch-error-border: #7f1d1d;
-    --websearch-error-text: #fca5a5;
-    --websearch-error-text-light: #f87171;
-    --websearch-button-bg: #334155;
-  }
-
   .websearch-container {
-    border: 1px solid var(--websearch-border);
-    border-radius: 12px;
-    background: var(--websearch-bg);
-    box-shadow: 0 2px 8px var(--websearch-shadow);
     overflow: hidden;
     transition: all 0.2s ease;
   }
 
-  .websearch-container:hover {
-    box-shadow: 0 4px 16px var(--websearch-shadow-hover);
+  * {
+    font-family: var(--default);
+  }
+
+  .websearch-container.expanded {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--t-3);
+    background: var(--white);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .websearch-container.expanded:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
 
   .websearch-header {
-    padding: 0.875rem 1rem;
-    background: var(--websearch-header-bg);
-    border-bottom: 1px solid var(--websearch-border);
+    padding: var(--t-1) 0;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
   }
 
-  .websearch-header:hover {
-    background: var(--websearch-header-bg-hover);
+  .websearch-container.expanded .websearch-header {
+    padding: var(--t-2) var(--t-3);
+    background: var(--accent-background);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
 
-  .websearch-title-section {
-    flex: 1;
+  .websearch-container.expanded .websearch-header:hover {
+    background: rgba(109, 130, 255, 0.15);
   }
 
-  .websearch-title-row {
+  .websearch-simple-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: var(--t-2);
   }
 
-  .websearch-icon {
-    color: var(--websearch-accent) !important;
-    display: flex;
-    align-items: center;
+  .websearch-container:not(.expanded) .websearch-simple-row {
+    justify-content: flex-start;
+    width: fit-content;
   }
 
-  .websearch-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--websearch-text-primary) !important;
-    flex: 1;
-  }
-
-  .websearch-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-right: 0.5rem;
+  .websearch-container.expanded .websearch-simple-row {
+    justify-content: space-between;
+    width: 100%;
   }
 
   .websearch-status-text {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--websearch-text-secondary) !important;
+    font-family: var(--default);
+    font-size: var(--t-13);
+    font-weight: var(--medium);
+    color: var(--on-surface);
     transition: color 0.2s ease;
   }
 
+  .websearch-container.expanded .websearch-status-text {
+    flex: 1;
+  }
+
+  .websearch-citations {
+    padding: var(--t-2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--t-1) var(--t-2);
+    align-items: center;
+  }
+
   .websearch-status-text.searching {
-    color: var(--websearch-accent) !important;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        #aae5ff 45%,
+        45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        white 45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        #aae5ff 45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        #aae5ff 45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        #aae5ff 45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 40%,
+        var(--accent) 45%,
+        transparent 50%,
+        transparent 100%
+      ),
+      var(--accent);
+    background-size:
+      200% 100%,
+      200% 100%,
+      200% 100%,
+      200% 100%,
+      200% 100%,
+      200% 100%,
+      100% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: multiSlide 60s infinite linear;
   }
 
   .websearch-status-text.error {
-    color: var(--websearch-error-text) !important;
-  }
-
-  .websearch-loading-spinner-small {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--websearch-border);
-    border-top: 2px solid var(--websearch-accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+    color: #dc2626;
   }
 
   .websearch-collapse-button {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.25rem;
-    color: var(--websearch-text-secondary) !important;
+    padding: var(--t-1);
+    color: var(--on-surface);
     transition: all 0.2s ease;
-    border-radius: 6px;
+    border-radius: var(--t-1);
   }
 
   .websearch-collapse-button:hover {
-    background: var(--websearch-accent-bg);
-    color: var(--websearch-accent) !important;
+    background: var(--accent-background);
+    color: var(--accent);
   }
 
   .websearch-collapse-button.rotated {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
   }
 
-  .websearch-query {
+  .websearch-query-section {
+    padding: var(--t-3) var(--t-4);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
+    gap: var(--t-2);
+    font-family: var(--default);
+    font-size: var(--t-13);
   }
 
-  .websearch-query-label {
-    color: var(--websearch-text-secondary) !important;
-    font-weight: 500;
+  .citation {
+    cursor: default;
   }
 
   .websearch-query-text {
-    color: var(--websearch-text-primary) !important;
-    font-weight: 500;
-    background: var(--websearch-accent-bg);
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
+    color: var(--on-surface-accent);
+    font-weight: var(--medium);
+    background: var(--accent-background);
+    padding: var(--t-1) var(--t-2);
+    border-radius: var(--t-2);
   }
 
   .websearch-content {
@@ -560,136 +517,57 @@
     animation: spin 1s linear infinite;
   }
 
-  @keyframes spin {
+  @keyframes multiSlide {
     0% {
-      transform: rotate(0deg);
+      background-position:
+        300% 0,
+        310% 0,
+        320% 0,
+        330% 0,
+        340% 0,
+        350% 0,
+        0 0;
     }
+
+    66.7% {
+      background-position:
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        0 0;
+    }
+
     100% {
-      transform: rotate(360deg);
+      background-position:
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        -6000% 0,
+        0 0;
     }
-  }
-
-  .websearch-results {
-    padding: 1rem;
-  }
-
-  .websearch-results-header {
-    margin-bottom: 0.875rem;
-  }
-
-  .websearch-results-header h4 {
-    margin: 0;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--websearch-text-primary) !important;
-  }
-
-  .websearch-results-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .websearch-result-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: var(--websearch-result-bg);
-    border: 1px solid var(--websearch-result-border);
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-
-  .websearch-result-item:hover {
-    background: var(--websearch-result-bg-hover);
-    border-color: var(--websearch-accent);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--websearch-shadow);
-  }
-
-  .websearch-result-number {
-    background: var(--websearch-accent);
-    color: white !important;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 600;
-    flex-shrink: 0;
-    margin-top: 0.125rem;
-  }
-
-  .websearch-result-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .websearch-result-title {
-    margin: 0 0 0.375rem 0;
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-
-  .websearch-result-title a {
-    color: var(--websearch-accent) !important;
-    text-decoration: none;
-  }
-
-  .websearch-result-title a:hover {
-    text-decoration: underline;
-  }
-
-  .websearch-result-url {
-    margin: 0;
-    font-size: 0.75rem;
-    color: var(--websearch-text-secondary) !important;
-    word-break: break-all;
-  }
-
-  .websearch-result-actions {
-    flex-shrink: 0;
-  }
-
-  .websearch-visit-button {
-    background: var(--websearch-button-bg);
-    color: var(--websearch-accent) !important;
-    border: 1px solid var(--websearch-accent);
-    padding: 0.375rem 0.625rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  .websearch-visit-button:hover {
-    background: var(--websearch-accent);
-    color: white !important;
   }
 
   .websearch-no-results {
-    padding: 2rem 1.5rem;
+    padding: var(--t-8) var(--t-4);
     text-align: center;
-    color: var(--websearch-text-secondary) !important;
+    color: var(--on-surface);
   }
 
   .websearch-no-results-icon {
-    color: var(--websearch-text-muted) !important;
-    margin-bottom: 0.75rem;
-    opacity: 0.6;
+    color: var(--on-surface-muted);
+    margin-bottom: var(--t-3);
+    opacity: var(--muted);
   }
 
   .websearch-no-results p {
-    margin: 0 0 1rem 0;
-    font-size: 0.875rem;
+    margin: 0 0 var(--t-4) 0;
+    font-size: var(--t-13);
+    font-family: var(--default);
   }
 
   .websearch-error-container {
@@ -697,10 +575,10 @@
     align-items: center;
     justify-content: center;
     min-height: 150px;
-    padding: 1.5rem;
-    background: var(--websearch-error-bg);
-    border: 1px solid var(--websearch-error-border);
-    border-radius: 12px;
+    padding: var(--t-4);
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--t-3);
   }
 
   .websearch-error-content {
@@ -709,43 +587,46 @@
   }
 
   .websearch-error-icon {
-    color: var(--websearch-error-text) !important;
-    margin-bottom: 0.75rem;
+    color: #dc2626;
+    margin-bottom: var(--t-3);
     display: flex;
     justify-content: center;
   }
 
   .websearch-error-title {
-    color: var(--websearch-error-text) !important;
-    margin: 0 0 0.375rem 0;
-    font-size: 1rem;
-    font-weight: 600;
+    color: #dc2626;
+    margin: 0 0 var(--t-1) 0;
+    font-size: var(--t-4);
+    font-weight: var(--bold);
+    font-family: var(--default);
   }
 
   .websearch-error-message {
-    color: var(--websearch-error-text-light) !important;
-    margin: 0 0 1rem 0;
+    color: #7f1d1d;
+    margin: 0 0 var(--t-4) 0;
     line-height: 1.5;
-    font-size: 0.875rem;
+    font-size: var(--t-13);
+    font-family: var(--default);
   }
 
   .websearch-retry-button {
-    background: var(--websearch-accent);
-    color: white !important;
+    background: var(--accent);
+    color: var(--white);
     border: none;
-    padding: 0.625rem 1.25rem;
-    border-radius: 6px;
+    padding: var(--t-2) var(--t-4);
+    border-radius: var(--t-1);
     cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: var(--t-12-6);
+    font-weight: var(--medium);
+    font-family: var(--default);
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--t-1);
   }
 
   .websearch-retry-button:hover {
-    background: var(--websearch-accent-hover);
+    background: rgba(109, 130, 255, 0.8);
     transform: translateY(-1px);
   }
 </style>

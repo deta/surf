@@ -2,6 +2,7 @@
   import { onMount, tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import { useLogScope } from '@deta/utils/io'
+  import { Icon } from '@deta/icons'
   import { DuckDuckGoAPI } from '@deta/web-parser'
 
   // NOTE: created by tiptap but not needed
@@ -149,7 +150,7 @@
     if ($isSearching) return 'Searching...'
     if ($error) return 'Error'
     if ($doneSearching && $searchResults.length > 0) {
-      return `${$searchResults.length} result${$searchResults.length !== 1 ? 's' : ''}`
+      return `Webserach found ${$searchResults.length} result${$searchResults.length !== 1 ? 's' : ''}`
     }
     if ($doneSearching && $searchResults.length === 0) return 'No results'
     return 'Ready'
@@ -251,20 +252,10 @@
             class:rotated={!$isCollapsed}
             on:click={toggleCollapse}
           >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
+            <Icon name="chevron-right" />
           </button>
         </div>
         <div class="websearch-query">
-          <span class="websearch-query-label">Query:</span>
           <span class="websearch-query-text">"{query}"</span>
         </div>
       </div>

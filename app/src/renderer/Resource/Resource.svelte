@@ -168,12 +168,10 @@
   }
 
   :global(body) {
-    background:
-      linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
+    background: linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
       url('./assets/greenfield.png');
     background: rgba(250, 250, 250, 1);
-    background:
-      linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(255, 255, 255, 0.9) 10%),
+    background: linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(255, 255, 255, 0.9) 10%),
       radial-gradient(at bottom right, transparent, rgba(255, 255, 255, 0.8) 90%),
       url('./assets/greenfield.png');
     background-repeat: no-repeat;

@@ -24,10 +24,10 @@
     e.stopImmediatePropagation()
 
     if (e.type === 'auxclick') {
-      if (e.button === 1){
+      if (e.button === 1) {
         dispatchClick('new-background-tab')
       }
-  
+
       return
     }
 
