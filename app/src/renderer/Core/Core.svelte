@@ -9,7 +9,13 @@
   import { handlePreloadEvents } from './handlers/preloadEvents'
 
   import WebContentsView from './components/WebContentsView.svelte'
-  import TabsList from './components/Tabs/TabsList/TabsList.svelte'
+  import TabsListWrapper from './components/Tabs/TabsListWrapper.svelte'
+  import {
+    tabOrientation,
+    toggleTabOrientation,
+    TabOrientation,
+    initializeTabOrientation
+  } from '@deta/services/tabs'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isLinux, isMac, isWindows, useDebounce, wait } from '@deta/utils'
@@ -50,6 +56,9 @@
   onMount(async () => {
     log.debug('Core component mounted')
     await telemetry.init({ configService: config })
+
+    // Initialize tab orientation from saved config
+    initializeTabOrientation()
 
     if (isWindows()) document.body.classList.add('os_windows')
     if (isMac()) document.body.classList.add('os_mac')
@@ -168,6 +177,14 @@
       return true
     })
 
+    shortcutsManager.registerHandler(ShortcutActions.TOGGLE_TAB_ORIENTATION, () => {
+      log.debug('Toggling tab orientation (CMD+O)')
+      toggleTabOrientation().catch((error) => {
+        log.error('Failed to toggle tab orientation:', error)
+      })
+      return true
+    })
+
     unsubs.push(handlePreloadEvents())
 
     await checkAndCreateDemoItems()
@@ -203,55 +220,101 @@
 
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
-<div class="main">
-  <div class="app-bar">
-    <div class="tabs">
-      {#if !isMac()}
+<div class="main" class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
+  {#if $tabOrientation === TabOrientation.Horizontal}
+    <!-- Horizontal Layout (Original) -->
+    <div class="app-bar">
+      <div class="tabs">
+        {#if !isMac()}
+          <div class="windows-menu-button">
+            <Button onclick={window.api.showAppMenuPopup} square size="md">
+              <Icon name="menu" size="1.1em" />
+            </Button>
+          </div>
+        {/if}
+        <TabsListWrapper orientation={$tabOrientation} />
+
+        {#if !isMac()}
+          <AltWindowControls />
+        {/if}
+      </div>
+    </div>
+
+    <main>
+      <div class="tab-view">
+        {#if activeTabView}
+          <NavigationBar
+            bind:this={activeTabNavigationBar}
+            view={activeTabView}
+            onsearchinput={handleSearchInput}
+            tab={tabsService.activeTab}
+            roundLeftCorner
+            roundRightCorner={!viewManager.sidebarViewOpen}
+          />
+        {/if}
+        <div class="tab-contents">
+          {#each tabsService.tabs as tab, idx (tab.id)}
+            {#if tabsService.activatedTabs.includes(tab.id)}
+              <WebContentsView
+                view={tabsService.tabs[idx].view}
+                active={tabsService.activeTab?.id === tab.id}
+                location={ViewLocation.Tab}
+              />
+            {/if}
+          {/each}
+        </div>
+      </div>
+
+      <AppSidebar />
+    </main>
+  {:else}
+    <!-- Vertical Layout (New) -->
+    {#if !isMac()}
+      <div class="vertical-app-bar">
         <div class="windows-menu-button">
           <Button onclick={window.api.showAppMenuPopup} square size="md">
             <Icon name="menu" size="1.1em" />
           </Button>
         </div>
-      {/if}
-      <TabsList />
-      <!-- <Button onclick={handleClick}>Create Overlay</Button> -->
 
-      <!-- <Overlay bounds={{ x: 200, y: 200, width: 400, height: 180 }}>
-      <Test />
-    </Overlay> -->
-      {#if !isMac()}
         <AltWindowControls />
-      {/if}
-    </div>
-  </div>
+      </div>
+    {/if}
 
-  <main>
-    <div class="tab-view">
-      {#if activeTabView}
-        <NavigationBar
-          bind:this={activeTabNavigationBar}
-          view={activeTabView}
-          onsearchinput={handleSearchInput}
-          tab={tabsService.activeTab}
-          roundLeftCorner
-          roundRightCorner={!viewManager.sidebarViewOpen}
-        />
-      {/if}
-      <div class="tab-contents">
-        {#each tabsService.tabs as tab, idx (tab.id)}
-          {#if tabsService.activatedTabs.includes(tab.id)}
-            <WebContentsView
-              view={tabsService.tabs[idx].view}
-              active={tabsService.activeTab?.id === tab.id}
-              location={ViewLocation.Tab}
+    <div class="vertical-main">
+      <div class="vertical-tabs-container">
+        <TabsListWrapper orientation={$tabOrientation} />
+      </div>
+
+      <div class="vertical-content">
+        <div class="tab-view">
+          {#if activeTabView}
+            <NavigationBar
+              bind:this={activeTabNavigationBar}
+              view={activeTabView}
+              onsearchinput={handleSearchInput}
+              tab={tabsService.activeTab}
+              roundLeftCorner={false}
+              roundRightCorner={!viewManager.sidebarViewOpen}
             />
           {/if}
-        {/each}
+          <div class="tab-contents">
+            {#each tabsService.tabs as tab, idx (tab.id)}
+              {#if tabsService.activatedTabs.includes(tab.id)}
+                <WebContentsView
+                  view={tabsService.tabs[idx].view}
+                  active={tabsService.activeTab?.id === tab.id}
+                  location={ViewLocation.Tab}
+                />
+              {/if}
+            {/each}
+          </div>
+        </div>
+
+        <AppSidebar />
       </div>
     </div>
-
-    <AppSidebar />
-  </main>
+  {/if}
 </div>
 
 <style lang="scss">
@@ -274,6 +337,10 @@
     background: var(--app-background);
     display: flex;
     flex-direction: column;
+
+    &.vertical-layout {
+      flex-direction: column;
+    }
   }
 
   .app-bar {
@@ -542,5 +609,65 @@
 
   .windows-menu-button {
     app-region: no-drag;
+  }
+
+  /* Vertical Layout Styles */
+  .vertical-app-bar {
+    height: 32px;
+    min-height: 32px;
+    background: var(--app-background);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    app-region: drag;
+
+    :global(body.os_mac) & {
+      padding-left: 5rem;
+    }
+
+    .windows-menu-button {
+      app-region: no-drag;
+    }
+
+    .mac-traffic-lights-spacer {
+      width: 5rem;
+      height: 100%;
+    }
+  }
+
+  .vertical-main {
+    flex: 1;
+    display: flex;
+    height: calc(100% - 32px);
+    overflow: hidden;
+  }
+
+  .vertical-tabs-container {
+    flex-shrink: 0;
+    height: 100%;
+  }
+
+  .vertical-content {
+    flex: 1;
+    display: flex;
+    height: 100%;
+    min-width: 0;
+
+    .tab-view {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-width: 0;
+      width: 100%;
+      flex-grow: 0;
+      flex-shrink: 1;
+    }
+
+    .tab-contents {
+      height: 100%;
+      width: 100%;
+      position: relative;
+    }
   }
 </style>

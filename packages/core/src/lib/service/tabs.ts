@@ -39,7 +39,6 @@ import type { HistoryEntriesManager } from './history'
 import type BrowserTab from '../components/Browser/BrowserTab.svelte'
 import type { Telemetry } from './telemetry'
 import { getContext, setContext, tick } from 'svelte'
-import { spawnBoxSmoke } from '../components/Effects/SmokeParticle.svelte'
 import type { Resource, ResourceManager } from './resources'
 import { type OasisService, type OasisSpace } from './oasis'
 import type { DesktopManager } from './desktop'
@@ -409,16 +408,6 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
   }
 
   async delete(tabId: string, trigger?: DeleteTabEventTrigger) {
-    const rect = document.getElementById(`tab-${tabId}`)?.getBoundingClientRect()
-    if (rect) {
-      spawnBoxSmoke(rect, {
-        densityN: 28,
-        size: 13,
-        //velocityScale: 0.5,
-        cloudPointN: 7
-      })
-    }
-
     const tab = this.tabsValue.find((tab) => tab.id === tabId)
     if (!tab) {
       this.log.error('Tab not found', tabId)
@@ -702,7 +691,8 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
 
     // TODO: find a better way to scroll to the active tab without accessing the DOM directly
     setTimeout(() => {
-      const activeTabElement = document.getElementById(`tab-${tabId}`)
+      const activeTabElement =
+        document.getElementById(`tab-${tabId}`) || document.getElementById(`vertical-tab-${tabId}`)
       if (activeTabElement) {
         activeTabElement.scrollIntoView({
           behavior: 'smooth',

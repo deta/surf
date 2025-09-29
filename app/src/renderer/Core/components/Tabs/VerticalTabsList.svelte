@@ -1,0 +1,324 @@
+<script lang="ts">
+  import { useTabs } from '@deta/services/tabs'
+  import VerticalTabItem from '../Tabs/VerticalTabItem.svelte'
+  import { Icon } from '@deta/icons'
+  import {
+    calculateVerticalTabLayout,
+    measureContainerHeight,
+    needsVerticalScrolling
+  } from './TabsList/verticalTabsLayout.svelte'
+  import type { VerticalLayoutCalculation } from './types'
+  import { onMount, tick } from 'svelte'
+  import { useDebounce } from '@deta/utils'
+  import { Button } from '@deta/ui'
+  import { HTMLAxisDragZone } from '@deta/dragcula'
+  import { createTabsDragAndDrop, cleanupDropIndicators } from './TabsList/dnd.svelte'
+  import { useTelemetry } from '@deta/services'
+  import { TelemetryCreateTabSource } from '@deta/types'
+  import { onDestroy } from 'svelte'
+
+  const tabsService = useTabs()
+  const telemetry = useTelemetry()
+
+  let containerElement: HTMLDivElement
+  let scrollContainerElement: HTMLDivElement
+  let containerHeight = $state(0)
+  let layoutCalculation = $state<VerticalLayoutCalculation | null>(null)
+  let isResizing = $state(false)
+  let needsScrolling = $state(false)
+
+  // Resize handle state
+  let isResizingWidth = $state(false)
+  let targetTabsWidth = $state(240)
+  let tabsWidth = $state(240)
+  let raf = null
+
+  const dnd = createTabsDragAndDrop(tabsService)
+
+  const handleNewTab = () => {
+    tabsService.openNewTabPage()
+    telemetry.trackCreateTab(TelemetryCreateTabSource.NewTabButton)
+  }
+
+  // Resize handle functions
+  const rafCbk = () => {
+    tabsWidth = targetTabsWidth
+    raf = null
+  }
+
+  const handleResizeMouseDown = (e: MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'col-resize'
+
+    window.addEventListener('mousemove', handleResizingMouseMove, { capture: true })
+    window.addEventListener('mouseup', handleResizingMouseUp, { capture: true, once: true })
+    isResizingWidth = true
+  }
+
+  const handleResizingMouseMove = (e: MouseEvent) => {
+    e.preventDefault()
+    targetTabsWidth = Math.max(200, Math.min(targetTabsWidth + e.movementX, 400))
+    if (raf === null) raf = requestAnimationFrame(rafCbk)
+  }
+
+  const handleResizingMouseUp = (e: MouseEvent) => {
+    e.preventDefault()
+    window.removeEventListener('mousemove', handleResizingMouseMove, { capture: true })
+    isResizingWidth = false
+    document.body.style.userSelect = ''
+    document.body.style.cursor = ''
+    // TODO: Save width to user preferences
+  }
+
+  // Reactive calculation of layout
+  $effect(() => {
+    if (containerHeight > 0 && tabsService.tabs.length > 0) {
+      layoutCalculation = calculateVerticalTabLayout(
+        tabsService.tabs,
+        containerHeight,
+        tabsService.activeTabIdValue
+      )
+      needsScrolling = needsVerticalScrolling(tabsService.tabs, containerHeight)
+    }
+  })
+
+  // Setup container height tracking
+  onMount(() => {
+    const updateHeight = () => {
+      if (!containerElement) return
+      containerHeight = measureContainerHeight(containerElement)
+    }
+
+    const debouncedUpdateHeight = useDebounce(updateHeight, 16)
+
+    const handleResize = () => {
+      isResizing = true
+      updateHeight() // Immediate update
+      debouncedUpdateHeight().then(() => {
+        isResizing = false
+      })
+    }
+
+    // Initial measurement
+    tick().then(() => updateHeight())
+
+    // Listen to window resize
+    window.addEventListener('resize', handleResize)
+
+    // Use ResizeObserver for more accurate container tracking
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize()
+    })
+
+    if (containerElement) {
+      resizeObserver.observe(containerElement)
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
+    }
+  })
+
+  // Cleanup on component destroy (defensive measure)
+  onDestroy(() => {
+    cleanupDropIndicators()
+  })
+
+  // Auto-scroll to active tab when it changes
+  $effect(() => {
+    if (tabsService.activeTab && scrollContainerElement) {
+      const activeTabElement = scrollContainerElement.querySelector(
+        `#vertical-tab-${tabsService.activeTab.id}`
+      )
+      if (activeTabElement) {
+        activeTabElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        })
+      }
+    }
+  })
+</script>
+
+<div class="vertical-tabs-list" bind:this={containerElement} style:--tabsWidth={tabsWidth + 'px'}>
+  <div
+    class="tabs-scroll-container"
+    class:needs-scrolling={needsScrolling}
+    bind:this={scrollContainerElement}
+    axis="vertical"
+    use:HTMLAxisDragZone.action={{
+      accepts: dnd.acceptTabDrag
+    }}
+    onDrop={dnd.handleTabDrop}
+  >
+    {#each tabsService.tabs as tab, index (tab.id)}
+      <VerticalTabItem
+        tab={tabsService.tabs[index]}
+        active={tabsService.activeTab?.id === tab.id}
+        height={layoutCalculation?.tabDimensions[index]?.height}
+        showCloseButton={layoutCalculation?.tabDimensions[index]?.showCloseButton ?? true}
+        {isResizing}
+      />
+    {/each}
+  </div>
+
+  <div class="add-tab-btn-container">
+    <Button onclick={handleNewTab} size="md" square>
+      <Icon name="add" size="1.1rem" />
+    </Button>
+  </div>
+
+  <div
+    class="resize-handle"
+    onmousedown={handleResizeMouseDown}
+    data-resizing={isResizingWidth}
+  ></div>
+</div>
+
+<style lang="scss">
+  .vertical-tabs-list {
+    position: relative;
+    height: 100%;
+    width: var(--tabsWidth, 240px);
+    min-width: 200px;
+    max-width: 400px;
+    padding-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    background: var(--app-background);
+    --fold-width: 0.5rem;
+  }
+
+  .tabs-scroll-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &.needs-scrolling {
+      // Add subtle scroll indicators
+      &::before {
+        content: '';
+        position: sticky;
+        top: 0;
+        height: 1px;
+        background: linear-gradient(to bottom, var(--border-color), transparent);
+        z-index: 1;
+      }
+
+      &::after {
+        content: '';
+        position: sticky;
+        bottom: 0;
+        height: 1px;
+        background: linear-gradient(to top, var(--border-color), transparent);
+        z-index: 1;
+      }
+    }
+
+    // Custom scrollbar styling
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--on-surface-muted);
+      }
+    }
+  }
+
+  .add-tab-btn-container {
+    flex-shrink: 0;
+    padding: 0.5rem;
+    app-region: no-drag;
+    display: flex;
+    justify-content: center;
+  }
+
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--fold-width);
+    cursor: ew-resize;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    app-region: no-drag;
+
+    &::before {
+      content: '';
+      z-index: 5;
+      position: absolute;
+      left: calc(50%);
+      top: 50%;
+      height: 30%;
+      width: 3px;
+      transform: translate(-50%, -50%);
+      background: transparent;
+      border-radius: 20px;
+      transition: background 123ms ease-out;
+    }
+
+    &:hover::before {
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    &:active::before,
+    &[data-resizing='true']::before {
+      background: rgba(0, 0, 0, 0.5);
+      width: 4px;
+    }
+  }
+
+  /* View Transitions for smooth tab reordering */
+  :global([data-tab-id^='vertical-tab-']) {
+    view-transition-name: var(--tab-id);
+  }
+
+  /* Smooth transitions during reordering */
+  :global(::view-transition-old(vertical-tab)),
+  :global(::view-transition-new(vertical-tab)) {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+  }
+
+  /* Slide animation for vertical tab reordering */
+  :global(::view-transition-old(vertical-tab)) {
+    animation-name: slide-up;
+  }
+
+  :global(::view-transition-new(vertical-tab)) {
+    animation-name: slide-down;
+  }
+
+  @keyframes slide-up {
+    to {
+      transform: translateY(-10px) scale(0.95);
+      opacity: 0.8;
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(10px) scale(0.95);
+      opacity: 0.8;
+    }
+  }
+</style>

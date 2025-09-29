@@ -18,7 +18,8 @@ export enum ShortcutActions {
   SWITCH_TO_TAB_8 = 'SWITCH_TO_TAB_8',
   SWITCH_TO_TAB_9 = 'SWITCH_TO_TAB_9',
   SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB',
-  TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR'
+  TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR',
+  TOGGLE_TAB_ORIENTATION = 'TOGGLE_TAB_ORIENTATION'
 }
 
 // Default shortcut definitions
@@ -123,6 +124,12 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.TOGGLE_SIDEBAR,
     defaultCombo: 'CmdOrCtrl+E',
     description: 'Toggle Sidebar',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.TOGGLE_TAB_ORIENTATION]: {
+    action: ShortcutActions.TOGGLE_TAB_ORIENTATION,
+    defaultCombo: 'CmdOrCtrl+O',
+    description: 'Toggle Tab Orientation (Horizontal/Vertical)',
     priority: ShortcutPriority.Normal
   }
 } as const

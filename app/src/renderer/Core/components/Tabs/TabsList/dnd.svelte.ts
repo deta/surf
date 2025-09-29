@@ -1,6 +1,22 @@
 import { type DragculaDragEvent } from '@deta/dragcula'
-import { type TabsService } from '@deta/services/tabs'
+import { type TabsService, type TabItem } from '@deta/services/tabs'
 import { DragTypeNames, type DragTypes } from '@deta/types'
+
+// Debounced cleanup to avoid multiple DOM queries
+let cleanupRaf: number | null = null
+export function cleanupDropIndicators() {
+  // Cancel any pending cleanup
+  if (cleanupRaf !== null) {
+    cancelAnimationFrame(cleanupRaf)
+  }
+
+  // Schedule cleanup on next frame
+  cleanupRaf = requestAnimationFrame(() => {
+    const indicators = document.querySelectorAll('.dragcula-drop-indicator')
+    indicators.forEach((el) => el.remove())
+    cleanupRaf = null
+  })
+}
 
 export function createTabsDragAndDrop(tabsService: TabsService) {
   const withViewTransition = (callback: () => void) => {
@@ -14,7 +30,7 @@ export function createTabsDragAndDrop(tabsService: TabsService) {
       return
     }
 
-    const draggedTab = dragEvent.item.data.getData(DragTypeNames.SURF_TAB)
+    const draggedTab = dragEvent.item.data.getData(DragTypeNames.SURF_TAB) as TabItem
     const draggedTabId = draggedTab.id
 
     const currentIndex = tabsService.tabs.findIndex((tab) => tab.id === draggedTabId)
@@ -36,6 +52,9 @@ export function createTabsDragAndDrop(tabsService: TabsService) {
     })
 
     dragEvent.continue()
+
+    // Clean up any lingering drop indicators
+    cleanupDropIndicators()
   }
 
   const acceptTabDrag = (dragOperation: any) => {
@@ -43,7 +62,7 @@ export function createTabsDragAndDrop(tabsService: TabsService) {
       return false
     }
 
-    const draggedTab = dragOperation.item.data.getData(DragTypeNames.SURF_TAB)
+    const draggedTab = dragOperation.item.data.getData(DragTypeNames.SURF_TAB) as TabItem
     const draggedTabId = draggedTab.id
 
     const currentIndex = tabsService.tabs.findIndex((tab) => tab.id === draggedTabId)
