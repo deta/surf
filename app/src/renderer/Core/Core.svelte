@@ -18,7 +18,7 @@
   } from '@deta/services/tabs'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
-  import { isLinux, isMac, isWindows, useDebounce, wait } from '@deta/utils'
+  import { isLinux, isMac, isWindows, ResourceTag, useDebounce, wait } from '@deta/utils'
   import { Button, prepareContextMenu } from '@deta/ui'
   import { debugMode } from './stores/debug'
   import AltWindowControls from './components/AltWindowControls.svelte'
@@ -35,6 +35,7 @@
     keyboardManager,
     shortcutsManager,
     browser,
+    resourceManager,
     ai
   } = initServices()
 
@@ -188,6 +189,8 @@
     unsubs.push(handlePreloadEvents())
 
     await checkAndCreateDemoItems()
+    // cleanup temporary resources created for chat
+    await resourceManager.deleteResourcesByTags([ResourceTag.createdForChat(true)])
 
     wait(500).then(() => {
       if (tabsService.tabs.length <= 0) {

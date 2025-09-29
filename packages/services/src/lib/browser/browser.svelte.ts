@@ -183,28 +183,26 @@ export class BrowserService {
   async handleCitationClick(data: CitationClickEvent, viewId: string) {
     this.log.debug('Citation click event received', data, viewId)
     try {
-      const metadata = await this.getCitationSourceAndResource(
+      let resourceId = data.resourceId
+      let url = data.url
+      const resourceSource = await this.getCitationSourceAndResource(
         data.resourceId,
         data.selection?.source,
         data.selection?.sourceUid
       )
-      if (!metadata) {
-        this.log.error(
-          'failed to get citation source and resource',
-          data.resourceId,
-          data.selection?.source
-        )
-        return
+      if (resourceSource?.resourceId) {
+        resourceId = resourceSource.resourceId
       }
-
+      if (resourceSource?.source?.metadata?.url) {
+        url = resourceSource.source.metadata.url
+      }
       if (data.preview === 'auto') {
         data.preview = await this.getViewOpenTarget(viewId)
       }
       this.log.debug('Determined citation open target:', data.preview)
 
-      let url = data.url
-      if (metadata.resourceId) {
-        const resource = await this.resourceManager.getResource(metadata.resourceId)
+      if (resourceId) {
+        const resource = await this.resourceManager.getResource(resourceId)
         if (resource?.type === ResourceTypes.PDF) {
           url = `surf://surf/resource/${resource.id}?raw`
         } else if (resource?.url) {
@@ -212,7 +210,7 @@ export class BrowserService {
         } else if (resource) {
           url = `surf://surf/resource/${resource.id}`
         } else {
-          this.log.error('Citation click event has invalid resourceId:', metadata.resourceId)
+          this.log.error('Citation click event has invalid resourceId:', resourceId)
         }
       }
 

@@ -215,6 +215,12 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self))]
+    pub fn remove_resources_by_tags(&mut self, tags: Vec<ResourceTagFilter>) -> BackendResult<()> {
+        let ids = self.db.list_resource_ids_by_tags(&tags)?;
+        self.remove_resources(ids)
+    }
+
+    #[instrument(level = "trace", skip(self))]
     pub fn recover_resource(&mut self, id: String) -> BackendResult<()> {
         let mut tx = self.db.begin()?;
         Database::update_resource_deleted_tx(&mut tx, &id, 1)?;
@@ -750,6 +756,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::RecoverResource(id) => {
             let result = worker.recover_resource(id);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::RemoveResourcesByTags(tags) => {
+            let result = worker.remove_resources_by_tags(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListResourcesByTags(tags) => {

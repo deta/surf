@@ -1212,6 +1212,13 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     })
   }
 
+  async deleteResourcesByTags(tags: SFFSResourceTag[]) {
+    const resourceIds = await this.sffs.listResourceIDsByTags(tags)
+    this.log.debug('deleting resources by tags', tags, resourceIds)
+    if (!resourceIds.length) return
+    await this.deleteResources(resourceIds)
+  }
+
   async deleteHistoryEntry(id: string) {
     await this.sffs.deleteHistoryEntry(id)
   }

@@ -420,6 +420,11 @@ export class SFFS {
     await this.backend.js__store_remove_resources(ids)
   }
 
+  async deleteResourcesByTags(tags: SFFSResourceTag[]): Promise<void> {
+    this.log.debug('deleting resources by tags', tags)
+    await this.backend.js__store_remove_resources_by_tags(tags)
+  }
+
   async recoverResource(id: string): Promise<void> {
     this.log.debug('recovering resource with id', id)
     await this.backend.js__store_recover_resource(id)

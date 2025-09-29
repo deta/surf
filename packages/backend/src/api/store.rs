@@ -7,6 +7,10 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_get_resource", js_get_resource)?;
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_remove_resources", js_remove_resources)?;
+    cx.export_function(
+        "js__store_remove_resources_by_tags",
+        js_remove_resources_by_tags,
+    )?;
     cx.export_function("js__store_recover_resource", js_recover_resource)?;
     cx.export_function("js__store_search_resources", js_search_resources)?;
     cx.export_function(
@@ -422,6 +426,29 @@ fn js_remove_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
         deferred,
     );
 
+    Ok(promise)
+}
+
+fn js_remove_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let resource_tags_json = cx
+        .argument_opt(1)
+        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
+        .map(|js_string| js_string.value(&mut cx));
+    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
+        .map(|json_str| serde_json::from_str(&json_str))
+        .transpose()
+    {
+        Ok(Some(tags)) => tags,
+        Ok(None) => return cx.throw_error("Resource tags must be provided"),
+        Err(err) => return cx.throw_error(err.to_string()),
+    };
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::RemoveResourcesByTags(resource_tags)),
+        deferred,
+    );
     Ok(promise)
 }
 

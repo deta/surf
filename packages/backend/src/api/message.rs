@@ -112,6 +112,7 @@ pub enum ResourceMessage {
     },
     GetResource(String, bool),
     RemoveResources(Vec<String>),
+    RemoveResourcesByTags(Vec<ResourceTagFilter>),
     RecoverResource(String),
     ListResourcesByTags(Vec<ResourceTagFilter>),
     ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>),
