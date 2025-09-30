@@ -536,16 +536,23 @@ export class TabsManager extends EventEmitterBase<TabEvents> {
 
     const activeTab = this.activeTabValue
     if (activeTab.pinned) {
-      this.log.debug('Active tab is pinned, deactivating it')
-      const tabsInOrder = [...this.pinnedTabsValue, ...this.unpinnedTabsValue]
-      const currentIndex = tabsInOrder.findIndex((tab) => tab.id === activeTab.id)
+      this.log.debug('Active tab is pinned, jumping to last opened tab instead of closing')
       this.activatedTabs.update((tabs) => tabs.filter((id) => id !== activeTab.id))
 
+      let targetTabId: string | null = null
+
+      const tabsInOrder = [...this.pinnedTabsValue, ...this.unpinnedTabsValue]
+      const currentIndex = tabsInOrder.findIndex((tab) => tab.id === activeTab.id)
       const nextTabIndex = currentIndex + 1
+
       if (nextTabIndex < tabsInOrder.length) {
-        this.makeActive(tabsInOrder[nextTabIndex].id)
+        targetTabId = tabsInOrder[nextTabIndex].id
       } else if (tabsInOrder.length > 1) {
-        this.makeActive(tabsInOrder[tabsInOrder.length - 2].id)
+        targetTabId = tabsInOrder[tabsInOrder.length - 2].id
+      }
+
+      if (targetTabId) {
+        this.makeActive(targetTabId)
       }
     } else {
       await this.delete(activeTab.id, trigger)

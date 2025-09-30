@@ -5,6 +5,7 @@ import {
   type DragZone,
   type DropEffect
 } from "./index.js";
+import type { DropPosition } from "./types.type.js";
 import { assert } from "./utils/internal.js";
 
 export type DragEventType =
@@ -23,6 +24,7 @@ interface IProps extends Omit<DragOperation, "isNative"> {
   event?: DragEvent;
 
   index?: number | null;
+  dropPosition?: DropPosition | null;
 
   metaKey?: boolean;
   ctrlKey?: boolean;
@@ -42,6 +44,7 @@ export class DragculaDragEvent<
   readonly dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
   readonly index: number | null = null; // index used e.g. by AxisDragZone
+  readonly dropPosition: DropPosition | null = null; // Fine-grained position relative to drop target
 
   readonly event?: DragEvent; // DragEvent passthrough from HTML... controllers.
 
@@ -101,6 +104,7 @@ export class DragculaDragEvent<
 
     this.event = props.event;
     this.index = props.index ?? null;
+    this.dropPosition = props.dropPosition ?? null;
 
     // Mouse passthrough
     this.metaKey = props.metaKey ?? false;

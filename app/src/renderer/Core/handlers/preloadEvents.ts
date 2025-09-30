@@ -1,4 +1,5 @@
 import { type Fn } from '@deta/types'
+import { toggleTabOrientation } from '@deta/services/tabs'
 
 import { setupDownloadEvents } from './downloadEvents'
 import { setupTabViewEvents } from './tabViewEvents'
@@ -41,6 +42,12 @@ export function handlePreloadEvents() {
 
   events.onBrowserFocusChange((_state) => {
     // no-op
+  })
+
+  events.onToggleTabsPosition(() => {
+    toggleTabOrientation().catch((error) => {
+      console.error('Failed to toggle tab orientation from menu:', error)
+    })
   })
 
   setupTabViewEvents(events)

@@ -2,6 +2,7 @@ import type { ActionReturn } from "svelte/action";
 import { HTMLDragZone, type HTMLDragZoneAttributes, type HTMLDragZoneProps } from "./DragZone.js";
 import { HTMLDragItem, type DragOperation } from "./index.js";
 import { Dragcula } from "./Dragcula.js";
+import type { DropPosition } from "./types.type.js";
 
 export type Axis = "horizontal" | "vertical" | "both";
 
@@ -35,6 +36,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   #containerCache: DOMRect | null = null;
 
   #lastIndex: number | null = null;
+  #lastDropPosition: DropPosition | null = null;
 
   constructor(node: HTMLElement, props?: HTMLDragZoneProps) {
     super(node, props);
@@ -78,9 +80,12 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     };
   }
 
-  /// Returns index of child element at position and distance to it.
-  protected getIndexAtPoint(x: number, y: number): [number, number] | [undefined, undefined] {
-    if (this.#childrenCache.length <= 0) return [0, 0];
+  /// Returns index of child element at position, distance to it, and drop position.
+  protected getIndexAtPoint(
+    x: number,
+    y: number
+  ): [number, number, DropPosition] | [undefined, undefined, undefined] {
+    if (this.#childrenCache.length <= 0) return [0, 0, "before"];
     if (this.#containerCache === null) this.#containerCache = this.element.getBoundingClientRect();
 
     const containerScroll = { x: this.element.scrollLeft, y: this.element.scrollTop };
@@ -100,7 +105,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
           (relativePoint.x < firstChild.rect.x + firstChild.rect.width &&
             relativePoint.y < firstChild.rect.y))
       ) {
-        return [0, 0];
+        return [0, 0, "before"];
       }
 
       // Check if we're after the last item
@@ -111,7 +116,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
           (relativePoint.x > lastChild.rect.x + lastChild.rect.width &&
             relativePoint.y > lastChild.rect.y))
       ) {
-        return [this.#childrenCache.length, 0];
+        return [this.#childrenCache.length, 0, "after"];
       }
 
       // Find the item we're hovering over or closest to
@@ -129,9 +134,9 @@ export class HTMLAxisDragZone extends HTMLDragZone {
           // We're inside this item - determine if we're in the left or right half
           const midX = child.rect.x + child.rect.width / 2;
           if (relativePoint.x < midX) {
-            return [i, 0]; // Left half - insert at this index
+            return [i, 0, "before"]; // Left half - insert at this index
           } else {
-            return [i + 1, 0]; // Right half - insert after this index
+            return [i + 1, 0, "after"]; // Right half - insert after this index
           }
         }
 
@@ -145,7 +150,7 @@ export class HTMLAxisDragZone extends HTMLDragZone {
           relativePoint.y >= child.rect.y &&
           relativePoint.y <= child.rect.y + child.rect.height
         ) {
-          return [i + 1, 0]; // Between items horizontally
+          return [i + 1, 0, "after"]; // Between items horizontally
         }
 
         // Check if we're between rows
@@ -166,10 +171,10 @@ export class HTMLAxisDragZone extends HTMLDragZone {
                 relativePoint.x <=
                 this.#childrenCache[j].rect.x + this.#childrenCache[j].rect.width
               ) {
-                return [j + 1, 0]; // Insert after this item in the row
+                return [j + 1, 0, "after"]; // Insert after this item in the row
               }
             }
-            return [rowEndIndex, 0]; // Insert at the start of the next row
+            return [rowEndIndex, 0, "before"]; // Insert at the start of the next row
           }
         }
       }
@@ -196,31 +201,59 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       // Check if we should insert before or after the closest item
       const closestChild = this.#childrenCache[closestIndex];
       const childCenterX = closestChild.rect.x + closestChild.rect.width / 2;
-      return [relativePoint.x < childCenterX ? closestIndex : closestIndex + 1, closestDistance];
+      return [
+        relativePoint.x < childCenterX ? closestIndex : closestIndex + 1,
+        closestDistance,
+        relativePoint.x < childCenterX ? "before" : "after"
+      ];
     } else if (this.axis === "horizontal") {
-      // From center to center
-      const distances = this.#childrenCache.map((child) => {
-        const center = child.rect.x + containerScroll.x + child.rect.width / 2;
-        return { el: child.el, dist: center - relativePoint.x };
-      });
+      // Improved algorithm: check if mouse is within element bounds first, then use edges for better precision
+      for (let i = 0; i < this.#childrenCache.length; i++) {
+        const child = this.#childrenCache[i];
+        const childLeft = child.rect.x + containerScroll.x;
+        const childRight = childLeft + child.rect.width;
 
-      const closestElement = distances.reduce(
-        (acc, curr) => {
-          if (Math.abs(curr?.dist ?? Infinity) < Math.abs(acc.dist)) {
-            return curr;
+        // Check if mouse is within this element's bounds
+        if (relativePoint.x >= childLeft && relativePoint.x <= childRight) {
+          const childCenter = childLeft + child.rect.width / 2;
+          if (relativePoint.x < childCenter) {
+            // Mouse in left half - insert before this element
+            return [i, 0, "before"];
+          } else {
+            // Mouse in right half - insert after this element
+            return [i + 1, 0, "after"];
           }
-          return acc;
-        },
-        { el: null, dist: Infinity }
-      );
+        }
+      }
 
-      if (closestElement?.el == null) return [undefined, undefined];
+      // If not within any element, find the closest edge (not center)
+      let closestIndex = 0;
+      let closestDistance = Infinity;
+      let closestPosition: DropPosition = "before";
 
-      let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
-      if (Math.sign(closestElement.dist) < 0) targetIndex++;
+      for (let i = 0; i < this.#childrenCache.length; i++) {
+        const child = this.#childrenCache[i];
+        const childLeft = child.rect.x + containerScroll.x;
+        const childRight = childLeft + child.rect.width;
 
-      if (targetIndex === -1) return [undefined, undefined];
-      return [targetIndex, closestElement.dist];
+        // Distance to left edge
+        const distToLeft = Math.abs(childLeft - relativePoint.x);
+        if (distToLeft < closestDistance) {
+          closestDistance = distToLeft;
+          closestIndex = i;
+          closestPosition = "before";
+        }
+
+        // Distance to right edge
+        const distToRight = Math.abs(childRight - relativePoint.x);
+        if (distToRight < closestDistance) {
+          closestDistance = distToRight;
+          closestIndex = i + 1;
+          closestPosition = "after";
+        }
+      }
+
+      return [closestIndex, closestDistance, closestPosition];
     } else if (this.axis === "vertical") {
       // From center to center
       const distances = this.#childrenCache.map((child) => {
@@ -238,16 +271,17 @@ export class HTMLAxisDragZone extends HTMLDragZone {
         { el: null, dist: Infinity }
       );
 
-      if (closestElement?.el == null) return [undefined, undefined];
+      if (closestElement?.el == null) return [undefined, undefined, undefined];
 
       let targetIndex = this.#childrenCache.findIndex((child) => child.el === closestElement.el);
+      const dropPosition: DropPosition = Math.sign(closestElement.dist) < 0 ? "after" : "before";
       if (Math.sign(closestElement.dist) < 0) targetIndex++;
 
-      if (targetIndex === -1) return [undefined, undefined];
-      return [targetIndex, closestElement.dist];
+      if (targetIndex === -1) return [undefined, undefined, undefined];
+      return [targetIndex, closestElement.dist, dropPosition];
     }
 
-    return [undefined, undefined];
+    return [undefined, undefined, undefined];
   }
 
   /**
@@ -274,7 +308,10 @@ export class HTMLAxisDragZone extends HTMLDragZone {
   protected boundRafCbk = this.rafCbk.bind(this);
   protected rafCbk() {
     // Query DOM
-    const [index, distance] = this.getIndexAtPoint(this.#mousePos.x, this.#mousePos.y);
+    const [index, distance, dropPosition] = this.getIndexAtPoint(
+      this.#mousePos.x,
+      this.#mousePos.y
+    );
 
     // Check if the indicator should be shown based on accepts callback
     const shouldShowIndicator = this.shouldShowIndicatorAtIndex(index);
@@ -284,7 +321,10 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       return;
     }
 
-    if (index !== undefined && index !== this.#lastIndex) {
+    if (
+      index !== undefined &&
+      (index !== this.#lastIndex || dropPosition !== this.#lastDropPosition)
+    ) {
       if (this.#containerCache === null)
         this.#containerCache = this.element.getBoundingClientRect();
       const containerScroll = { x: this.element.scrollLeft, y: this.element.scrollTop };
@@ -403,7 +443,11 @@ export class HTMLAxisDragZone extends HTMLDragZone {
       this.element.appendChild(this.#indicatorEl);
     }
 
-    if (index !== undefined && this.#lastIndex !== index && this.#indicatorEl !== null) {
+    if (
+      index !== undefined &&
+      (this.#lastIndex !== index || this.#lastDropPosition !== dropPosition) &&
+      this.#indicatorEl !== null
+    ) {
       if (this.axis === "vertical") {
         this.#indicatorEl.style.top = `${this.#indicatorOffsetTop}px`;
       } else if (this.axis === "horizontal") {
@@ -413,7 +457,13 @@ export class HTMLAxisDragZone extends HTMLDragZone {
         this.#indicatorEl.style.top = `${this.#indicatorOffsetTop}px`;
       }
 
+      // Add data attribute for visual debugging
+      if (dropPosition) {
+        this.#indicatorEl.setAttribute("data-drop-position", dropPosition);
+      }
+
       this.#lastIndex = index;
+      this.#lastDropPosition = dropPosition;
     }
 
     this.#raf = null;
@@ -479,7 +529,9 @@ export class HTMLAxisDragZone extends HTMLDragZone {
     this.#containerCache = null;
     if (this.#raf === null) requestAnimationFrame(this.boundRafCbk);
     drag.index = this.#lastIndex;
+    drag.dropPosition = this.#lastDropPosition;
     this.#lastIndex = null;
+    this.#lastDropPosition = null;
     super.onDrop(drag, e);
   }
 }

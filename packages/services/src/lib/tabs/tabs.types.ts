@@ -7,6 +7,7 @@ export interface KVTabItem extends BaseKVItem {
   title: string
   index: number
   view: WebContentsViewData
+  pinned?: boolean
 }
 
 export type CreateTabOptions = {

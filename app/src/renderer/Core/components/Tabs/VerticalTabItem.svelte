@@ -45,7 +45,7 @@
   function handleClose(event: MouseEvent) {
     event.stopPropagation()
 
-    const rect = document.getElementById(`vertical-tab-${tab.id}`)?.getBoundingClientRect()
+    const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
     if (rect) {
       spawnBoxSmoke(rect, {
         densityN: 30,
@@ -102,7 +102,7 @@
   class:state-visible={stateIndicator !== 'none'}
   class:no-transition={isResizing}
   style:--height={`${height ?? '40'}px`}
-  style:--tab-id={`vertical-tab-${tab.id}`}
+  style:--tab-id={`tab-${tab.id}`}
   onclick={handleClick}
   aria-hidden="true"
   draggable="true"
@@ -111,7 +111,7 @@
     items
   })}
   use:HTMLDragItem.action={{
-    id: `vertical-tab-${tab.id}`,
+    id: `tab-${tab.id}`,
     data: (() => {
       const dragData = new DragData()
       dragData.setData(DragTypeNames.SURF_TAB, tab)

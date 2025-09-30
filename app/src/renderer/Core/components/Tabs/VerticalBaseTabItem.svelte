@@ -6,23 +6,24 @@
   import { DragTypeNames } from '@deta/types'
   import { getCleanHostname } from '@deta/utils'
   import { useBrowser } from '@deta/services/browser'
+  import { spawnBoxSmoke } from '@deta/ui/src/lib/components/Effects/index'
   import { ViewType } from '@deta/services/views'
 
   let {
     tab,
     active,
-    width,
-    collapsed = false,
-    squished = false,
+    height,
     showCloseButton = true,
+    showTitle = true,
+    showPinIndicator = false,
     isResizing = false
   }: {
     tab: TabItem
     active: boolean
-    width?: number
-    collapsed?: boolean
-    squished?: boolean
+    height?: number
     showCloseButton?: boolean
+    showTitle?: boolean
+    showPinIndicator?: boolean
     isResizing?: boolean
   } = $props()
 
@@ -47,7 +48,17 @@
 
   function handleClose(event: MouseEvent) {
     event.stopPropagation()
-    tabsService.delete(tab.id, true)
+
+    const rect = document.getElementById(`tab-${tab.id}`)?.getBoundingClientRect()
+    if (rect) {
+      spawnBoxSmoke(rect, {
+        densityN: 30,
+        size: 13,
+        cloudPointN: 7
+      })
+    }
+
+    tabsService.delete(tab.id, true, false)
   }
 
   function handleDragStart() {
@@ -107,14 +118,12 @@
 <div
   id="tab-{tab.id}"
   data-tab-id="tab-{tab.id}"
-  class="tab-item"
+  class="vertical-tab-item"
   class:active
-  class:collapsed
-  class:squished
   class:pinned={tab.pinned}
   class:state-visible={stateIndicator !== 'none'}
   class:no-transition={isResizing}
-  style:--width={`${width ?? '0'}px`}
+  style:--height={`${height ?? '40'}px`}
   style:--tab-id={`tab-${tab.id}`}
   onclick={handleClick}
   aria-hidden="true"
@@ -144,15 +153,23 @@
     {/if}
   </div>
 
-  {#if !collapsed && !squished && !tab.pinned}
-    <span class="tab-title typo-tab-title">{$title || hostname || 'Untitled'}</span>
-  {/if}
+  {#if showTitle}
+    <div class="tab-content">
+      <span class="tab-title typo-tab-title">{$title || hostname || 'Untitled'}</span>
 
-  {#if showCloseButton && !collapsed && !squished && !tab.pinned}
-    <div class="close-button">
-      <Button size="xs" square onclick={handleClose}>
-        <Icon name="close" />
-      </Button>
+      {#if showPinIndicator && tab.pinned}
+        <div class="pin-indicator">
+          <Icon name="pin" />
+        </div>
+      {/if}
+
+      {#if showCloseButton}
+        <div class="close-button">
+          <Button size="xs" square onclick={handleClose}>
+            <Icon name="close" />
+          </Button>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -164,29 +181,30 @@
 </div>
 
 <style lang="scss">
-  .tab-item {
+  .vertical-tab-item {
     position: relative;
-    padding: 0.5rem 0.55rem;
-    border-radius: 11px;
+    padding: 0.375rem 0.75rem;
+    border-radius: 12px;
     user-select: none;
     overflow: hidden;
     display: flex;
-    flex-shrink: 0;
-    gap: var(--t-2);
     align-items: center;
-    width: var(--width, 0px);
+    gap: var(--t-2);
+    height: var(--height, 32px);
+    min-height: 32px;
+    width: var(--drag-width, 100%);
     opacity: 1;
     border: 0.5px solid transparent;
     transition:
       background-color 90ms ease-out,
-      width 190ms cubic-bezier(0.165, 0.84, 0.44, 1),
+      height 190ms cubic-bezier(0.165, 0.84, 0.44, 1),
       opacity 150ms ease-out;
     app-region: no-drag;
     box-sizing: border-box;
-    will-change: width;
+    will-change: height;
 
     @starting-style {
-      width: calc(var(--width, 0px) * 0.5);
+      height: calc(var(--height, 40px) * 0.5);
       opacity: 0.66;
     }
 
@@ -218,72 +236,16 @@
       box-shadow:
         0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
         0 1px 1px 0 #fff inset,
-        0 12px 5px 0 #3e4750,
-        0 7px 4px 0 rgba(62, 71, 80, 0.01),
-        0 3px 3px 0 rgba(62, 71, 80, 0.02),
-        0 1px 2px 0 rgba(62, 71, 80, 0.02),
-        0 1px 1px 0 #000,
-        0 1px 1px 0 rgba(0, 0, 0, 0.01),
-        0 1px 1px 0 rgba(0, 0, 0, 0.05),
-        0 0 1px 0 rgba(0, 0, 0, 0.09);
-      box-shadow:
-        0 -0.5px 1px 0 color(display-p3 0.5294 0.7333 0.9961 / 0.15) inset,
-        0 1px 1px 0 color(display-p3 1 1 1) inset,
-        0 12px 5px 0 color(display-p3 0.251 0.2784 0.3098 / 0),
-        0 7px 4px 0 color(display-p3 0.251 0.2784 0.3098 / 0.01),
-        0 3px 3px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
-        0 1px 2px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0.01),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0.05),
-        0 0 1px 0 color(display-p3 0 0 0 / 0.09);
+        0 2px 8px 0 rgba(62, 71, 80, 0.1),
+        0 1px 3px 0 rgba(62, 71, 80, 0.1);
+
       .tab-title {
         color: var(--on-surface-accent);
       }
       color: var(--on-surface-accent);
     }
 
-    &.squished {
-      width: fit-content;
-    }
-
-    &.squished:not(.active) {
-      padding: 0.25rem 0;
-      width: auto;
-      flex-grow: 1;
-      min-width: 4px;
-      overflow: visible;
-      &:hover {
-        background: none;
-        box-shadow: none;
-        &:after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -25%;
-          width: 150%;
-          height: 100%;
-          background: rgba(255, 255, 255, 0.6);
-          border-radius: 8px;
-          outline: 0.5px solid rgba(255, 255, 255, 0.6);
-          z-index: 1;
-        }
-      }
-      .tab-icon {
-        position: absolute;
-        left: 50%;
-        width: 16px;
-        height: 16px;
-        max-width: 16px;
-        max-height: 16px;
-        overflow: visible;
-        transform: translateX(-50%);
-        z-index: 2;
-      }
-    }
-
-    &:hover,
-    &.state-visible {
+    &:hover:not(.pinned) {
       .tab-title {
         -webkit-mask-image: linear-gradient(
           to right,
@@ -303,29 +265,8 @@
       transition: none;
     }
 
-    &.collapsed {
-      justify-content: center;
-
-      .tab-icon {
-        margin: 0;
-      }
-    }
-
-    // Pinned tab styles
-    &.pinned {
-      min-width: 40px;
-      max-width: 40px;
-      width: 40px !important;
-      padding: 0.5rem 0.375rem;
-      justify-content: center;
-
-      .tab-icon {
-        margin: 0;
-      }
-    }
-
-    /* Reveal close button on hover — but not in collapsed state or pinned state */
-    &:hover:not(.collapsed):not(.pinned) .close-button {
+    /* Always reveal close button on hover in vertical mode - we have space */
+    &:hover .close-button {
       opacity: 1;
       pointer-events: auto;
     }
@@ -336,6 +277,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 16px;
+    height: 16px;
+  }
+
+  .tab-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    gap: var(--t-2);
   }
 
   .tab-title {
@@ -347,12 +299,12 @@
     -webkit-font-smoothing: subpixel-antialiased;
     text-rendering: optimizeLegibility;
     color: var(--on-app-background);
+    font-size: 0.875rem;
   }
 
   .close-button {
     position: absolute;
-    right: 0.55rem;
-
+    right: 0.75rem;
     flex-shrink: 0;
     background: none;
     display: flex;
@@ -374,8 +326,7 @@
 
   .state-indicator {
     position: absolute;
-    right: 0.55rem;
-
+    right: 0.75rem;
     flex-shrink: 0;
     background: none;
     display: flex;
@@ -389,5 +340,16 @@
     &.success {
       color: var(--accent);
     }
+  }
+
+  .pin-indicator {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    color: var(--accent);
+    opacity: 0.7;
   }
 </style>

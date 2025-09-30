@@ -1,5 +1,6 @@
 import { get, writable } from "svelte/store";
 import { HTMLDragArea, HTMLDragZone, type DragItem, type DragZone } from "./index.js";
+import type { DropPosition } from "./types.type.js";
 import {
   genId,
   getParentArea,
@@ -244,6 +245,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
   dataTransfer: DataTransfer | null; // DataTransfer, if custom drag, still original event dataTransfer
 
   index: number | null; // Generic index used by e.g. AxisDragZone
+  dropPosition: DropPosition | null; // Fine-grained position relative to drop target
 
   get isNative(): boolean {
     return this.item === null && this.dataTransfer !== null;
@@ -257,6 +259,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     item?: DragItem<any>;
     dataTransfer?: DataTransfer;
     index?: number;
+    dropPosition?: DropPosition;
   }) {
     this.id = props.id ?? genId();
     this.from = props.from || null;
@@ -265,6 +268,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     this.item = props.item ?? null;
     this.dataTransfer = props.dataTransfer ?? null;
     this.index = props.index ?? null;
+    this.dropPosition = props.dropPosition ?? null;
   }
 
   static new(props: {
@@ -274,6 +278,7 @@ export class DragOperation<DataTypes extends { [key: string]: any } = { [key: st
     area?: HTMLDragArea;
     item?: DragItem;
     dataTransfer?: DataTransfer;
+    dropPosition?: DropPosition;
   }): DragOperation {
     return new this(props);
   }

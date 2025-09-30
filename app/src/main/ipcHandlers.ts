@@ -23,7 +23,7 @@ import {
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates, getAnnouncements } from './appUpdates'
 import { getAnnouncementsWindow } from './announcementsWindow'
-import { useAsDefaultBrowser } from './appMenu'
+import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest, TrackEvent } from '@deta/services/ipc'
@@ -276,6 +276,11 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     const updatedSettings = updateUserConfigSettings(settings)
+
+    // Update menu items if tab orientation changed
+    if (settings.tabs_orientation) {
+      updateTabOrientationMenuItem()
+    }
 
     // notify other windows of the change
     ipcSenders.userConfigSettingsChange(updatedSettings)

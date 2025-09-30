@@ -8,7 +8,7 @@ import { join } from 'path'
 import { isAppSetup, isDefaultBrowser } from './utils'
 import { TelemetryEventTypes } from '@deta/types'
 import { createSettingsWindow } from './settingsWindow'
-import { updateUserConfig } from './config'
+import { updateUserConfig, getUserConfig } from './config'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { importFiles } from './importer'
@@ -26,6 +26,7 @@ interface MenuConfig {
   accelerator?: string
   click?: () => void
   submenu?: MenuConfig[]
+  checked?: boolean
 }
 
 class AppMenu {
@@ -50,8 +51,26 @@ class AppMenu {
   }
 
   public buildMenu(): void {
+    // Set initial checkbox states based on user config
+    this.updateCheckboxStates()
     this.menu = Menu.buildFromTemplate(this.template as any)
     Menu.setApplicationMenu(this.menu)
+  }
+
+  private updateCheckboxStates(): void {
+    const userConfig = getUserConfig()
+    const isVertical = userConfig.settings.tabs_orientation === 'vertical'
+
+    // Update the checkbox state for "Show Tabs in Sidebar"
+    for (const menuItem of this.template) {
+      if (menuItem.submenu) {
+        const tabsMenuItem = menuItem.submenu.find((item) => item.id === 'showTabsInSidebar')
+        if (tabsMenuItem) {
+          tabsMenuItem.checked = isVertical
+          break
+        }
+      }
+    }
   }
 
   public updateMenuItem(id: string, newLabel: string): void {
@@ -60,6 +79,23 @@ class AppMenu {
         const item = menuItem.submenu.find((item) => item.id === id)
         if (item) {
           item.label = newLabel
+          break
+        }
+      }
+    }
+    this.buildMenu()
+  }
+
+  public updateTabOrientationMenuItem(): void {
+    const userConfig = getUserConfig()
+    const isVertical = userConfig.settings.tabs_orientation === 'vertical'
+
+    // Update the checkbox state for "Show Tabs in Sidebar"
+    for (const menuItem of this.template) {
+      if (menuItem.submenu) {
+        const tabsMenuItem = menuItem.submenu.find((item) => item.id === 'showTabsInSidebar')
+        if (tabsMenuItem) {
+          tabsMenuItem.checked = isVertical
           break
         }
       }
@@ -195,29 +231,14 @@ class AppMenu {
     return {
       label: 'View',
       submenu: [
-        // { type: 'separator' },
-        // {
-        //   label: 'Change Tabs Orientation',
-        //   accelerator: 'CmdOrCtrl+Shift+Alt+B',
-        //   click: () => ipcSenders.toggleTabsPosition()
-        // },
-        // {
-        //   id: 'toggleTheme',
-        //   label: 'Switch Theme',
-        //   click: () => ipcSenders.toggleTheme()
-        // },
-        // { type: 'separator' },
-        // { role: 'resetZoom' },
-        // { role: 'zoomIn' },
-        // { role: 'zoomOut' },
-        // { type: 'separator' },
-        /*
         {
-          label: 'Toggle Sidebar',
-          accelerator: 'CmdOrCtrl+E',
-          click: () => ipcSenders.toggleRightSidebar()
+          id: 'showTabsInSidebar',
+          label: 'Show Tabs in Sidebar',
+          type: 'checkbox',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => ipcSenders.toggleTabsPosition()
         },
-        */
+        { type: 'separator' },
         { role: 'togglefullscreen' },
         {
           label: 'Toggle Developer Tools',
@@ -352,6 +373,10 @@ export const setAppMenu = (): void => {
 
 export const changeMenuItemLabel = (id: string, newLabel: string): void => {
   appMenu?.updateMenuItem(id, newLabel)
+}
+
+export const updateTabOrientationMenuItem = (): void => {
+  appMenu?.updateTabOrientationMenuItem()
 }
 
 const checkForChangeWithTimeout = async (

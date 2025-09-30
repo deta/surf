@@ -113,9 +113,14 @@
 
     shortcutsManager.registerHandler(ShortcutActions.CLOSE_TAB, () => {
       log.debug('Closing current tab (CMD+W)')
-      if (tabsService.activeTab) {
-        tabsService.delete(tabsService.activeTab.id, true)
+
+      const activeTab = tabsService.activeTab
+      if (!activeTab) {
+        log.error('No active tab')
+        return true
       }
+
+      tabsService.closeTab(activeTab.id, true)
       return true
     })
 
@@ -511,6 +516,19 @@
       top 100ms cubic-bezier(0.2, 0, 0, 1),
       left 100ms cubic-bezier(0.2, 0, 0, 1);
   }
+
+  /* Visual indicators for fine-grained drop positions */
+  // :global(.dragcula-drop-indicator[data-drop-position='before']) {
+  //   --color: #00ff00; /* Green for "before" */
+  // }
+
+  // :global(.dragcula-drop-indicator[data-drop-position='after']) {
+  //   --color: #ff0000; /* Red for "after" */
+  // }
+
+  // :global(.dragcula-drop-indicator[data-drop-position='on']) {
+  //   --color: #ffaa00; /* Orange for "on" */
+  // }
   :global(.dragcula-drop-indicator.dragcula-axis-vertical) {
     left: var(--inset);
     right: var(--inset);
@@ -616,7 +634,7 @@
 
   /* Vertical Layout Styles */
   .vertical-app-bar {
-    height: 32px;
+    height: 40px;
     min-height: 32px;
     background: var(--app-background);
     display: flex;

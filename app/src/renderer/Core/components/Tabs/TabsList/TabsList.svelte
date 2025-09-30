@@ -84,6 +84,17 @@
   }}
   onDrop={dnd.handleTabDrop}
 >
+  <!-- Pin zone hint when no pinned tabs exist -->
+  {#if tabsService.tabs.filter((tab) => tab.pinned).length === 0}
+    <div
+      class="pin-zone-hint"
+      use:HTMLAxisDragZone.action={{
+        accepts: dnd.acceptUnpinnedTabDrag
+      }}
+      onDrop={dnd.handlePinZoneDrop}
+    ></div>
+  {/if}
+
   {#each tabsService.tabs as tab, index (tab.id)}
     <TabItem
       tab={tabsService.tabs[index]}
@@ -125,6 +136,50 @@
   /* View Transitions for smooth tab reordering */
   :global([data-tab-id]) {
     view-transition-name: var(--tab-id);
+  }
+
+  /* Pin zone hint for empty state */
+  .pin-zone-hint {
+    width: 0;
+    height: 100%;
+    margin: 0 3px 0 0;
+    border-radius: 6px;
+    opacity: 0;
+    transition: all 150ms ease-out;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  :global(body[data-dragging='true']) .pin-zone-hint {
+    width: 100px;
+    opacity: 1;
+    height: -webkit-fill-available;
+    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.1);
+    border: 1px dashed rgba(var(--accent-color-rgb, 0, 122, 204), 0.3);
+  }
+
+  :global(body[data-dragging='true']) .pin-zone-hint::before {
+    content: 'Pin';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: var(--on-surface-muted);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* Enhanced visual feedback when hovering over pin zone */
+  .pin-zone-hint[data-drag-target='true'] {
+    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.2) !important;
+    border-color: rgba(var(--accent-color-rgb, 0, 122, 204), 0.5) !important;
+    border-style: solid !important;
+  }
+
+  .pin-zone-hint[data-drag-target='true']::before {
+    color: var(--on-surface) !important;
+    font-weight: 600;
   }
 
   /* Smooth transitions during reordering */

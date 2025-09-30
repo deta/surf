@@ -12,7 +12,6 @@ import { type Fn, TelemetryViewType, TelemetryCreateTabSource } from '@deta/type
 import { useViewManager, WebContentsView, ViewManager } from '../views'
 import { derived, get, writable, type Readable } from 'svelte/store'
 import { ViewManagerEmitterNames, ViewType, WebContentsViewEmitterNames } from '../views/types'
-import type { NewWindowRequest } from '../ipc/events'
 import { spawnBoxSmoke } from '@deta/ui'
 import {
   type TabItemEmitterEvents,
@@ -41,6 +40,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
   createdAt: Date
   updatedAt: Date
   view: WebContentsView
+  pinned = $state<boolean>(false)
 
   stateIndicator = $state<'none' | 'success'>('none')
 
@@ -56,6 +56,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
     this.createdAt = new Date(data.createdAt)
     this.updatedAt = new Date(data.updatedAt)
     this.view = view
+    this.pinned = data.pinned ?? false
 
     this.title = derived(this.view.title, (title) => title)
 
@@ -80,7 +81,8 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
       title: this.view.titleValue,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
-      view: this.view.dataValue
+      view: this.view.dataValue,
+      pinned: this.pinned
     }
   }
 
@@ -89,6 +91,7 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
     this.index = data.index ?? this.index
     this.createdAt = data.createdAt ? new Date(data.createdAt) : this.createdAt
     this.updatedAt = data.updatedAt ? new Date(data.updatedAt) : this.updatedAt
+    this.pinned = data.pinned ?? this.pinned
 
     this.log.debug(`Updating tab ${this.id} with data:`, data)
 
@@ -110,6 +113,14 @@ export class TabItem extends EventEmitterBase<TabItemEmitterEvents> {
     setTimeout(() => {
       this.stateIndicator = currState
     }, 2000)
+  }
+
+  pin() {
+    this.manager.pinTab(this.id)
+  }
+
+  unpin() {
+    this.manager.unpinTab(this.id)
   }
 
   onDestroy() {
@@ -297,9 +308,9 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     const tabs = raw
-      .sort((a, b) => a.index - b.index)
       .map((item) => this.itemToTabItem(item))
-      .filter((item) => item !== null) as TabItem[]
+      .filter((item) => item !== null)
+      .sort((a, b) => a.index - b.index) as TabItem[]
 
     return tabs
   }
@@ -335,7 +346,16 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
     this.log.debug('Creating new tab with view:', view, 'options:', options)
 
-    const newIndex = this.activeTabIndex + 1 || (await this.getLastTabIndex()) + 1
+    // Smart positioning: if active tab is pinned, place new tab at the end
+    let newIndex: number
+    const activeTab = this.activeTab
+    if (activeTab && activeTab.pinned) {
+      // Place at the end of all tabs
+      newIndex = this.tabs.length
+    } else {
+      newIndex = this.activeTabIndex + 1 || (await this.getLastTabIndex()) + 1
+    }
+
     const hostname = getHostname(url) || 'unknown'
 
     const item = await this.kv.create({
@@ -475,6 +495,51 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     } catch (error) {
       this.log.error('Error updating tab:', error)
       return false
+    }
+  }
+
+  /**
+   * Closes a tab with special handling for pinned tabs.
+   * If the tab is pinned, it will switch to the next available tab instead of deleting it.
+   * If the tab is not pinned, it will be deleted normally.
+   *
+   * @param id The ID of the tab to close
+   * @param userAction Whether this is a user-initiated action
+   */
+  async closeTab(id: string, userAction = false) {
+    try {
+      this.log.debug('Closing tab with id:', id)
+
+      const tab = this.tabs.find((t) => t.id === id)
+      if (!tab) {
+        this.log.error('No tab found with id:', id)
+        return
+      }
+
+      if (tab.pinned) {
+        this.log.debug('Tab is pinned, jumping to next tab instead of closing')
+
+        const allTabs = this.tabs
+        let targetTab: TabItem | null = null
+
+        const currentIndex = allTabs.findIndex((t) => t.id === id)
+        const nextTabIndex = currentIndex + 1
+
+        if (nextTabIndex < allTabs.length) {
+          targetTab = allTabs[nextTabIndex]
+        } else if (allTabs.length > 1) {
+          targetTab = allTabs[allTabs.length - 2]
+        }
+
+        if (targetTab) {
+          await this.setActiveTab(targetTab.id, userAction)
+        }
+      } else {
+        // Delete regular tabs normally
+        await this.delete(id, userAction)
+      }
+    } catch (error) {
+      this.log.error('Error closing tab:', error)
     }
   }
 
@@ -621,12 +686,80 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
       newTabs.forEach((tab, index) => (tab.index = index))
 
-      await Promise.all(newTabs.map((tab) => this.update(tab.id, { index: tab.index })))
+      // Update all tabs with error handling for race conditions
+      const updateResults = await Promise.allSettled(
+        newTabs.map((tab) => this.update(tab.id, { index: tab.index }))
+      )
+
+      // Log any failures but don't block the reorder operation
+      updateResults.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          this.log.warn(`Failed to update index for tab ${newTabs[idx].id}:`, result.reason)
+        }
+      })
 
       this.emit(TabsServiceEmitterNames.REORDERED, { tabId, oldIndex: currentIndex, newIndex })
       this.log.debug(`Successfully reordered tab ${tabId} from ${currentIndex} to ${newIndex}`)
     } catch (error) {
       this.log.error('Error reordering tab:', error)
+    }
+  }
+
+  /**
+   * Pin a tab, keeping its current position
+   * @param tabId The ID of the tab to pin
+   */
+  async pinTab(tabId: string) {
+    try {
+      this.log.debug(`Pinning tab ${tabId}`)
+
+      const tab = this.tabs.find((t) => t.id === tabId)
+      if (!tab) {
+        this.log.warn(`Tab with id "${tabId}" not found for pinning`)
+        return
+      }
+
+      if (tab.pinned) {
+        this.log.debug(`Tab ${tabId} is already pinned`)
+        return
+      }
+
+      // Update the tab's pinned state
+      tab.pinned = true
+      await this.update(tabId, { pinned: true })
+
+      this.log.debug(`Successfully pinned tab ${tabId}`)
+    } catch (error) {
+      this.log.error('Error pinning tab:', error)
+    }
+  }
+
+  /**
+   * Unpin a tab, keeping its current position
+   * @param tabId The ID of the tab to unpin
+   */
+  async unpinTab(tabId: string) {
+    try {
+      this.log.debug(`Unpinning tab ${tabId}`)
+
+      const tab = this.tabs.find((t) => t.id === tabId)
+      if (!tab) {
+        this.log.warn(`Tab with id "${tabId}" not found for unpinning`)
+        return
+      }
+
+      if (!tab.pinned) {
+        this.log.debug(`Tab ${tabId} is already unpinned`)
+        return
+      }
+
+      // Update the tab's pinned state
+      tab.pinned = false
+      await this.update(tabId, { pinned: false })
+
+      this.log.debug(`Successfully unpinned tab ${tabId}`)
+    } catch (error) {
+      this.log.error('Error unpinning tab:', error)
     }
   }
 

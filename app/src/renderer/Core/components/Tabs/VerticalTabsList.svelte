@@ -1,7 +1,9 @@
 <script lang="ts">
   import { useTabs } from '@deta/services/tabs'
-  import VerticalTabItem from '../Tabs/VerticalTabItem.svelte'
+  import VerticalPinnedTab from './VerticalPinnedTab.svelte'
+  import VerticalUnpinnedTab from './VerticalUnpinnedTab.svelte'
   import { Icon } from '@deta/icons'
+  import { isMac } from '@deta/utils'
   import {
     calculateVerticalTabLayout,
     measureContainerHeight,
@@ -131,7 +133,7 @@
   $effect(() => {
     if (tabsService.activeTab && scrollContainerElement) {
       const activeTabElement = scrollContainerElement.querySelector(
-        `#vertical-tab-${tabsService.activeTab.id}`
+        `#tab-${tabsService.activeTab.id}`
       )
       if (activeTabElement) {
         activeTabElement.scrollIntoView({
@@ -143,7 +145,12 @@
   })
 </script>
 
-<div class="vertical-tabs-list" bind:this={containerElement} style:--tabsWidth={tabsWidth + 'px'}>
+<div
+  class="vertical-tabs-list"
+  bind:this={containerElement}
+  style:--tabsWidth={tabsWidth + 'px'}
+  class:mac={isMac()}
+>
   <div
     class="tabs-scroll-container"
     class:needs-scrolling={needsScrolling}
@@ -154,14 +161,38 @@
     }}
     onDrop={dnd.handleTabDrop}
   >
+    <!-- Small pin zone indicator when no pinned tabs exist -->
+    {#if tabsService.tabs.filter((tab) => tab.pinned).length === 0}
+      <div
+        class="pin-zone-hint"
+        use:HTMLAxisDragZone.action={{
+          accepts: dnd.acceptUnpinnedTabDrag
+        }}
+        onDrop={dnd.handlePinZoneDrop}
+      ></div>
+    {/if}
+
     {#each tabsService.tabs as tab, index (tab.id)}
-      <VerticalTabItem
-        tab={tabsService.tabs[index]}
-        active={tabsService.activeTab?.id === tab.id}
-        height={layoutCalculation?.tabDimensions[index]?.height}
-        showCloseButton={layoutCalculation?.tabDimensions[index]?.showCloseButton ?? true}
-        {isResizing}
-      />
+      {#if tab.pinned}
+        <VerticalPinnedTab
+          {tab}
+          active={tabsService.activeTab?.id === tab.id}
+          height={layoutCalculation?.tabDimensions[index]?.height}
+          {isResizing}
+        />
+        <!-- Add separator line after last pinned tab -->
+        {#if index + 1 < tabsService.tabs.length && !tabsService.tabs[index + 1].pinned}
+          <div class="pinned-separator"></div>
+        {/if}
+      {:else}
+        <VerticalUnpinnedTab
+          {tab}
+          active={tabsService.activeTab?.id === tab.id}
+          height={layoutCalculation?.tabDimensions[index]?.height}
+          showCloseButton={layoutCalculation?.tabDimensions[index]?.showCloseButton ?? true}
+          {isResizing}
+        />
+      {/if}
     {/each}
   </div>
 
@@ -190,6 +221,49 @@
     flex-direction: column;
     background: var(--app-background);
     --fold-width: 0.5rem;
+    &:not(.mac) {
+      padding-top: 0rem;
+    }
+  }
+
+  .pin-zone-hint {
+    height: 0;
+    margin: 0 0.5rem 0.25rem 0.5rem;
+    border-radius: 6px;
+    opacity: 0;
+    transition: all 150ms ease-out;
+    position: relative;
+  }
+
+  /* Show pin zone hint during drag when no pinned tabs exist */
+  :global(body[data-dragging='true']) .pin-zone-hint {
+    height: 40px;
+    opacity: 1;
+    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.1);
+    border: 1px dashed rgba(var(--accent-color-rgb, 0, 122, 204), 0.3);
+  }
+
+  :global(body[data-dragging='true']) .pin-zone-hint::before {
+    content: 'Drop here to pin';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: var(--on-surface-muted);
+    pointer-events: none;
+  }
+
+  /* Enhanced visual feedback when hovering over pin zone */
+  .pin-zone-hint[data-drag-target='true'] {
+    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.2) !important;
+    border-color: rgba(var(--accent-color-rgb, 0, 122, 204), 0.5) !important;
+    border-style: solid !important;
+  }
+
+  .pin-zone-hint[data-drag-target='true']::before {
+    color: var(--on-surface) !important;
+    font-weight: 600;
   }
 
   .tabs-scroll-container {
@@ -249,6 +323,13 @@
     justify-content: center;
   }
 
+  .pinned-separator {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0.5rem 0.75rem;
+    opacity: 0.3;
+  }
+
   .resize-handle {
     position: absolute;
     top: 0;
@@ -288,7 +369,7 @@
   }
 
   /* View Transitions for smooth tab reordering */
-  :global([data-tab-id^='vertical-tab-']) {
+  :global([data-tab-id^='tab-']) {
     view-transition-name: var(--tab-id);
   }
 

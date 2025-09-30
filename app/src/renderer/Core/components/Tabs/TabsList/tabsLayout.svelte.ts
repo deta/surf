@@ -5,6 +5,7 @@ export interface TabDimensions {
   collapsed: boolean
   squished: boolean
   showCloseButton: boolean
+  pinned: boolean
 }
 
 export interface LayoutCalculation {
@@ -39,6 +40,8 @@ const DEFAULT_CONFIG: TabLayoutConfig = {
   tabHorizontalPadding: 24
 }
 
+const PINNED_TAB_WIDTH = 40
+
 /**
  * Measures container width accounting for parent padding
  */
@@ -71,47 +74,120 @@ export function calculateTabLayout(
   const cfg = DEFAULT_CONFIG
   const addButtonWidth = cfg.addButtonWidth
 
-  // 1) Compute available space for tabs
-  const gapsWidth = Math.max(0, tabs.length - 1) * cfg.tabGap
-  const availableWidth = containerWidth - cfg.containerPadding - addButtonWidth - gapsWidth
+  // Separate pinned and unpinned tabs
+  const pinnedTabs = tabs.filter((tab) => tab.pinned)
+  const unpinnedTabs = tabs.filter((tab) => !tab.pinned)
 
-  // Not enough space for anything meaningful — collapse all
-  if (availableWidth <= 0) {
-    return minimalCollapsedLayout(tabs.length, addButtonWidth, containerWidth)
+  // Calculate space used by pinned tabs
+  const pinnedTabsWidth = pinnedTabs.length * PINNED_TAB_WIDTH
+  const pinnedTabsGaps = pinnedTabs.length > 0 ? (pinnedTabs.length - 1) * cfg.tabGap : 0
+
+  // Calculate available space for unpinned tabs
+  const unpinnedTabsGaps = unpinnedTabs.length > 0 ? (unpinnedTabs.length - 1) * cfg.tabGap : 0
+  const totalGaps =
+    pinnedTabsGaps +
+    unpinnedTabsGaps +
+    (pinnedTabs.length > 0 && unpinnedTabs.length > 0 ? cfg.tabGap : 0)
+  const availableForUnpinned =
+    containerWidth - cfg.containerPadding - addButtonWidth - pinnedTabsWidth - totalGaps
+
+  // Create dimensions array with correct length
+  const dimensions: TabDimensions[] = new Array(tabs.length)
+
+  // Set dimensions for pinned tabs (fixed width)
+  let pinnedIndex = 0
+  for (let i = 0; i < tabs.length; i++) {
+    if (tabs[i].pinned) {
+      dimensions[i] = {
+        width: PINNED_TAB_WIDTH,
+        collapsed: false,
+        squished: false,
+        showCloseButton: false,
+        pinned: true
+      }
+      pinnedIndex++
+    }
   }
 
-  // 2) Try uniform layout first (all tabs same width)
-  const uniformWidth = Math.min(availableWidth / tabs.length, cfg.maxTabWidth)
+  // Handle unpinned tabs
+  if (unpinnedTabs.length === 0) {
+    // Only pinned tabs
+    const totalTabsWidth = dimensions.reduce((sum, d) => sum + d.width, 0)
+    return {
+      tabDimensions: dimensions,
+      addButtonWidth,
+      totalWidth: cfg.containerPadding + totalTabsWidth + totalGaps + addButtonWidth
+    }
+  }
+
+  // Not enough space for unpinned tabs — collapse all
+  if (availableForUnpinned <= 0) {
+    for (let i = 0; i < tabs.length; i++) {
+      if (!tabs[i].pinned) {
+        dimensions[i] = {
+          width: cfg.minTabWidth,
+          collapsed: true,
+          squished: false,
+          showCloseButton: false,
+          pinned: false
+        }
+      }
+    }
+    const totalTabsWidth = dimensions.reduce((sum, d) => sum + d.width, 0)
+    return {
+      tabDimensions: dimensions,
+      addButtonWidth,
+      totalWidth: containerWidth
+    }
+  }
+
+  // Try uniform layout for unpinned tabs
+  const uniformWidth = Math.min(availableForUnpinned / unpinnedTabs.length, cfg.maxTabWidth)
   const canUseUniform = uniformWidth >= cfg.collapsedThreshold
   if (canUseUniform) {
-    return uniformLayout(tabs.length, uniformWidth, addButtonWidth, gapsWidth)
+    for (let i = 0; i < tabs.length; i++) {
+      if (!tabs[i].pinned) {
+        dimensions[i] = {
+          width: uniformWidth,
+          collapsed: false,
+          squished: false,
+          showCloseButton: true,
+          pinned: false
+        }
+      }
+    }
+    const totalTabsWidth = dimensions.reduce((sum, d) => sum + d.width, 0)
+    return {
+      tabDimensions: dimensions,
+      addButtonWidth,
+      totalWidth: cfg.containerPadding + totalTabsWidth + totalGaps + addButtonWidth
+    }
   }
 
-  // 3) Tight space — allocate for active tabs first, then distribute remainder
+  // Tight space — allocate for active unpinned tabs first
   const collapsedWidth = cfg.iconWidth + cfg.tabHorizontalPadding
   const squishedWidth = cfg.squishedThreshold
-  let remainingWidth = availableWidth
-  const dimensions: TabDimensions[] = []
+  let remainingWidth = availableForUnpinned
 
-  const activeIndices = tabs
+  const activeUnpinnedIndices = tabs
     .map((t, i) => ({ t, i }))
-    .filter((x) => x.t.id === activeTabId)
+    .filter((x) => x.t.id === activeTabId && !x.t.pinned)
     .map((x) => x.i)
-  const nonActiveIndices = tabs
+  const nonActiveUnpinnedIndices = tabs
     .map((t, i) => ({ t, i }))
-    .filter((x) => x.t.id !== activeTabId)
+    .filter((x) => x.t.id !== activeTabId && !x.t.pinned)
     .map((x) => x.i)
 
-  // Reserve space for active tabs (enforce minimum width for close button visibility)
-  if (activeIndices.length > 0) {
-    const minForNonActive = collapsedWidth * nonActiveIndices.length
+  // Reserve space for active unpinned tabs
+  if (activeUnpinnedIndices.length > 0) {
+    const minForNonActive = collapsedWidth * nonActiveUnpinnedIndices.length
     const availableForActive = Math.max(
-      collapsedWidth * activeIndices.length,
-      availableWidth - minForNonActive
+      collapsedWidth * activeUnpinnedIndices.length,
+      remainingWidth - minForNonActive
     )
 
-    const perActiveTarget = availableForActive / activeIndices.length
-    for (const idx of activeIndices) {
+    const perActiveTarget = availableForActive / activeUnpinnedIndices.length
+    for (const idx of activeUnpinnedIndices) {
       const minActiveWidth = Math.max(cfg.collapsedThreshold + 20, 112)
       const width = Math.max(
         minActiveWidth,
@@ -123,23 +199,25 @@ export function calculateTabLayout(
         width,
         collapsed: isCollapsed,
         squished: isSquished,
-        showCloseButton: true
+        showCloseButton: true,
+        pinned: false
       }
       remainingWidth -= width
     }
   }
 
-  // Distribute remaining space to non-active tabs
-  if (remainingWidth > 0 && nonActiveIndices.length > 0) {
-    const perNonActive = remainingWidth / nonActiveIndices.length
-    for (const idx of nonActiveIndices) {
+  // Distribute remaining space to non-active unpinned tabs
+  if (remainingWidth > 0 && nonActiveUnpinnedIndices.length > 0) {
+    const perNonActive = remainingWidth / nonActiveUnpinnedIndices.length
+    for (const idx of nonActiveUnpinnedIndices) {
       if (perNonActive >= cfg.collapsedThreshold) {
         const width = Math.min(perNonActive, cfg.maxTabWidth)
         dimensions[idx] = {
           width,
           collapsed: false,
           squished: false,
-          showCloseButton: false
+          showCloseButton: false,
+          pinned: false
         }
       } else if (perNonActive >= cfg.squishedThreshold) {
         const width = Math.max(collapsedWidth, perNonActive)
@@ -147,7 +225,8 @@ export function calculateTabLayout(
           width,
           collapsed: true,
           squished: false,
-          showCloseButton: false
+          showCloseButton: false,
+          pinned: false
         }
       } else {
         const width = Math.max(squishedWidth, perNonActive)
@@ -155,26 +234,29 @@ export function calculateTabLayout(
           width,
           collapsed: false,
           squished: true,
-          showCloseButton: false
+          showCloseButton: false,
+          pinned: false
         }
       }
     }
   } else {
-    // No space left — squish all non-active tabs if extremely cramped
-    for (const idx of nonActiveIndices) {
-      if (availableWidth / tabs.length < cfg.squishedThreshold) {
+    // No space left — squish all non-active unpinned tabs
+    for (const idx of nonActiveUnpinnedIndices) {
+      if (availableForUnpinned / unpinnedTabs.length < cfg.squishedThreshold) {
         dimensions[idx] = {
           width: squishedWidth,
           collapsed: false,
           squished: true,
-          showCloseButton: false
+          showCloseButton: false,
+          pinned: false
         }
       } else {
         dimensions[idx] = {
           width: collapsedWidth,
           collapsed: true,
           squished: false,
-          showCloseButton: false
+          showCloseButton: false,
+          pinned: false
         }
       }
     }
@@ -184,7 +266,7 @@ export function calculateTabLayout(
   return {
     tabDimensions: dimensions,
     addButtonWidth,
-    totalWidth: cfg.containerPadding + totalTabsWidth + gapsWidth + addButtonWidth
+    totalWidth: cfg.containerPadding + totalTabsWidth + totalGaps + addButtonWidth
   }
 }
 
@@ -199,7 +281,8 @@ function minimalCollapsedLayout(
       width: DEFAULT_CONFIG.minTabWidth,
       collapsed: true,
       squished: false,
-      showCloseButton: false
+      showCloseButton: false,
+      pinned: false
     })),
     addButtonWidth,
     totalWidth: containerWidth
@@ -217,7 +300,8 @@ function uniformLayout(
       width: tabWidth,
       collapsed: false,
       squished: false,
-      showCloseButton: true
+      showCloseButton: true,
+      pinned: false
     })),
     addButtonWidth,
     totalWidth: DEFAULT_CONFIG.containerPadding + tabWidth * count + gapsWidth + addButtonWidth

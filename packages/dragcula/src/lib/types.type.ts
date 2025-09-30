@@ -4,6 +4,8 @@ export type DropEffect = "move" | "copy" | "link" | "none";
 
 export type DragItemPreviewType = "clone" | "hoist" | "component";
 
+export type DropPosition = "before" | "after" | "on";
+
 /*export interface DragOperation {
 	readonly id: string;
 
