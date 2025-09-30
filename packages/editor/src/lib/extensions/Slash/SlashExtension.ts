@@ -11,7 +11,7 @@ export default Extension.create({
         allowSpaces: true,
         preventReTrigger: true,
         dismissOnSpace: true,
-        placeholder: 'filter or search stuff…'
+        placeholder: 'Insert…'
       }
     }
   },

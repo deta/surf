@@ -1,6 +1,7 @@
 <svelte:options accessors={true} />
 
 <script lang="ts">
+  import { onMount } from 'svelte'
   import type { Editor } from '@tiptap/core'
   import { DynamicIcon } from '@deta/icons'
   import type { SlashMenuItem, SlashCommandPayload } from './types'
@@ -10,6 +11,8 @@
   export let query: string
   export let loading: boolean = false
   export let callback: (payload: SlashCommandPayload) => void
+  export let onKeyDownRef: ((handler: (e: KeyboardEvent) => boolean) => void) | undefined =
+    undefined
 
   let selectedSection = 0
   let selectedIndex = 0
@@ -65,6 +68,12 @@
         return false
     }
   }
+
+  onMount(() => {
+    if (onKeyDownRef) {
+      onKeyDownRef(onKeyDown)
+    }
+  })
 </script>
 
 <div class="slash-container">

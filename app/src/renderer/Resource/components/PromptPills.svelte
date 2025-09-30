@@ -24,11 +24,15 @@
   export let hide: boolean = false
 
   export let direction: 'horizontal' | 'vertical' = 'vertical'
+  export let maxHorizontalItems: number = 5
+
+  $: visibleItems =
+    direction === 'horizontal' ? promptItems.slice(0, maxHorizontalItems) : promptItems
 </script>
 
 {#key direction}
   <div class="prompt-list direction-{direction}" class:hide>
-    {#each promptItems as prompt, i (prompt.prompt.replace(/[^a-zA-Z0-9]/g, ''))}
+    {#each visibleItems as prompt, i (prompt.prompt.replace(/[^a-zA-Z0-9]/g, ''))}
       <div class="pill-wrapper" style="--delay: {(i + 0) * 75}ms;" use:startingClass={{}}>
         <PromptPill
           label={prompt.label}
@@ -40,9 +44,6 @@
         />
       </div>
     {/each}
-    {#if direction === 'horizontal'}
-      <div style="width: 6rem; flex-shrink: 0"></div>
-    {/if}
   </div>
 {/key}
 
@@ -64,8 +65,11 @@
     }
 
     &.direction-horizontal {
-      overflow-x: auto;
-      padding-bottom: 0.75rem;
+      flex-wrap: nowrap;
+      overflow: hidden;
+      gap: 0.375rem;
+      font-size: 0.75rem;
+      padding-top: 0.125rem;
     }
 
     .pill-wrapper {

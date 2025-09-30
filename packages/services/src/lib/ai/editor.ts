@@ -7,8 +7,6 @@ import { conditionalArrayItem, generateID, useLogScope, wait } from '@deta/utils
 import type { Editor as EditorComp } from '@deta/editor'
 import { type Editor } from '@deta/editor/editor'
 
-import { getPrepPhrase, getWritingPhrase } from './helpers'
-
 export type AIGenerationStatus = 'idle' | 'initializing' | 'generating' | 'completed' | 'failed'
 
 export type AIGenerationOptions = {
@@ -16,7 +14,6 @@ export type AIGenerationOptions = {
   textQuery: string
   autoScroll?: boolean
   showPrompt?: boolean
-  loadingMessage?: string
 }
 
 export class EditorAIGeneration {
@@ -50,7 +47,7 @@ export class EditorAIGeneration {
     this.log = useLogScope('EditorAIGeneration')
   }
 
-  createNode(loadingMsg?: string) {
+  createNode() {
     this.log.debug('Creating AI generation node', this.id, this.textQuery)
 
     const tr = this.editor.view.state.tr
@@ -64,14 +61,6 @@ export class EditorAIGeneration {
 
     this.log.debug('Prompt node created', promptNode)
 
-    // Create the loading node
-    const loadingNode = schema.nodes.loading.create({
-      id: this.id,
-      text: loadingMsg ? loadingMsg : getPrepPhrase()
-    })
-
-    this.log.debug('Loading node created', loadingNode)
-
     // Create the output node (initially empty)
     const outputNode = schema.nodes.output.create({
       id: this.id
@@ -82,8 +71,7 @@ export class EditorAIGeneration {
     // Create the generation node containing all the above nodes
     const generationNode = schema.nodes.generation.create({ id: this.id, status: 'initializing' }, [
       ...conditionalArrayItem(this.showPrompt, promptNode),
-      outputNode,
-      loadingNode
+      outputNode
     ])
 
     this.log.debug('Generation node created', generationNode)
@@ -154,18 +142,6 @@ export class EditorAIGeneration {
     const tr = this.editor.view.state.tr
     this.updateAIGenerationNodeStatus(status, tr)
 
-    if (status === 'generating') {
-      this.updateNodeAttributes(
-        'loading',
-        {
-          text: getWritingPhrase()
-        },
-        tr
-      )
-    } else if (status === 'completed' || status === 'failed') {
-      this.removeLoadingNode(tr)
-    }
-
     this.editor.view.dispatch(tr)
   }
 
@@ -227,32 +203,11 @@ export class EditorAIGeneration {
     this.updateNodeAttributes('generation', { status: status }, transaction)
   }
 
-  removeLoadingNode(transaction?: Transaction) {
-    const nodePos = this.getNodeByType('loading')
-    if (nodePos) {
-      this.log.debug('Removing loading node', this.id, nodePos)
-      const tr = transaction || this.editor.view.state.tr
-      tr.delete(nodePos.pos, nodePos.pos + nodePos.node.nodeSize)
-
-      if (!transaction) {
-        this.editor.view.dispatch(tr)
-      }
-    } else {
-      this.log.warn('Loading node not found', this.id)
-    }
-  }
-
   scrollToNode() {
     this.log.debug('Scrolling to AI generation node', this.id)
 
     const nodePos = this.noteEditor.getNodeByID(this.id, 'generation')
     if (nodePos) {
-      //   const domElem = nodePos.element
-      //   domElem.scrollIntoView({
-      //     behavior: 'smooth',
-      //     block: 'start'
-      //   })
-
       const wrapper = this.noteEditor.element
       const domElem = nodePos.element
 
@@ -308,32 +263,8 @@ export class NoteEditor {
   createAIGeneration(pos: number, opts: AIGenerationOptions) {
     this.log.debug('Creating AI generation', pos, opts)
     const generation = new EditorAIGeneration(this, pos, opts)
-    generation.createNode(opts.loadingMessage)
+    generation.createNode()
     return generation
-  }
-
-  cleanupLoadingNodes() {
-    try {
-      this.log.debug('Cleaning up loading nodes')
-      const tr = this.editor.view.state.tr
-      const loadingNodes = this.editor.$nodes('loading')
-
-      if (!loadingNodes || loadingNodes.length === 0) {
-        this.log.debug('No loading nodes found, nothing to clean up')
-        return
-      }
-
-      this.log.debug('Found loading nodes to clean up', loadingNodes)
-
-      const reversed = [...loadingNodes].reverse()
-      reversed.forEach((nodePos) => {
-        tr.delete(nodePos.pos, nodePos.pos + nodePos.node.nodeSize)
-      })
-
-      this.editor.view.dispatch(tr)
-    } catch (error) {
-      this.log.error('Error cleaning up loading nodes', error)
-    }
   }
 
   static create(editor: Editor, component: EditorComp, element: HTMLElement) {

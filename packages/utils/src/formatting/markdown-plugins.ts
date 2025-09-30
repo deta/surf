@@ -79,7 +79,7 @@ function handleIncompleteComponent(node: any): boolean {
 }
 
 function cleanTextContent(text: string): string {
-  return text.replace(/\s*:::(\w+)(\{[^}]*)?\s*$/, '')
+  return text.replace(/\s*:::(\w+)(\{[^}]*)?\s*$/, '').replace(/\}\s*$/g, '')
 }
 
 function processTextNodeForComponents(child: any): { nodes: any[]; hasChanges: boolean } {

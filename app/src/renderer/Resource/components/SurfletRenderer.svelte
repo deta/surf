@@ -739,16 +739,6 @@
                   <IconConfirmation bind:this={copyIcon} name="copy" size="16px" />
                 </button>
               {/if}
-
-              {#if $doneGenerating}
-                <button
-                  use:tooltip={{ text: 'Open as Tab', position: 'left' }}
-                  class="flex items-center p-1 rounded-md transition-colors"
-                  on:click|stopPropagation={handleOpenAsTab}
-                >
-                  <Icon name="arrow.up.right" size="16px" />
-                </button>
-              {/if}
             </div>
           {/if}
         {/if}

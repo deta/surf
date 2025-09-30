@@ -3,24 +3,21 @@
 </script>
 
 <script lang="ts">
-  import { derived, type Writable, writable, type Readable } from 'svelte/store'
+  import { get, derived, type Writable, writable, type Readable } from 'svelte/store'
   import Input from './Input.svelte'
   import { Icon } from '@deta/icons'
   import PromptPills, { type PromptPillItem } from './PromptPills.svelte'
   import type { ContextManager } from '@deta/services/ai'
   import { BUILT_IN_PAGE_PROMPTS } from '@deta/services/constants'
-  import { conditionalArrayItem, isMac, useLogScope } from '@deta/utils'
+  import { conditionalArrayItem, useLogScope } from '@deta/utils'
   import { createEventDispatcher, tick } from 'svelte'
-  import type { Editor, MentionItem } from '@deta/editor'
+  import { elementFromString, type Editor, type MentionItem } from '@deta/editor'
   import type { ChatPrompt } from '@deta/services/ai'
   import { useConfig } from '@deta/services'
-  // import NoteInputSavedPrompts from './NoteInputSavedPrompts.svelte'
-  // import NoteContextBubbles from './NoteContextBubbles.svelte'
-  import { isGeneratingAI } from '@deta/services/ai'
   import { startingClass } from '@deta/utils/dom'
   import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
   import { AddToContextMenu, Dropdown } from '@deta/ui'
-  import type { AITool } from '@deta/types'
+  import type { AIChatStatusMessage, AITool } from '@deta/types'
 
   const log = useLogScope('ChatInput')
   const dispatch = createEventDispatcher<{
@@ -30,9 +27,6 @@
     autocomplete: void
   }>()
 
-  export let state: ChatInputState = 'floaty'
-  export let firstLine: boolean = false
-  export let disabled: boolean = false
   export let editor: Editor | undefined = undefined
   export let hideEmptyPrompts: boolean = false
 
@@ -54,24 +48,41 @@
   const userConfigSettings = config.settings
   const { generatingPrompts, generatedPrompts } = contextManager
 
-  const savedPromptsDialogOpen = writable(false)
   const contextManagementDialogOpen = writable(false)
 
   const inputValue = writable('')
-  const isEditorEmpty = writable(true)
+  $: isEditorEmpty = editor ? get(editor.isEmpty) : true
 
   // TODO: Can we not manually track responses here but give suggested prompts from service
   // directly & cleaned up already?
   const responses = writable<unknown[]>([])
 
-  $: activeState = $isGeneratingAI ? 'bottom' : state
-  $: if (activeState) savedPromptsDialogOpen.set(false)
-  $: if (activeState) contextManagementDialogOpen.set(false)
-  $: isContextEmpty = true // $contextItems.filter((e) => e.visibleValue).length <= 0
-  $: isEditorEmpty.set(!$inputValue || $inputValue.trim() === '')
+  const statusMessage = writable<AIChatStatusMessage | null>(null)
+
+  // Derived store for loading state
+  const isLoading = derived(statusMessage, ($statusMessage) => {
+    return $statusMessage !== null && $statusMessage.type !== 'error'
+  })
 
   let focusInput: () => void
   let chatInputElement: HTMLElement
+
+  // ==== Status Message Management
+
+  export const showStatus = (message: AIChatStatusMessage) => {
+    statusMessage.set(message)
+  }
+
+  export const dismissStatus = () => {
+    statusMessage.set(null)
+    clearEditor()
+  }
+
+  export const clearEditor = () => {
+    setContent('', true)
+    inputValue.set('')
+    editor?.clear()
+  }
 
   // ==== Suggested Prompts
 
@@ -163,6 +174,8 @@
   })
 
   const handleClickPrompt = (e: CustomEvent<PromptPillItem>) => {
+    if ($isLoading) return // Prevent prompt clicks while loading
+
     usedPrompts.update((v) => {
       v.push(e.detail)
       return v
@@ -171,50 +184,30 @@
   }
 
   const handleSubmit = () => {
-    // Get the current content from both sources to debug
-    const tiptapEditor = editor?.getEditor()
-    const htmlContent = tiptapEditor?.getHTML() || ''
-    const storeContent = $inputValue || ''
+    if ($isLoading) return
 
-    // Use the store content as primary since it's bound to the editor
-    const currentContent = storeContent || htmlContent
+    const currentContent = $inputValue
     const trimmedContent = currentContent.trim()
 
-    if (firstLine && tiptapEditor?.state.selection.from === 0) {
-      const { selection, doc } = tiptapEditor.state
-      const node = doc.nodeAt(selection.from)
-      if (node?.type.name === 'titleNode') {
-        return
-      }
-    }
-
-    log.debug('Handling submit', currentContent, { firstLine, htmlContent, storeContent })
-
-    if ($isGeneratingAI) dispatch('cancel-completion')
-
-    if (!trimmedContent && firstLine) {
-      dispatch('submit', null)
-      return
-    }
+    log.debug('Handling submit', currentContent)
     if (!trimmedContent) {
       log.debug('Empty content, not submitting')
       return
     }
-
     if (!editor) {
-      log.debug('No editor, submitting null')
-      dispatch('submit', null)
+      log.debug('No editor, not submitting')
       return
     }
-
     const mentions: MentionItem[] = editor.getMentions()
     dispatch('submit', { query: currentContent, mentions })
-
-    inputValue.set('')
-    editor?.clear()
     tick().then(() => {
       focus()
     })
+  }
+
+  const handleCancel = () => {
+    if (!$isLoading) return
+    dispatch('cancel-completion')
   }
 
   export const setContent = (content: string, focus = false) => {
@@ -235,142 +228,278 @@
   }
 </script>
 
-<!--
-{#if disabled}
-  <div class="inline-controls" use:startingClass={{}}>
-    <Tooltip side="bottom">
-      <AppBarButton class="-mr-1.5" on:click={handleSubmit}>
-        <Icon name={$isGeneratingAI ? 'spinner' : 'cursor'} size="1.15rem" />
-      </AppBarButton>
-      <svelte:fragment slot="content"
-        >{$isGeneratingAI ? 'Stop completion' : 'Send Message'}</svelte:fragment
-      >
-    </Tooltip>
-    <!--<div>
-      <NoteInputSavedPrompts
-        {contextManager}
-        promptSelectorOpen={savedPromptsDialogOpen}
-        direction={'top'}
-        on:run-prompt
-      >
-        <AppBarButton active={$savedPromptsDialogOpen}>
-          <Icon name="dots.vertical" size="1rem" />
-        </AppBarButton>
-      </NoteInputSavedPrompts>
-           <NoteContextBubbles {contextManager} pickerOpen={contextManagementDialogOpen} />
-    </div>
-  </div>
-{/if}-->
-
 <div
   bind:this={chatInputElement}
-  class="note-chat-input {activeState}"
+  class="note-chat-input bottom"
+  class:loading={$isLoading}
   use:startingClass={{}}
-  class:firstLine
-  class:focusOutside={disabled}
 >
-  <header>
-    <PromptPills
-      promptItems={$suggestedPrompts}
-      hide={$isEditorEmpty || !showExamplePrompts || $contextManagementDialogOpen}
-      direction={activeState === 'bottom' ? 'horizontal' : 'vertical'}
-      on:click={handleClickPrompt}
-    />
-    {#key activeState}
-      <div
-        class="context-controls {activeState}"
-        use:startingClass={{}}
-        class:open-context-picker={$contextManagementDialogOpen}
-      >
-        <div>
-          <!-- {#if !firstLine} -->
-          <AddToContextMenu {onFileSelect} {onMentionSelect} align="end" />
-          <Dropdown
-            items={$toolsDropdownItems}
-            triggerText="Tools"
-            triggerIcon="bolt"
-            align="end"
-          />
-          <!-- {/if} -->
-
-          {#if !$contextManagementDialogOpen}
-            <!-- {#if $userConfigSettings.enable_custom_prompts}
-              <NoteInputSavedPrompts
-                {contextManager}
-                promptSelectorOpen={savedPromptsDialogOpen}
-                direction={activeState === 'bottom' ? 'top' : 'right'}
-                on:run-prompt
-              >
-                <button active={$savedPromptsDialogOpen}>
-                  <Icon name="chat.square.heart" size="1rem" />
-                </button>
-              </NoteInputSavedPrompts>
-            {/if} -->
-            <!-- <NoteContextBubbles
-              {contextManager}
-              pickerOpen={contextManagementDialogOpen}
-              layout={activeState}
-              {firstLine}
-            /> -->
-          {:else}
-            <!-- {#if isContextEmpty && $userConfigSettings.enable_custom_prompts}
-              <NoteInputSavedPrompts
-                {contextManager}
-                promptSelectorOpen={savedPromptsDialogOpen}
-                direction={activeState === 'bottom' ? 'top' : 'right'}
-                on:run-prompt
-              >
-                <button active={$savedPromptsDialogOpen}>
-                  <Icon name="chat.square.heart" size="1rem" />
-                </button>
-              </NoteInputSavedPrompts>
-            {/if} -->
-            <!-- <NoteContextBubbles
-              {contextManager}
-              pickerOpen={contextManagementDialogOpen}
-              layout={activeState}
-              {firstLine}
-            /> -->
-          {/if}
-        </div>
+  {#if $statusMessage}
+    <div class="status-message" class:error={$statusMessage.type === 'error'}>
+      <div class="status-content">
+        {#if $statusMessage.type === 'error'}
+          <Icon name="exclamation.circle" size="1.15rem" />
+          <span>{$statusMessage.value}</span>
+        {:else}
+          <Icon name="plane.loader" size="1.15rem" />
+          <span class="status-text">{$statusMessage.value}</span>
+        {/if}
       </div>
-    {/key}
-  </header>
+      {#if $statusMessage.type === 'error'}
+        <button class="dismiss-button" on:click={dismissStatus} aria-label="Dismiss">
+          <Icon name="close" size="0.75rem" />
+        </button>
+      {/if}
+    </div>
+  {:else}
+    <div class="prompts">
+      <PromptPills
+        promptItems={$suggestedPrompts}
+        hide={!isEditorEmpty ||
+          !showExamplePrompts ||
+          $contextManagementDialogOpen ||
+          !editor?.focused}
+        direction={'horizontal'}
+        on:click={handleClickPrompt}
+      />
+    </div>
+  {/if}
   <Input
     bind:editor
     value={inputValue}
     active={$contextManagementDialogOpen}
-    placeholder={writable('Ask me anything…')}
+    placeholder={writable($isLoading ? 'Answering...' : 'Ask me anything…')}
     bind:focusInput
     submitOnEnter
     parseMentions
-    hide={firstLine && activeState !== 'bottom'}
     {mentionItemsFetcher}
+    disabled={$isLoading}
     on:submit={handleSubmit}
     on:blur
-    on:update
-  >
-    {#if !disabled}
-      <div class="submit-btn" use:startingClass={{}}>
-        <!--{#if firstLine}
-          <span class="submit-hint">{isMac() ? 'CMD' : 'Ctrl'} + ⮐</span>
-        {/if}-->
-        <button class="-mr-1.5" on:click={handleSubmit}>
-          {#if $isGeneratingAI}
-            <Icon name="plane.loader" size="1.15rem" />
-          {:else}
-            <Icon name="cursor" fill="var(--accent)" size="1.15rem" />
-          {/if}
-        </button>
+  />
+  <header>
+    <div
+      class="context-controls bottom"
+      use:startingClass={{}}
+      class:open-context-picker={$contextManagementDialogOpen}
+    >
+      <div>
+        <AddToContextMenu {onFileSelect} {onMentionSelect} align="end" disabled={$isLoading} />
+        <Dropdown
+          items={$toolsDropdownItems}
+          triggerText="Tools"
+          triggerIcon="bolt"
+          align="end"
+          disabled={$isLoading}
+        />
+        <div>
+          <button
+            class="submit-btn -mr-1.5"
+            on:click={$isLoading ? handleCancel : handleSubmit}
+            disabled={isEditorEmpty && !$isLoading}
+          >
+            {#if $isLoading}
+              <span class="loading-icon">
+                <Icon name="spinner" fill="var(--accent)" size="1rem" class="loading-icon" />
+              </span>
+              <span class="stop-icon">
+                <Icon name="spinner.stop" size="1rem" />
+              </span>
+            {:else}
+              <Icon name="cursor" size="14" />
+              <span>Ask</span>
+            {/if}
+          </button>
+        </div>
       </div>
-    {/if}
-  </Input>
+    </div>
+  </header>
 </div>
 
 <style lang="scss">
   :global(.browser-content .editor-spacer) {
     height: 60px !important;
   }
+
+  .prompts {
+    margin-bottom: 16px;
+  }
+
+  .status-message {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 12px 8px;
+    margin-bottom: 4px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    animation: slideIn 0.2s ease-out;
+
+    background: light-dark(rgba(255, 255, 255), rgba(15, 23, 42));
+    color: light-dark(rgb(37, 99, 235), rgb(147, 197, 253));
+    backdrop-filter: blur(12px);
+
+    &.error {
+      background: light-dark(rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15));
+      color: light-dark(rgb(220, 38, 38), rgb(252, 165, 165));
+    }
+
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    $total-duration: 40s;
+    $speed-multiplier: 20;
+    $hump-spacing: 10%;
+    $idle-delay: 20s;
+
+    .status-text {
+      font-family: var(--default);
+      font-weight: var(--medium);
+      font-size: 0.9rem;
+      background: linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          #aae5ff 45%,
+          45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          white 45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          #aae5ff 45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          #aae5ff 45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          #aae5ff 45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0%,
+          transparent 40%,
+          var(--accent) 45%,
+          transparent 50%,
+          transparent 100%
+        ),
+        #399bf1;
+      background-size:
+        200% 100%,
+        200% 100%,
+        200% 100%,
+        200% 100%,
+        200% 100%,
+        200% 100%,
+        100% 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: multiSlide #{$total-duration + $idle-delay} infinite linear;
+    }
+
+    .dismiss-button,
+    .cancel-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: inherit;
+      opacity: 0.7;
+      transition:
+        opacity 0.15s ease,
+        background-color 0.15s ease;
+
+      &:hover {
+        opacity: 1;
+        background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes multiSlide {
+      $animation-percent: percentage($total-duration / ($total-duration + $idle-delay));
+      $idle-percent: percentage($idle-delay / ($total-duration + $idle-delay));
+
+      0% {
+        background-position:
+          #{300% + (0 * $hump-spacing)} 0,
+          #{300% + (1 * $hump-spacing)} 0,
+          #{300% + (2 * $hump-spacing)} 0,
+          #{300% + (3 * $hump-spacing)} 0,
+          #{300% + (4 * $hump-spacing)} 0,
+          #{300% + (5 * $hump-spacing)} 0,
+          0 0;
+      }
+
+      #{$animation-percent} {
+        background-position:
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          0 0;
+      }
+
+      100% {
+        background-position:
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          #{-300% * $speed-multiplier} 0,
+          0 0;
+      }
+    }
+  }
+
   .note-chat-input {
     transition-property: top, left, right, padding, opacity, filter;
     transition-duration: 234ms;
@@ -393,51 +522,19 @@
       filter: grayscale(100%);
     }
 
+    &.loading {
+      opacity: 0.9;
+    }
+
     &:global(._starting) {
       transition-delay: 200ms;
       opacity: 0 !important;
     }
 
-    &.floaty {
-      transition-property: top, left, right, padding;
-
-      position-anchor: --editor-last-line;
-      top: calc(anchor(--editor-last-line top) + 1rem);
-      left: calc(anchor(--editor-last-line start) - 0.6rem);
-      right: calc(anchor(--editor-last-line end) - 0.6rem);
-      bottom: unset;
-
-      &.firstLine {
-        header {
-          margin-top: 0.2rem;
-        }
-
-        // outline: 1px dashed red;
-
-        position-anchor: --editor-active-line;
-        top: calc(anchor(--editor-active-line start) + 0.33rem);
-        top: calc(anchor(--editor-active-line start) + 1.75rem);
-        left: calc(anchor(--editor-active-line start) - 0.6rem);
-        right: calc(anchor(--editor-active-line end) - 0.6rem);
-        :global(.input-container) {
-          display: none;
-        }
-      }
-
-      header {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        gap: 0.75rem;
-        order: 2;
-        padding-top: 0.75rem;
-      }
-    }
-
     &.bottom {
       --chat-input-max-width: 800px;
       --chat-input-half-width: calc(var(--chat-input-max-width) / 2);
-      --chat-input-padding: 1.5rem;
+      --chat-input-padding: 0.5rem;
       --chat-input-padding-px: 24px;
 
       transition-property: top, left, right, padding;
@@ -445,16 +542,23 @@
       left: calc(50% - 780px / 2);
       right: calc(50% - 780px / 2);
 
-      background: radial-gradient(
+      /*
+      background:
+        radial-gradient(
           ellipse 400px 60px at 50% 100%,
           rgba(40, 87, 247, 0.15) 0%,
           transparent 70%
         ),
-        radial-gradient(ellipse 300px 45px at 50% 100%, rgba(40, 87, 247, 0.12) 0%, transparent 80%),
+        radial-gradient(
+          ellipse 300px 45px at 50% 100%,
+          rgba(40, 87, 247, 0.12) 0%,
+          transparent 80%
+        ),
         radial-gradient(ellipse 200px 30px at 50% 100%, rgba(40, 87, 247, 0.08) 0%, transparent 90%);
       background-size: 100% 100%;
       background-repeat: no-repeat;
       background-position: center bottom;
+      */
 
       @media screen and (max-width: 780px) {
         left: 0 !important;
@@ -462,7 +566,7 @@
       }
 
       top: unset;
-      padding-bottom: 1rem;
+      padding-bottom: 2.5rem;
       padding-inline: var(--chat-input-padding);
       width: 100%;
       max-width: var(--chat-input-max-width);
@@ -506,35 +610,45 @@
     }
 
     .submit-btn {
-      transition-property: opacity;
-      transition-duration: 200ms;
-      transition-delay: 123ms;
-      transition-timing-function: ease-out;
-      padding: 0.2rem;
-      &:global(._starting) {
-        opacity: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0.25rem 0.5rem;
+      gap: 0.25rem;
+      cursor: pointer;
+      border-radius: 9px;
+      background: transparent;
+      color: #6d82ff;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      opacity: 1;
+      transition:
+        background-color 150ms ease-out,
+        opacity 150ms ease-out;
+
+      &:hover:not(:disabled) {
+        background: #f3f5ff;
+      }
+
+      &:disabled {
+        color: #808794;
+        opacity: 0.4;
+        cursor: not-allowed !important;
+      }
+
+      .stop-icon {
+        display: none;
       }
 
       &:hover {
-        border-radius: 5px;
-        background: rgb(from var(--accent) r g b / 0.12);
-      }
-
-      opacity: 1;
-
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      pointer-events: all;
-      width: 24px;
-
-      .submit-hint {
-        font-size: 0.65rem;
-        font-weight: 500;
-        color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3));
-        padding: 1.5px 8px;
-        background: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.04));
-        border-radius: 1rem;
+        .loading-icon {
+          display: none !important;
+        }
+        .stop-icon {
+          display: inline;
+        }
       }
     }
 
@@ -569,6 +683,7 @@
     }
 
     // Background blur
+    /*
     &::before {
       transition-property: top;
       transition-duration: 134ms;
@@ -598,6 +713,7 @@
     &:has(> header)::before {
       top: -2rem;
     }
+  */
   }
 
   .inline-controls {

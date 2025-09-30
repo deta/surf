@@ -94,7 +94,6 @@
   import { createWikipediaAPI, WebParser } from '@deta/web-parser'
   import EmbeddedResource from './EmbeddedResource.svelte'
   import { isGeneratedResource } from '@deta/services/resources'
-  import { updateCaretPopoverVisibility } from '@deta/editor/src/lib/extensions/CaretIndicator/utils'
   import {
     MODEL_CLAUDE_MENTION,
     MODEL_GPT_MENTION,
@@ -109,8 +108,6 @@
   } from '@deta/editor/src/lib/extensions/Slash/index'
   import type { SlashItemsFetcher } from '@deta/editor/src/lib/extensions/Slash/suggestion'
   import { BUILT_IN_SLASH_COMMANDS } from '@deta/editor/src/lib/extensions/Slash/actions'
-  import CaretPopover from './CaretPopover.svelte'
-  import type { CaretPosition } from '@deta/editor/src/lib/extensions/CaretIndicator'
   import Surflet from './Surflet.svelte'
   import WebSearch from './WebSearch.svelte'
   import { createResourcesFromMediaItems, processPaste } from '@deta/services'
@@ -188,16 +185,12 @@
     floatyBarState.set(e.detail)
   }
   const lastLineVisible = writable<boolean>(true)
-  const isFirstLine = writable<boolean>(true)
   const isTitleFocused = writable<boolean>(false)
 
   let viewLocation: ViewLocation
 
   const handleLastLineVisibilityChanged = (e: CustomEvent<boolean>) => {
     lastLineVisible.set(e.detail)
-  }
-  const handleIsFirstLineChanged = (e: CustomEvent<boolean>) => {
-    isFirstLine.set(e.detail)
   }
 
   // Handler to detect when cursor is in TitleNode
@@ -458,7 +451,6 @@
       if (editorElem && editorElement) {
         const editor = editorElem.getEditor()
         const noteEditor = NoteEditor.create(editor, editorElem, editorElement)
-        noteEditor?.cleanupLoadingNodes()
       }
 
       document.addEventListener('create-surflet', handleCreateSurfletEvent as EventListener)
@@ -559,20 +551,9 @@
   let disableAutoscroll = false
   let focusInlineBar: () => void
 
-  // Caret indicator state
-  let caretPosition: CaretPosition | null = null
-  let showCaretPopover = false
-  let escapeFirstLineChat = false
-
   let focusInput: () => void
 
   const editorPlaceholder = writable<string>(`Write or type / for commands…`)
-  $: if (!escapeFirstLineChat) {
-    editorPlaceholder.set(`Ask me anything…`)
-  } else {
-    editorPlaceholder.set(`Write or type / for commands…`)
-  }
-
   const mentionItemsFetcher = createRemoteMentionsFetcher(resourceId) // createMentionsFetcher({ ai, resourceManager }, resourceId)
   const linkItemsFetcher = createResourcesMentionsFetcher(resourceManager, resourceId)
 
@@ -1037,20 +1018,6 @@
     return elem.outerHTML
   }
 
-  const cleanupCompletion = () => {
-    const editor = editorElem.getEditor()
-    const loading = getLastNode('loading')
-    if (loading) {
-      editor.commands.deleteRange(loading.range)
-    }
-
-    const outputNode = getLastNode('output')
-    if (outputNode) {
-      const range = outputNode.range
-      editor.commands.deleteRange(range)
-    }
-  }
-
   export const submitChatMessage = async () => {
     try {
       const editor = editorElem.getEditor()
@@ -1144,12 +1111,13 @@
       surflet: enabledTools.some((tool) => tool.id === 'surflet')
     }
 
-    // Hide the caret popover when generation starts
-    hidePopover()
-
     // Update both local and global AI generation state
     isGeneratingAI.set(true)
     startAIGeneration('text-resource', `Generating response to: ${query.substring(0, 30)}...`)
+    chatInputComp?.showStatus({
+      type: 'status',
+      value: loadingMessage || 'Thinking...'
+    })
 
     if (options.focusEnd) {
       editorElem.focusEnd()
@@ -1189,7 +1157,7 @@
         id: options.generationID,
         textQuery: textQuery,
         autoScroll: options.autoScroll,
-        showPrompt: options.showPrompt,
+        showPrompt: false, //options.showPrompt,
         loadingMessage: loadingMessage
       })
 
@@ -1204,6 +1172,10 @@
           createdLoading = true
 
           aiGeneration?.updateStatus('generating')
+          chatInputComp?.showStatus({
+            type: 'status',
+            value: 'Answering...'
+          })
 
           // Update progress
           updateAIGenerationProgress(50, 'Generating response...')
@@ -1248,43 +1220,32 @@
       )
 
       log.debug('autocomplete response', response)
-
-      // Remove wikipedia context if it was added as we might have created temporary resource that we don't want to keep around
-      // Ignoring above for now citations to the resources otherwise won't work
-      // const wikipediaContext = chat.contextManager.itemsValue.find(
-      //   (item) => item.type === ContextItemTypes.WIKIPEDIA
-      // )
-      // if (wikipediaContext) {
-      //   chat.contextManager.removeContextItem(wikipediaContext.id)
-      // }
-
       if (response.error) {
         log.error('Error generating AI output', response.error)
-        if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
-          toasts.error(response.error.message)
-        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
-          toasts.error('Too many requests, please try again later')
+        let errorMsg = response.error.message
+        if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+          errorMsg = 'Too many requests, please try again later'
         } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
-          toasts.error(
+          errorMsg =
             'Sorry your query did not pass our content policy, please try again with a different query.'
-          )
         } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
-          toasts.error(
+          errorMsg =
             'No relevant context found. Please add more resources or try a different query.'
-          )
-        } else {
-          toasts.error('Something went wrong generating the AI output. Please try again.')
         }
-
         aiGeneration.updateStatus('failed')
-        cleanupCompletion()
+        chatInputComp?.showStatus({
+          type: 'error',
+          value: errorMsg
+        })
         telemetry.trackNoteGenerateCompletion({ failed: true })
       } else if (!response.output) {
         log.error('No output found')
-        toasts.error('Something went wrong generating the AI output. Please try again.')
 
         aiGeneration.updateStatus('failed')
-        cleanupCompletion()
+        chatInputComp?.showStatus({
+          type: 'error',
+          value: 'Sorry, no response was generated for an unknown reason.'
+        })
         telemetry.trackNoteGenerateCompletion({ failed: true })
       } else {
         const content = await parseChatOutputToHtml(response.output)
@@ -1293,6 +1254,7 @@
 
         await wait(200)
         aiGeneration.updateStatus('completed')
+        chatInputComp?.dismissStatus()
         telemetry.trackNoteGenerateCompletion({ failed: false })
 
         // Generate title if needed (empty/default title and any AI generation)
@@ -1319,15 +1281,11 @@
       }
     } catch (err) {
       log.error('Error generating AI output', err)
-      toasts.error('Something went wrong generating the AI output. Please try again.')
-
-      // const loading = getLastNode('loading')
-      // if (loading) {
-      //   const editor = editorElem.getEditor()
-      //   editor.commands.deleteRange(loading.range)
-      // }
-
       aiGeneration?.updateStatus('failed')
+      chatInputComp?.showStatus({
+        type: 'error',
+        value: String(err)
+      })
 
       // Update global AI generation state to indicate error
       updateAIGenerationProgress(100, 'Error generating AI output')
@@ -1337,7 +1295,6 @@
       isGeneratingAI.set(false)
       endAIGeneration()
       autocompleting.set(false)
-      noteEditor?.cleanupLoadingNodes()
     }
   }
 
@@ -1547,27 +1504,6 @@
     // }
   }
 
-  const handleCaretPositionUpdate = (position: CaretPosition) => {
-    if (position) {
-      // Create a new object to ensure reactivity
-      caretPosition = { ...position }
-
-      // Don't show popover if AI generation is in progress
-      if ($isGeneratingAI) {
-        showCaretPopover = false
-        return
-      }
-
-      // Use our utility to determine whether to show the popover
-      if (editorElem) {
-        const editor = editorElem.getEditor()
-        updateCaretPopoverVisibility(editor, caretPosition, (visible) => {
-          showCaretPopover = visible && !$isGeneratingAI
-        })
-      }
-    }
-  }
-
   const handleLinkClick: LinkClickHandler = async (e, href) => {
     const backgroundTab =
       (isModKeyPressed(e) && !e.shiftKey) || (e.type === 'auxclick' && e.button === 1)
@@ -1602,9 +1538,6 @@
   const handleEditorKeyDown = (e: KeyboardEvent) => {
     // Only prevent propagation when the editor exists AND is focused
     if (editorElem) {
-      if (e.key === 'Escape') escapeFirstLineChat = true
-      if (e.key === 'Backspace' && $isEmpty) escapeFirstLineChat = false
-      if (e.key === 'Enter' && $isEmpty) escapeFirstLineChat = true
       // Prevent Option+Arrow or Command+Arrow keys from navigating the browser
       if (
         (e.altKey || e.metaKey) &&
@@ -1634,10 +1567,6 @@
         }
       }
     }
-  }
-
-  const hidePopover = () => {
-    showCaretPopover = false
   }
 
   const checkIfAlreadyRunning = (kind: string = 'ai generation') => {
@@ -1733,7 +1662,6 @@
       )
     } catch (e) {
       log.error('Error handling web search completed', e)
-      toasts.error('Failed to handle web search results')
     } finally {
       // TODO: decide whether we should remove or keep the web search context after processing
       // TODO: also use an enum for the context id
@@ -2004,31 +1932,10 @@
     }
   }, 500)
 
-  const runProoompt = async (prompt: ChatPrompt, custom: boolean = false) => {
+  const runProoompt = async (prompt: ChatPrompt, _custom: boolean = false) => {
     try {
       log.debug('Handling prompt submit', prompt)
-
-      let promptType = PromptType.BuiltIn
-      if (custom) {
-        promptType = PromptType.Custom
-      } else {
-        //const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
-        //promptType = builtIn ? PromptType.BuiltIn : PromptType.Generated
-      }
-      telemetry.trackUsePrompt(
-        promptType,
-        EventContext.Chat,
-        prompt.label ? prompt.label.toLowerCase() : undefined
-      )
-
-      // insert prompt at current position if first line
-      if ($isFirstLine) {
-        const editor = editorElem.getEditor()
-        editor.commands.insertContent(prompt.label + ' ', { updateSelection: false })
-        editor.commands.focus()
-      }
-
-      runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: !$isFirstLine })
+      runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: false })
     } catch (e) {
       log.error('Error doing magic', e)
     }
@@ -2257,6 +2164,7 @@
     if (chat) {
       chat.stopGeneration(chatInputGenerationID ?? undefined)
     }
+    chatInputComp?.dismissStatus()
   }
 
   const handleScroll = () => {
@@ -2599,9 +2507,6 @@
         bind:this={chatInputComp}
         bind:editor={chatInputEditorElem}
         bind:focus={focusInput}
-        state={$isTitleFocused ? 'bottom' : $lastLineVisible ? 'floaty' : 'bottom'}
-        firstLine={$isFirstLine && !escapeFirstLineChat}
-        disabled={(showCaretPopover && editorFocused && !$isFirstLine) || $isTitleFocused}
         hideEmptyPrompts={viewLocation !== ViewLocation.Sidebar}
         {mentionItemsFetcher}
         {onFileSelect}
@@ -2631,15 +2536,11 @@
             bind:floatingMenuShown={$floatingMenuShown}
             bind:focused={editorFocused}
             bind:editorElement
-            placeholder={escapeFirstLineChat
-              ? 'Start writing a note…'
-              : `Ask Surf or start writing a note (esc) …`}
             placeholderNewLine={$editorPlaceholder}
             citationComponent={CitationItem}
             surfletComponent={Surflet}
             webSearchComponent={WebSearch}
             resourceComponent={EmbeddedResource}
-            autocomplete={!($isFirstLine && escapeFirstLineChat)}
             floatingMenu
             readOnlyMentions={false}
             bubbleMenu={$showBubbleMenu && !minimal}
@@ -2654,7 +2555,6 @@
             showSimilaritySearch={!minimal && similaritySearch}
             parseMentions
             enableCaretIndicator={origin !== 'homescreen' || !readOnlyMode}
-            onCaretPositionUpdate={handleCaretPositionUpdate}
             onLinkClick={handleLinkClick}
             readOnly={readOnlyMode}
             enableTitleNode={showTitle && !readOnlyMode}
@@ -2664,7 +2564,6 @@
             {slashItemsFetcher}
             {mentionItemsFetcher}
             {linkItemsFetcher}
-            on:blur={hidePopover}
             on:click
             on:dragstart
             on:update={handleContentUpdated}
@@ -2681,21 +2580,9 @@
             on:slash-command={handleSlashCommand}
             on:floaty-input-state-update={handleFloatyInputStateUpdate}
             on:last-line-visbility-changed={handleLastLineVisibilityChanged}
-            on:is-first-line-changed={handleIsFirstLineChanged}
             on:web-search-completed={debouncedHandleWebSearchCompleted}
             {autofocus}
-          >
-            <div slot="caret-popover">
-              <!-- CaretPopover positioned absolutely over the editor -->
-              {#if showCaretPopover && caretPosition && !$isFirstLine}
-                <CaretPopover
-                  visible={showCaretPopover}
-                  position={caretPosition}
-                  on:autocomplete={handleCaretPopoverAutocomplete}
-                />
-              {/if}
-            </div>
-          </Editor>
+          ></Editor>
         </div>
       </div>
     {/if}
@@ -2754,7 +2641,7 @@
     overflow: hidden;
     position: relative;
     //padding-top: 3em;
-    padding-bottom: 0;
+    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2909,6 +2796,11 @@
       :global(*):not(.mention, a, span) {
         color: var(--text-color-dark) !important;
       }
+    }
+
+    // added from task list extension
+    :global(.extension-task-list label) {
+      padding-top: 0.3rem !important;
     }
   }
 </style>

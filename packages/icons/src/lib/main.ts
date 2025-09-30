@@ -15,6 +15,7 @@ import Copy from './Icons/Copy.svelte'
 import Cursor from './Icons/Cursor.svelte'
 import Download from './Icons/Download.svelte'
 import Edit from './Icons/Edit.svelte'
+import ExclamationCircle from './Icons/ExclamationCircle.svelte'
 import Mute from './Icons/Muted.svelte'
 import Unmute from './Icons/Unmute.svelte'
 import Bold from './Icons/Bold.svelte'
@@ -45,6 +46,8 @@ import BookmarkFilled from './Icons/BookmarkFilled.svelte'
 import SidebarLeft from './Icons/SidebarLeft.svelte'
 import SidebarRight from './Icons/SidebarRight.svelte'
 import SquareRotated from './Icons/SquareRotated.svelte'
+import Stop from './Icons/Stop.svelte'
+import SpinnerStop from './Icons/SpinnerStop.svelte'
 import Home from './Icons/Home.svelte'
 import HelpCircle from './Icons/HelpCircle.svelte'
 import Rectangle from './Icons/Rectangle.svelte'
@@ -166,6 +169,7 @@ export const icons = {
   command: Command,
   download: Download,
   edit: Edit,
+  'exclamation.circle': ExclamationCircle,
   mute: Mute,
   unmute: Unmute,
   bold: Bold,
@@ -198,6 +202,8 @@ export const icons = {
   'square.rotated': SquareRotated,
   rectangle: Rectangle,
   spinner: Spinner,
+  'spinner.stop': SpinnerStop,
+  stop: Stop,
   menu: Menu,
   'sidebar.left': SidebarLeft,
   'sidebar.right': SidebarRight,
@@ -321,6 +327,7 @@ export {
   Cursor,
   Command,
   Edit,
+  ExclamationCircle,
   Mute,
   Unmute,
   Bold,
@@ -351,6 +358,8 @@ export {
   BookmarkFilled,
   Home,
   Spinner,
+  SpinnerStop,
+  Stop,
   SidebarLeft,
   SidebarRight,
   SquareRotated,

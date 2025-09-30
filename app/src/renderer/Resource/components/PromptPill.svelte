@@ -48,19 +48,25 @@
     width: fit-content;
     &.direction-vertical {
       max-width: 40ch;
+      padding: 0.35rem 0.85rem;
+      border-radius: 0.75rem;
     }
     &.direction-horizontal {
-      max-width: 22ch;
+      max-width: 18ch;
+      padding: 0.25rem 0.6rem;
+      border-radius: 0.5rem;
+      gap: 0.35em;
+      font-size: 1em;
     }
-
-    padding: 0.35rem 0.85rem;
-    border-radius: 0.75rem;
 
     transform: translate(var(--offset-x), var(--offset-y)) scale(var(--scale));
 
     color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.5));
-    background: light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.035));
+    //background: light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.035));
+    background: light-dark(rgba(255, 255, 255, 0.85), rgba(0, 0, 0, 0.85));
+    backdrop-filter: blur(8px);
     border: 0.5px solid light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
+
     user-select: none;
 
     &:not(.disabled) {

@@ -52,20 +52,11 @@
 
   let prevMentionsHash = $state('')
 
-  const notebooks = $derived.by(() => {
-    return notebookManager.sortedNotebooks
-      .filter((e) => ($ttyQuery || showAll ? true : e.data.pinned))
-      .filter((e) => {
-        if (!$ttyQuery) return true
-        return e.nameValue.toLowerCase().includes($ttyQuery.toLowerCase())
-      })
-  })
-
   const suggestedPrompts = $derived.by(() => {
     if ($generatingPrompts) {
       return [
         {
-          label: 'Analyzing Page',
+          label: 'Analyzing Page...',
           prompt: '',
           loading: true
         }
@@ -223,6 +214,16 @@
 
 <NotebookLayout>
   <main>
+    {#if viewLocation === ViewLocation.Sidebar && hasMentions}
+      <div class="prompts-wrapper">
+        <PromptPills
+          direction="horizontal"
+          promptItems={suggestedPrompts}
+          on:click={handleRunPrompt}
+          hide={$ttyQuery.slice(11).trim().length > 0}
+        />
+      </div>
+    {/if}
     <div class="tty-wrapper">
       <!--<h1>
         {title}
@@ -233,14 +234,6 @@
       <section class="contents-wrapper">
         <NotebookContents />
       </section>
-    {:else if viewLocation === ViewLocation.Sidebar && hasMentions && !isTtyInitializing}
-      <div class="prompts-wrapper">
-        <PromptPills
-          promptItems={suggestedPrompts}
-          direction="vertical"
-          on:click={handleRunPrompt}
-        />
-      </div>
     {/if}
   </main>
 
@@ -360,5 +353,6 @@
 
   .prompts-wrapper {
     padding-left: 1.25rem;
+    margin-bottom: -1rem;
   }
 </style>

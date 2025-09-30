@@ -52,6 +52,13 @@ export type AIDocsSimilarity = {
 
 export type AIChatMessageRole = 'user' | 'system' | 'assistant'
 
+export type AIChatStatusMessageType = 'status' | 'error' | 'sources'
+
+export type AIChatStatusMessage = {
+  type: AIChatStatusMessageType
+  value: string | AIChatMessageSource[]
+}
+
 export type AIChatMessage = {
   id: string // generated in the frontend
   ai_session_id: string

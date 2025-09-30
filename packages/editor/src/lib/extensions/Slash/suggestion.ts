@@ -1,3 +1,4 @@
+import { mount, unmount } from 'svelte'
 import Slash from './Slash.svelte'
 import tippy from 'tippy.js'
 import { BUILT_IN_SLASH_COMMANDS } from './actions'
@@ -16,11 +17,12 @@ export default {
   render: () => {
     let component: Slash
     let popup: any
+    let keyDownHandler: ((e: KeyboardEvent) => boolean) | null = null
 
     return {
       onStart: (props) => {
         let element = document.createElement('div')
-        component = new Slash({
+        component = mount(Slash, {
           target: element,
           props: {
             editor: props.editor,
@@ -30,6 +32,9 @@ export default {
             loading: props.loading,
             callback: (payload: SlashCommandPayload) => {
               props.command(payload)
+            },
+            onKeyDownRef: (handler: (e: KeyboardEvent) => boolean) => {
+              keyDownHandler = handler
             }
           }
         })
@@ -68,7 +73,7 @@ export default {
           return true
         }
 
-        return component.onKeyDown(props.event)
+        return keyDownHandler ? keyDownHandler(props.event) : false
       },
 
       onExit() {
@@ -76,7 +81,7 @@ export default {
           popup[0].destroy()
         }
         if (component) {
-          component.$destroy()
+          unmount(component)
         }
       }
     }

@@ -24,7 +24,6 @@ import Table from '@tiptap/extension-table'
 import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TableRow from '@tiptap/extension-table-row'
-import UniqueID from '@tiptap-pro/extension-unique-id'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { all, createLowlight } from 'lowlight'
 
@@ -33,18 +32,15 @@ import { SlashExtension, SlashSuggestion, type SlashCommandPayload } from './ext
 import hashtagSuggestion from './extensions/Hashtag/suggestion'
 import Hashtag from './extensions/Hashtag/index'
 import Mention, { type MentionAction } from './extensions/Mention/index'
-// import Mention from '@tiptap/extension-mention'
 import mentionSuggestion, { type MentionItemsFetcher } from './extensions/Mention/suggestion'
-import { CaretIndicatorExtension, type CaretPosition } from './extensions/CaretIndicator'
+import { type CaretPosition } from './extensions/CaretIndicator'
 import Loading from './extensions/Loading'
 import Thinking from './extensions/Thinking'
-import TrailingNode, { EnsureTrailingParagraph } from './extensions/TrailingNode'
+import TrailingNode from './extensions/TrailingNode'
 import AIOutput from './extensions/AIOutput'
 import type { MentionItem } from './types'
 import Button from './extensions/Button'
 import Resource from './extensions/Resource'
-import UseAsDefaultBrowser from './extensions/UseAsDefaultBrowser'
-import OpenStuff from './extensions/OpenStuff/openStuff'
 import type { ComponentType, SvelteComponent } from 'svelte'
 import { conditionalArrayItem } from '@deta/utils'
 import type { SlashItemsFetcher } from './extensions/Slash/suggestion'
@@ -55,8 +51,6 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import Link from './extensions/Link'
 import type { LinkClickHandler } from './extensions/Link/helpers/clickHandler'
 import { detailsInputRule } from './utilities/inputRules/details'
-import FloatyInput from './FloatyInput'
-import TableAddRowColumn from './extensions/TableAddRowColumn'
 import AIPrompt from './extensions/AIPrompt'
 import AIGeneration from './extensions/AIGeneration'
 import { TitleNode } from './extensions/TitleNode'
@@ -191,28 +185,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
       return opts?.placeholder ?? "Write or type '/' for options…"
     }
   }),
-  UniqueID.configure({
-    attributeName: 'uuid',
-    types: [
-      'titleNode',
-      'heading',
-      'paragraph',
-      'resource',
-      'output',
-      'surflet',
-      'taskItem',
-      'taskList',
-      'blockquote',
-      'details',
-      'image',
-      'link',
-      'codeBlock',
-      'orderedList',
-      'bulletList',
-      'listItem',
-      'table'
-    ]
-  }),
   ...conditionalArrayItem(
     !opts?.disableHashtag,
     Hashtag.configure({
@@ -302,7 +274,11 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
     })
   ),
   TaskItem,
-  TaskList,
+  TaskList.configure({
+    HTMLAttributes: {
+      class: 'extension-task-list'
+    }
+  }),
   ListKeymap,
   Loading,
   Thinking,
@@ -311,33 +287,6 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   AIPrompt,
   AIGeneration,
   Image,
-  ...conditionalArrayItem(
-    !!opts?.enableCaretIndicator,
-    CaretIndicatorExtension.configure({
-      debug: false,
-      onSelectionUpdate: ({ editor }) => {
-        const pos = editor.storage.caretIndicator.caretPosition
-        if (pos && opts?.onCaretPositionUpdate) {
-          opts.onCaretPositionUpdate(pos)
-        }
-      },
-      updateDelay: 10 // Reduced delay for more responsive updates
-    })
-  ),
-  ...conditionalArrayItem(
-    !!opts?.enableCaretIndicator && opts?.onFloatyInputStateChange !== undefined,
-    [
-      FloatyInput.configure({
-        onLastLineVisibilityChanged: opts?.onLastLineVisibilityChanged,
-        onFirstLineStateChanged: opts?.onFirstLineStateChanged,
-        observerOptions: {
-          threshold: 1,
-          rootMargin: '0px'
-        }
-      })
-      //EnsureTrailingParagraph
-    ]
-  ),
   Extension.create<{ pluginKey?: PluginKey }>({
     name: 'paste-handler',
 

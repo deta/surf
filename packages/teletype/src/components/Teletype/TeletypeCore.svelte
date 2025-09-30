@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fade, slide } from 'svelte/transition'
-  import { derived } from 'svelte/store'
+  import { writable, derived } from 'svelte/store'
   import { focus } from 'focus-svelte'
 
   import type { Action, ActionPanelOption } from './types'
@@ -60,6 +60,23 @@
   let showModalOverlay = false
   let mentions: MentionItem[] = []
   let modalContent: Action | null = null
+  const inputValueWithoutMentions = writable('')
+
+  $effect(() => {
+    if (!mentions || mentions.length === 0 || !$inputValue) {
+      inputValueWithoutMentions.set($inputValue || '')
+      return
+    }
+
+    let cleanedValue = $inputValue
+
+    mentions.forEach((mention) => {
+      const mentionPattern = new RegExp(`@${mention.label}\\s*`, 'g')
+      cleanedValue = cleanedValue.replace(mentionPattern, '')
+    })
+
+    inputValueWithoutMentions.set(cleanedValue.trim())
+  })
 
   const isModal = $derived(
     $currentAction?.view === 'Modal' ||
@@ -278,7 +295,7 @@
     }
 
     if (isInMentionMode || hasMentions) {
-      actions.secondary = 'create-note'
+      actions.secondary = null
     } else if (!$selectedAction || $selectedAction?.id === 'ask-action') {
       actions.secondary = 'search-web'
     } else if (
@@ -616,7 +633,7 @@
               size="md"
               onclick={() => executeAction(ttyActions.secondary)}
               class="secondary-button"
-              disabled={!$inputValue || $inputValue.length === 0}
+              disabled={$inputValueWithoutMentions.length === 0}
             >
               {#if ttyActions.secondary === 'ask'}
                 Ask Surf
@@ -640,7 +657,7 @@
             size="md"
             onclick={() => executeAction(ttyActions.primary)}
             class="send-button"
-            disabled={!$inputValue || $inputValue.length === 0}
+            disabled={$inputValueWithoutMentions.length === 0}
           >
             {#if ttyActions.primary === 'ask'}
               Ask Surf
