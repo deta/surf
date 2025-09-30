@@ -27,6 +27,10 @@
 
   let unsubs: Fn[] = []
 
+  $effect(() => {
+    if (bounds) overlay?.saveBounds(bounds)
+  })
+
   onMount(async () => {
     overlay = await overlayManager.create({ bounds })
 
