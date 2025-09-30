@@ -132,11 +132,18 @@ export class API {
 
 export class AuthenticatedAPI extends API {
   private apiKey: string
+  private currentAppVersion: string
 
-  constructor(base: string, apiKey: string, fetchFunc: typeof fetch = fetch) {
+  constructor(
+    base: string,
+    apiKey: string,
+    currentAppVersion: string,
+    fetchFunc: typeof fetch = fetch
+  ) {
     super(base, fetchFunc)
 
     this.apiKey = apiKey
+    this.currentAppVersion = currentAppVersion
   }
 
   async request(path: string, options?: RequestInit): Promise<Response> {
@@ -144,6 +151,7 @@ export class AuthenticatedAPI extends API {
       ...options,
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
+        'X-Surf-App-Version': this.currentAppVersion,
         ...options?.headers
       }
     })
@@ -173,6 +181,7 @@ export class AuthenticatedAPI extends API {
       {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
+          'X-Surf-App-Version': this.currentAppVersion,
           'Content-Type': 'application/json'
         }
       }
@@ -191,19 +200,20 @@ export class AuthenticatedAPI extends API {
       {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
+          'X-Surf-App-Version': this.currentAppVersion,
           'Content-Type': 'application/json'
         }
       }
     )
   }
 
-  static createAuthenticatedAPI(base: string, apiKey: string) {
-    return new AuthenticatedAPI(base, apiKey, window.fetch.bind(window))
+  static createAuthenticatedAPI(base: string, apiKey: string, currentAppVersion: string) {
+    return new AuthenticatedAPI(base, apiKey, currentAppVersion, window.fetch.bind(window))
   }
 }
 
 export const createAPI = (base: string) => API.createAPI(base)
-export const createAuthenticatedAPI = (base: string, apiKey: string) =>
-  AuthenticatedAPI.createAuthenticatedAPI(base, apiKey)
+export const createAuthenticatedAPI = (base: string, apiKey: string, currentAppVersion: string) =>
+  AuthenticatedAPI.createAuthenticatedAPI(base, apiKey, currentAppVersion)
 
 export * from './types'

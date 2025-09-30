@@ -147,9 +147,8 @@ jobs:
       - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
         env:
-          # APP_VERSION: ${{ inputs.app_version }}
-          # M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
-          # R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          #M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          #R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
 
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192

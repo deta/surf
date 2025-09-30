@@ -21,6 +21,7 @@ const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 
 const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
+const APP_VERSION = import.meta.env.P_VITE_APP_VERSION ?? '0.0.0'
 
 mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -83,7 +84,7 @@ const api = {
     const res = await api.activateAppUsingKey(key, acceptedTerms)
     if (res.ok && (res.data as AppActivationResponse)) {
       // Use the API key to fetch full user data and store it
-      const authedAPI = createAuthenticatedAPI(API_BASE, res.data.api_key)
+      const authedAPI = createAuthenticatedAPI(API_BASE, res.data.api_key, APP_VERSION)
       const user = await authedAPI.getUserData()
       if (!user) {
         console.error('Failed to fetch user data after activation')
@@ -139,7 +140,7 @@ const api = {
       return false
     }
 
-    const api = createAuthenticatedAPI(API_BASE, apiKey)
+    const api = createAuthenticatedAPI(API_BASE, apiKey, APP_VERSION)
     await api.setUserTelemetryId(userId)
 
     userConfig.anon_telemetry = false

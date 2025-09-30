@@ -56,6 +56,7 @@ let userStats = getUserStats(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_
 
 const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
 const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
+const APP_VERSION = import.meta.env.P_VITE_APP_VERSION ?? 'n/a'
 
 const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
@@ -715,7 +716,7 @@ const api = {
       return
     }
 
-    const api = createAuthenticatedAPI(API_BASE, API_KEY)
+    const api = createAuthenticatedAPI(API_BASE, API_KEY, APP_VERSION)
 
     // Figure out what id to use:
     let userId = userConfig.anon_id ?? userConfig.user_id

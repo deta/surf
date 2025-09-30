@@ -150,6 +150,7 @@ jobs:
         env:
           APP_VERSION: ${{ inputs.b_app_version }}
           M_VITE_APP_VERSION: ${{ inputs.b_app_version }}
+          P_VITE_APP_VERSION: ${{ inputs.b_app_version }}
           R_VITE_APP_VERSION: ${{ inputs.b_app_version }}
 
           HUSKY: 0

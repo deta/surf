@@ -96,6 +96,7 @@ jobs:
           APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
           M_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
           P_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
+          R_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
 
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192

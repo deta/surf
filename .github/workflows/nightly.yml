@@ -143,6 +143,7 @@ jobs:
           APP_VERSION: ${{ needs.next-nightly-version.outputs.version }}
           M_VITE_APP_VERSION: ${{ needs.next-nightly-version.outputs.version }}
           P_VITE_APP_VERSION: ${{ needs.next-nightly-version.outputs.version }}
+          R_VITE_APP_VERSION: ${{ needs.next-nightly-version.outputs.version }}
 
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
