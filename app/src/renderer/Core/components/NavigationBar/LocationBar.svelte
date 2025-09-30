@@ -395,7 +395,11 @@
       </div>
     {/if}
     {#if titleText && activeViewState}
-      <div class="title" style:--progress={`${activeViewState.loadingProgress.current * 100}%`}>
+      <div
+        class="title"
+        style:--progress={`${activeViewState.loadingProgress.current * 100}%`}
+        class:done={activeViewState.loadingProgress.current >= 1}
+      >
         <span>{titleText}</span>
         <!--
           NOTE: This key is ensuring no weird inbetween states.. should work
@@ -432,6 +436,9 @@
 
     span {
       font-family: 'Inter', sans-serif;
+      letter-spacing: 0.014rem;
+      margin-bottom: 1.25px;
+      -webkit-font-smoothing: antialiased;
       mask-image: linear-gradient(
         to right,
         transparent calc(var(--progress) + 0.05rem) #000 var(--progress)
@@ -441,6 +448,7 @@
 
     :global(svg.riso) {
       font-family: 'Inter', sans-serif;
+      letter-spacing: 0.1rem;
       position: absolute;
       inset: 0;
       padding-top: 1.5px;
@@ -462,6 +470,7 @@
     }
 
     :global(svg.riso) {
+      transition: opacity 187ms ease-out;
       opacity: 0.75;
       font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(
@@ -469,6 +478,16 @@
         #000 var(--progress),
         transparent calc(var(--progress) + 0.05rem)
       );
+    }
+
+    &.done {
+      span {
+        opacity: 0.75;
+        color: var(--on-surface);
+      }
+      :global(svg.riso) {
+        opacity: 0;
+      }
     }
   }
   input {
