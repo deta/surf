@@ -9,12 +9,17 @@ export enum Provider {
 }
 
 export enum BuiltInModelIDs {
+  GPT5 = 'gpt-5',
+  GPT5_Mini = 'gpt-5-mini',
   GPT4_1 = 'gpt-4.1',
   GPT4_1_Mini = 'gpt-4.1-mini',
   GPT4o = 'gpt-4o',
   GPT4oMini = 'gpt-4o-mini',
+  O4Mini = 'o4-mini',
   O3Mini = 'o3-mini',
   ClaudeSonnet = 'claude-3-5-sonnet-latest',
+  ClaudeSonnet45 = 'claude-4-5-sonnet-latest',
+  ClaudeSonnet4 = 'claude-4-sonnet-latest',
   ClaudeSonnet37 = 'claude-3-7-sonnet-latest',
   ClaudeHaiku = 'claude-3-5-haiku-latest',
   Gemini2Flash = 'gemini-2.0-flash'
@@ -161,14 +166,18 @@ export namespace ChatMode {
 }
 
 export const BuiltInModelLabels = {
-  [BuiltInModelIDs.GPT4_1]: 'GPT-4.1',
   [BuiltInModelIDs.GPT4_1_Mini]: 'GPT-4.1 Mini',
   [BuiltInModelIDs.GPT4o]: 'GPT-4o',
   [BuiltInModelIDs.GPT4oMini]: 'GPT-4o Mini',
   [BuiltInModelIDs.O3Mini]: 'o3 Mini',
   [BuiltInModelIDs.ClaudeSonnet37]: 'Claude 3.7 Sonnet',
   [BuiltInModelIDs.ClaudeSonnet]: 'Claude 3.5 Sonnet',
+  [BuiltInModelIDs.GPT4_1]: 'GPT-4.1',
   [BuiltInModelIDs.ClaudeHaiku]: 'Claude 3.5 Haiku',
+  [BuiltInModelIDs.GPT5]: 'GPT-5',
+  [BuiltInModelIDs.GPT5_Mini]: 'GPT-5 Mini',
+  [BuiltInModelIDs.ClaudeSonnet45]: 'Claude 4.5 Sonnet',
+  [BuiltInModelIDs.ClaudeSonnet4]: 'Claude 4 Sonnet',
   [BuiltInModelIDs.Gemini2Flash]: 'Gemini 2.0 Flash'
 }
 
@@ -197,6 +206,24 @@ export type Model = {
 export const OPEN_AI_PATH_SUFFIX = '/v1/chat/completions'
 
 export const BUILT_IN_MODELS = [
+  {
+    id: BuiltInModelIDs.GPT5,
+    label: BuiltInModelLabels[BuiltInModelIDs.GPT5],
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Premium,
+    icon: 'open-ai',
+    supports_json_format: true,
+    vision: true
+  },
+  {
+    id: BuiltInModelIDs.GPT5_Mini,
+    label: BuiltInModelLabels[BuiltInModelIDs.GPT5_Mini],
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Standard,
+    icon: 'open-ai',
+    supports_json_format: true,
+    vision: true
+  },
   {
     id: BuiltInModelIDs.GPT4_1,
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4_1],
@@ -243,6 +270,24 @@ export const BUILT_IN_MODELS = [
     supports_json_format: true
   },
   {
+    id: BuiltInModelIDs.ClaudeSonnet45,
+    label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet45],
+    provider: Provider.Anthropic,
+    tier: ModelTiers.Premium,
+    icon: 'claude',
+    supports_json_format: true,
+    vision: true
+  },
+  {
+    id: BuiltInModelIDs.ClaudeSonnet4,
+    label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet4],
+    provider: Provider.Anthropic,
+    tier: ModelTiers.Premium,
+    icon: 'claude',
+    supports_json_format: true,
+    vision: true
+  },
+  {
     id: BuiltInModelIDs.ClaudeSonnet37,
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet37],
     provider: Provider.Anthropic,
@@ -282,4 +327,4 @@ export const BUILT_IN_MODELS = [
   }
 ] as Model[]
 
-export const DEFAULT_AI_MODEL = BuiltInModelIDs.GPT4_1
+export const DEFAULT_AI_MODEL = BuiltInModelIDs.ClaudeSonnet45

@@ -46,6 +46,11 @@ pub enum Provider {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Model {
+    #[serde(rename = "gpt-5")]
+    GPT5,
+    #[serde(rename = "gpt-5-mini")]
+    #[allow(non_camel_case_types)]
+    GPT5_Mini,
     #[serde(rename = "gpt-4.1")]
     GPT4_1,
     #[serde(rename = "gpt-4.1-mini")]
@@ -57,6 +62,10 @@ pub enum Model {
     #[serde(rename = "o3-mini")]
     O3Mini,
 
+    #[serde(rename = "claude-4-5-sonnet-latest")]
+    Claude45Sonnet,
+    #[serde(rename = "claude-4-sonnet-latest")]
+    Claude4Sonnet,
     #[serde(rename = "claude-3-7-sonnet-latest")]
     Claude37Sonnet,
     #[serde(rename = "claude-3-5-sonnet-latest")]
@@ -523,11 +532,15 @@ impl Model {
 
     fn as_str(&self) -> String {
         match self {
+            Self::GPT5 => "gpt-5",
+            Self::GPT5_Mini => "gpt-5-mini",
             Self::GPT4_1 => "gpt-4.1",
             Self::GPT4_1Mini => "gpt-4.1-mini",
             Self::GPT4o => "gpt-4o",
             Self::GPT4oMini => "gpt-4o-mini",
             Self::O3Mini => "o3-mini",
+            Self::Claude45Sonnet => "claude-4-5-sonnet-latest",
+            Self::Claude4Sonnet => "claude-4-sonnet-latest",
             Self::Claude37Sonnet => "claude-3-7-sonnet-latest",
             Self::Claude35Sonnet => "claude-3-5-sonnet-latest",
             Self::Claude35Haiku => "claude-3-5-haiku-latest",
@@ -539,12 +552,18 @@ impl Model {
 
     fn provider(&self) -> &Provider {
         match self {
-            Self::GPT4_1 | Self::GPT4_1Mini | Self::GPT4o | Self::GPT4oMini | Self::O3Mini => {
-                &Provider::OpenAI
-            }
-            Self::Claude37Sonnet | Self::Claude35Sonnet | Self::Claude35Haiku => {
-                &Provider::Anthropic
-            }
+            Self::GPT5
+            | Self::GPT5_Mini
+            | Self::GPT4_1
+            | Self::GPT4_1Mini
+            | Self::GPT4o
+            | Self::GPT4oMini
+            | Self::O3Mini => &Provider::OpenAI,
+            Self::Claude45Sonnet
+            | Self::Claude4Sonnet
+            | Self::Claude37Sonnet
+            | Self::Claude35Sonnet
+            | Self::Claude35Haiku => &Provider::Anthropic,
             Self::Gemini20Flash => &Provider::Google,
             Self::Custom { provider, .. } => provider,
         }
@@ -555,13 +574,18 @@ impl TokenModel for Model {
     fn max_tokens(&self) -> usize {
         match self {
             // NOTE: actual is 1M for gpt4.1
+            Self::GPT5 | Self::GPT5_Mini => 900_000,
             Self::GPT4_1 => 900_000,
             Self::GPT4_1Mini => 900_000,
             Self::GPT4o => 128_000,
             Self::GPT4oMini => 128_000,
             Self::O3Mini => 128_000,
             // TODO: verify if 200k tokens is correct for Claude models
-            Self::Claude37Sonnet | Self::Claude35Sonnet | Self::Claude35Haiku => 200_000,
+            Self::Claude45Sonnet
+            | Self::Claude4Sonnet
+            | Self::Claude37Sonnet
+            | Self::Claude35Sonnet
+            | Self::Claude35Haiku => 200_000,
             // NOTE: actual is 1M for gemini-2.0-flash
             Self::Gemini20Flash => 900_000,
             Self::Custom { max_tokens, .. } => *max_tokens,
