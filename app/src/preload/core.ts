@@ -532,16 +532,6 @@ const eventHandlers = {
     >
   },
 
-  onFetchMentions: (callback: (data: { query: string }) => void) => {
-    return IPC_EVENTS_RENDERER.fetchMentions.handle((data) => {
-      try {
-        return callback(data)
-      } catch (error) {
-        // noop
-      }
-    })
-  },
-
   onMessagePort: (callback: MessagePortCallbackPrimary) => {
     messagePort.onMessage(callback)
   }

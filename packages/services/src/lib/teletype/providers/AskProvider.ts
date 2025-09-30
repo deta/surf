@@ -46,7 +46,7 @@ export class AskProvider implements ActionProvider {
   async triggerAskAction(query: string, mentions: MentionItem[]): Promise<void> {
     try {
       this.log.debug('Triggering ask action for query:', query, 'with mentions:', mentions)
-      await this.service.ask(query, mentions)
+      await this.service.ask({ query, mentions })
     } catch (error) {
       this.log.error('Failed to trigger ask action:', error)
     }

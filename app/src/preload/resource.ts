@@ -159,10 +159,6 @@ const api = {
     >
   },
 
-  fetchMentions: (query: string) => {
-    return IPC_EVENTS_RENDERER.fetchMentions.invoke({ query })
-  },
-
   ...eventHandlers
 }
 

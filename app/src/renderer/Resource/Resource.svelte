@@ -86,6 +86,7 @@
       path: '/notebook/drafts',
       component: DraftsRoute,
       props: {
+        messagePort: messagePort,
         resourcesPanelOpen: resourcesPanelOpen
       }
     },

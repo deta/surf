@@ -4,6 +4,7 @@ import { derived, get, writable, type Readable, type Writable } from 'svelte/sto
 import {
   checkIfYoutubeUrl,
   generateID,
+  hashString,
   isInternalRendererURL,
   parseUrlIntoCanonical,
   useLocalStorage,
@@ -956,13 +957,12 @@ export class ContextManager {
         url: '',
         content: ''
       }
-
+      const mentions = payload?.mentions ?? []
       let cacheKey: string | null = null
 
       if (
-        !payload?.mentions ||
-        payload.mentions.length === 0 ||
-        payload.mentions.findIndex((x) => x.type === MentionItemType.ACTIVE_TAB) !== -1
+        (mentions.length === 0 && !payload?.text) ||
+        mentions.findIndex((x) => x.type === MentionItemType.ACTIVE_TAB) !== -1
       ) {
         const activeTab = this.tabsManager.activeTabValue
         if (!activeTab) {
@@ -1003,9 +1003,17 @@ export class ContextManager {
             generatePayload.content = parsed.plain ?? parsed.html ?? ''
           }
         }
-      } else if (payload.mentions && payload.mentions.length === 1) {
-        const mention = payload.mentions[0]
+      } else if (mentions.length === 1) {
+        const mention = mentions[0]
         generatePayload.title = mention.label
+        cacheKey = mention.id
+      } else if (payload?.text) {
+        generatePayload.title = payload.text
+        cacheKey = `text-${hashString(payload.text)}` // base64 encode the text to create a unique key
+      } else {
+        this.log.debug('No active tab or mentions found, returning empty prompts')
+        this.generatedPrompts.set([])
+        return []
       }
 
       this.log.debug('Generating prompts with', generatePayload)

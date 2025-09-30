@@ -41,3 +41,46 @@ export const BUILT_IN_PAGE_PROMPTS = [
       'Summarize the page to extract the main points and give a overview of what it is about. Try to stay concise and to the point.'
   }
 ]
+
+export const EXAMPLE_PROMPTS = [
+  {
+    id: 'search',
+    icon: 'search',
+    label: "Why hasn't the computer revolution happened yet?",
+    description:
+      "Ask about a topic that's interesting to you, and let Surf help you find relevant information.",
+    prompt: 'Search the web on why the computer revolution has not happened yet'
+  },
+  {
+    id: 'youtube',
+    icon: 'message',
+    label: 'YouTube Insights',
+    description: 'Open a YouTube video and ask about the details of the content.',
+    prompt: 'What did steve say about styluses?',
+    url: 'https://www.youtube.com/watch?v=VKpaK670U7s'
+  },
+  {
+    id: 'pdf',
+    icon: 'file-text-ai',
+    label: 'PDF Analysis',
+    description: 'Upload a PDF from your computer and ask for a summary.',
+    prompt: 'Summarize the key findings and conclusions presented in this document.'
+  },
+  {
+    id: 'mention',
+    icon: 'mention',
+    label: 'Mentioning Sources',
+    description:
+      '@mention any of your notebooks, notes, tabs and/or other media to pinpoint various contexts.',
+    prompt: ''
+  },
+  {
+    id: 'note',
+    icon: 'note',
+    label: 'Note Taking',
+    description: 'Compose a note directly in Surf.',
+    prompt: ''
+  }
+]
+
+export type ExamplePrompt = (typeof EXAMPLE_PROMPTS)[number]

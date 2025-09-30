@@ -5,7 +5,7 @@
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
   import { ResourceLoader, NotebookCover } from '@deta/ui'
   import { type ResourceSearchResult } from '@deta/services/resources'
-  import type { NotebookEntry, Option } from '@deta/types'
+  import type { ChatPrompt, NotebookEntry, Option, ViewLocation } from '@deta/types'
   import { ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import { SearchResourceTags, truncate, useDebounce, useLogScope, wait } from '@deta/utils'
   import { onMount } from 'svelte'
@@ -15,11 +15,15 @@
   import { Icon } from '@deta/icons'
   import { useNotebookManager } from '@deta/services/notebooks'
   import { type RouteResult } from '@mateothegreat/svelte5-router'
-  import { useTelemetry } from '@deta/services'
+  import { useConfig, useTelemetry, useTeletypeService } from '@deta/services'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
   import NotebookContents from '../components/notebook/NotebookContents.svelte'
+  import { provideAI } from '@deta/services/ai'
+  import { MentionItemType } from '@deta/editor'
+  import { BUILT_IN_PAGE_PROMPTS } from '@deta/services/constants'
+  import PromptPills from '../components/PromptPills.svelte'
 
   let {
     route,
@@ -37,6 +41,48 @@
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
   const telemetry = useTelemetry()
+  const config = useConfig()
+  const ai = provideAI(resourceManager, config, false)
+  const teletype = useTeletypeService()
+
+  const contextManager = ai.contextManager
+  const { generatedPrompts, generatingPrompts } = contextManager
+  const ttyQuery = teletype.query
+  const mentions = teletype.mentions
+
+  let hasMentions = $derived($mentions.length > 0)
+  let hasActiveTabMention = $derived($mentions.some((m) => m.type === MentionItemType.ACTIVE_TAB))
+  let mentionsHash = $derived(JSON.stringify($mentions))
+
+  let prevMentionsHash = $state('')
+  let viewLocation = $state<ViewLocation | null>(null)
+
+  const suggestedPrompts = $derived.by(() => {
+    if ($generatingPrompts) {
+      return [
+        {
+          label: hasActiveTabMention
+            ? 'Analyzing Page'
+            : hasMentions
+              ? 'Analyzing Mentions'
+              : 'Generating Prompts',
+          prompt: '',
+          loading: true
+        }
+      ]
+    }
+
+    if ($generatedPrompts.length === 0) return []
+
+    return [
+      ...BUILT_IN_PAGE_PROMPTS.filter((p) =>
+        $generatedPrompts.every((gp) => gp.label !== p.label && gp.label !== 'Summary')
+      ),
+      ...$generatedPrompts
+        .slice(0, 4)
+        .sort((a, b) => (a.label?.length ?? 0) - (b.label?.length ?? 0))
+    ]
+  })
 
   let showAllNotes = $state(false)
   let isRenamingNote = $state(null)
@@ -97,6 +143,19 @@
     } else return resources.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
   }
 
+  const handleRunPrompt = (e: CustomEvent<ChatPrompt>) => {
+    const prompt = e.detail
+    log.debug('Running prompt', prompt)
+    teletype.ask({ query: prompt.prompt, queryLabel: prompt.label })
+  }
+
+  $effect(() => {
+    if (hasMentions && mentionsHash !== prevMentionsHash && !$generatingPrompts) {
+      prevMentionsHash = mentionsHash
+      contextManager.getPrompts({ mentions: $mentions })
+    }
+  })
+
   onMount(async () => {
     if (notebookId) {
       // NOTE: Ideally messagePort events optionally get queued up until connection established
@@ -104,6 +163,32 @@
       notebook = await notebookManager.getNotebook(notebookId)
     } else {
       notebook = notebookId
+    }
+  })
+
+  onMount(() => {
+    let unsubs = [
+      messagePort.viewMounted.handle(({ location }) => {
+        log.debug('Received view-mounted event', location)
+        viewLocation = location
+
+        if (hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        } /*else {
+          contextManager.getPrompts({ text: 'generate prompts that are useful for the user to kick off a new research session. make them insightful and relevant' })
+        }*/
+      }),
+
+      messagePort.activeTabChanged.handle(() => {
+        log.debug('Received active-tab-changed event', viewLocation, contextManager)
+        if (hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        }
+      })
+    ]
+
+    return () => {
+      unsubs.forEach((u) => u())
     }
   })
 </script>
@@ -182,9 +267,22 @@
           </div>
           <TeletypeEntry open={true} hideNavigation />
         </div>
-        <section class="contents-wrapper">
-          <NotebookContents {notebookId} />
-        </section>
+
+        {#if ($generatingPrompts || suggestedPrompts.length > 0) && hasMentions}
+          <div class="prompts-wrapper">
+            <PromptPills
+              promptItems={suggestedPrompts}
+              direction={'vertical'}
+              on:click={handleRunPrompt}
+            />
+          </div>
+        {/if}
+
+        {#if !hasMentions}
+          <section class="contents-wrapper">
+            <NotebookContents {notebookId} />
+          </section>
+        {/if}
       </main>
     {/snippet}
   </NotebookLoader>
@@ -324,5 +422,9 @@
       margin: 0 auto;
       padding-inline: 1.5rem;
     }
+  }
+
+  .prompts-wrapper {
+    padding-left: 1.25rem;
   }
 </style>

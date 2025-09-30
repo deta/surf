@@ -285,10 +285,15 @@
           await contextManager.clear()
         }
 
-        let showPrompt = true
-        if (payload.mentions.length === 1 && payload.mentions[0]?.data?.insertIntoEditor) {
-          showPrompt = false
-          insertMention(payload.mentions[0], payload?.queryLabel || payload.query)
+        if (payload.mentions.length > 0) {
+          log.debug(`Inserting ${payload.mentions.length} mentions from query:`, payload.mentions)
+          for (const mentionItem of payload.mentions) {
+            insertMention(mentionItem)
+          }
+        }
+
+        if (payload.queryLabel) {
+          insertMention(undefined, payload.queryLabel)
         }
 
         tools.update((tools) =>
@@ -299,7 +304,7 @@
           payload.query,
           payload.mentions,
           PageChatMessageSentEventTrigger.NoteUseSuggestion,
-          { focusEnd: true, autoScroll: false, showPrompt: showPrompt, focusInput: true }
+          { focusEnd: true, autoScroll: false, showPrompt: !payload.queryLabel, focusInput: true }
         )
       }
     } catch (err) {

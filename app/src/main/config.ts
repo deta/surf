@@ -115,6 +115,9 @@ export const getUserConfig = (path?: string) => {
       auto_toggle_pip: false,
       show_resource_contexts: true,
       disable_bookmark_shortcut: false,
+      teletype_default_action: 'auto',
+      completed_onboarding_examples: [],
+      dismissed_onboarding_examples: false,
 
       /// Deprecated
       homescreen_link_cmdt: false,
@@ -246,6 +249,21 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings?.disable_bookmark_shortcut === undefined) {
     storedConfig.settings.disable_bookmark_shortcut = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings?.teletype_default_action === undefined) {
+    storedConfig.settings.teletype_default_action = 'auto'
+    changedConfig = true
+  }
+
+  if (storedConfig.settings?.completed_onboarding_examples === undefined) {
+    storedConfig.settings.completed_onboarding_examples = []
+    changedConfig = true
+  }
+
+  if (storedConfig.settings?.dismissed_onboarding_examples === undefined) {
+    storedConfig.settings.dismissed_onboarding_examples = false
     changedConfig = true
   }
 

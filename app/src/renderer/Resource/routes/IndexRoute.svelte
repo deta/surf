@@ -12,15 +12,15 @@
   import { useResourceManager } from '@deta/services/resources'
   import { provideAI } from '@deta/services/ai'
   import { useMessagePortClient } from '@deta/services/messagePort'
-  import { BUILT_IN_PAGE_PROMPTS } from '@deta/services/constants'
+  import { BUILT_IN_PAGE_PROMPTS, type ExamplePrompt } from '@deta/services/constants'
   import { useConfig } from '@deta/services'
-  import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
   import { useTeletypeService } from '../../../../../packages/services/src/lib'
   import NotebookContents from '../components/notebook/NotebookContents.svelte'
   import PromptPills from '../components/PromptPills.svelte'
   import { MentionItemType } from '@deta/editor'
+  import NotebookSidecarExample from '../components/notebook/NotebookSidecarExample.svelte'
 
   let {
     onopensidebar,
@@ -48,6 +48,7 @@
   const mentions = teletype.mentions
 
   let hasMentions = $derived($mentions.length > 0)
+  let hasActiveTabMention = $derived($mentions.some((m) => m.type === MentionItemType.ACTIVE_TAB))
   let mentionsHash = $derived(JSON.stringify($mentions))
 
   let prevMentionsHash = $state('')
@@ -56,12 +57,18 @@
     if ($generatingPrompts) {
       return [
         {
-          label: 'Analyzing Page...',
+          label: hasActiveTabMention
+            ? 'Analyzing Page...'
+            : hasMentions
+              ? 'Analyzing Mentions...'
+              : 'Generating Prompts...',
           prompt: '',
           loading: true
         }
       ]
     }
+
+    if ($generatedPrompts.length === 0) return []
 
     return [
       ...BUILT_IN_PAGE_PROMPTS.filter((p) =>
@@ -143,16 +150,29 @@
   const handleRunPrompt = (e: CustomEvent<ChatPrompt>) => {
     const prompt = e.detail
     log.debug('Running prompt', prompt)
-    teletype.ask(prompt.prompt, undefined, prompt.label)
+    teletype.ask({ query: prompt.prompt, queryLabel: prompt.label })
+  }
+
+  const handleRunExample = (example: ExamplePrompt) => {
+    log.debug('Running example', example)
+
+    if (example.id === 'search') {
+      teletype.ask({ query: example.prompt, queryLabel: example.label })
+    } else if (example.id === 'youtube') {
+      teletype.ask({ query: example.prompt, openTabUrl: example.url })
+    } else if (example.id === 'pdf') {
+      teletype.promptForAndInsertFileMentions()
+    } else if (example.id === 'note') {
+      teletype.createNote('')
+    } else if (example.id === 'mention') {
+      teletype.insertMention(undefined, '@')
+    } else {
+      log.warn('Unknown example prompt id', example.id)
+    }
   }
 
   $effect(() => {
-    if (
-      viewLocation === ViewLocation.Sidebar &&
-      hasMentions &&
-      mentionsHash !== prevMentionsHash &&
-      !$generatingPrompts
-    ) {
+    if (hasMentions && mentionsHash !== prevMentionsHash && !$generatingPrompts) {
       prevMentionsHash = mentionsHash
       contextManager.getPrompts({ mentions: $mentions })
     }
@@ -183,14 +203,16 @@
         log.debug('Received view-mounted event', location)
         viewLocation = location
 
-        if (viewLocation === ViewLocation.Sidebar && hasMentions) {
+        if (hasMentions) {
           contextManager.getPrompts({ mentions: $mentions })
-        }
+        } /*else {
+          contextManager.getPrompts({ text: 'generate prompts that are useful for the user to kick off a new research session. make them insightful and relevant' })
+        }*/
       }),
 
       messagePort.activeTabChanged.handle(() => {
         log.debug('Received active-tab-changed event', viewLocation, contextManager)
-        if (viewLocation === ViewLocation.Sidebar && hasMentions) {
+        if (hasMentions) {
           contextManager.getPrompts({ mentions: $mentions })
         }
       })
@@ -214,7 +236,7 @@
 
 <NotebookLayout>
   <main>
-    {#if viewLocation === ViewLocation.Sidebar && hasMentions}
+    {#if $generatingPrompts || (suggestedPrompts.length > 0 && (viewLocation === ViewLocation.Sidebar || hasMentions))}
       <div class="prompts-wrapper">
         <PromptPills
           direction="horizontal"
@@ -230,10 +252,15 @@
       </h1>-->
       <TeletypeEntry open={true} />
     </div>
-    {#if $ttyQuery.length <= 0 && !isTtyInitializing}
+
+    {#if $ttyQuery.length <= 0}
       <section class="contents-wrapper">
         <NotebookContents />
       </section>
+    {/if}
+
+    {#if viewLocation === ViewLocation.Tab && $ttyQuery.length <= 0}
+      <NotebookSidecarExample onselect={handleRunExample} />
     {/if}
   </main>
 
@@ -246,6 +273,7 @@
     height: 100%;
     max-width: 680px;
     margin: 0 auto;
+    position: relative;
 
     display: flex;
     flex-direction: column;

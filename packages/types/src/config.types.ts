@@ -49,6 +49,8 @@ export type UserSettings = {
   enable_custom_prompts: boolean
   tab_bar_visible: boolean
   teletype_default_action: 'auto' | 'always_ask' | 'always_search'
+  completed_onboarding_examples: string[]
+  dismissed_onboarding_examples: boolean
 
   /**
    * @deprecated use individual feature flags instead

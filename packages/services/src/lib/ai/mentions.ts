@@ -19,7 +19,8 @@ import { MentionItemType, type MentionItem as MentionItemEditor } from '@deta/ed
 import { type ResourceManager } from '@deta/services/resources'
 import type { MentionItemsFetcher } from '@deta/editor/extensions/Mention'
 import { SearchResourceTags } from '@deta/utils/formatting'
-import { MentionTypes, type MentionItem } from '../mentions/mention.types'
+import { MentionTypes } from '../mentions/mention.types'
+import { useMessagePortClient } from '../messagePort'
 
 export const createResourcesMentionsFetcher = (
   resourceManager: ResourceManager,
@@ -162,12 +163,12 @@ export const createMentionsFetcher = (
 
 export const createRemoteMentionsFetcher = (notResourceId?: string) => {
   const log = useLogScope('MentionsHelper')
+  const messagePort = useMessagePortClient()
 
   const mentionItemsFetcher: MentionItemsFetcher = async ({ query }) => {
     log.debug('fetching mention items', query)
 
-    // @ts-ignore
-    const items = (await window.api.fetchMentions(query)) as MentionItem[]
+    const items = await messagePort.fetchMentions.request({ query })
     log.debug('fetched mention items', items)
 
     // Transform service items to editor format

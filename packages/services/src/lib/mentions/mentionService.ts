@@ -8,6 +8,7 @@ import type {
   MentionSelection,
   MentionType
 } from './mention.types'
+import { useMessagePortPrimary } from '../messagePort'
 
 import { TabsMentionProvider } from './providers/TabsMentionProvider'
 import { ResourceMentionProvider } from './providers/ResourceMentionProvider'
@@ -16,13 +17,20 @@ import type { TabsService } from '../tabs/tabs.svelte'
 
 import { MentionTypes } from './mention.types'
 import { tick } from 'svelte'
+import type { Fn } from '@deta/types'
+import { useBrowser } from '../browser'
 
 export class MentionService {
   private providers = new Map<string, MentionProvider>()
   private searchState: Writable<MentionSearchState>
   private readonly options: Required<MentionServiceOptions>
+
   private readonly log = useLogScope('MentionService')
+  private readonly messagePort = useMessagePortPrimary()
+  private readonly browser = useBrowser()
+
   private queryUnsubscribe?: () => void
+  private unsubs: Fn[] = []
 
   // Public reactive stores
   public readonly query: Writable<string>
@@ -85,19 +93,30 @@ export class MentionService {
   }
 
   private attachListeners() {
-    // @ts-ignore
-    if (window.api.onFetchMentions) {
-      // @ts-ignore
-      window.api.onFetchMentions(async ({ query }) => {
+    this.unsubs.push(
+      this.messagePort.fetchMentions.handle(async ({ query }, viewId: string) => {
         this.log.debug('Received fetchMentions event', query)
-        const results = await (query.length > 0
+
+        const location = this.browser.getViewLocation(viewId) ?? 'tab'
+
+        let results = await (query.length > 0
           ? this.debouncedPerformSearch(query)
           : this.performSearch(query))
 
+        if (!results) {
+          this.log.debug('No results found')
+          return []
+        }
+
+        if (location === 'tab') {
+          this.log.debug('Filtering out ACTIVE_TAB mentions for tab')
+          results = results.filter((item) => item.type !== MentionTypes.ACTIVE_TAB)
+        }
+
         this.log.debug('Returning fetched mentions:', results)
-        return results || []
+        return results
       })
-    }
+    )
   }
 
   /**
@@ -189,12 +208,15 @@ export class MentionService {
       this.queryUnsubscribe = undefined
     }
 
+    this.unsubs.forEach((unsub) => unsub())
+
     // Cleanup providers
     for (const provider of this.providers.values()) {
       if (provider.destroy) {
         provider.destroy()
       }
     }
+
     this.providers.clear()
   }
 

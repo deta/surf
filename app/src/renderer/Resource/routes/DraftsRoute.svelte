@@ -12,29 +12,77 @@
   import { MaskedScroll } from '@deta/ui'
   import { contextMenu, type CtxItem } from '@deta/ui'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
-  import { SearchResourceTags, truncate, useDebounce } from '@deta/utils'
+  import { SearchResourceTags, truncate, useDebounce, useLogScope } from '@deta/utils'
   import {
     useResourceManager,
     type Resource,
     type ResourceNote,
     ResourceManagerEvents
   } from '@deta/services/resources'
-  import { ResourceTagsBuiltInKeys, ResourceTypes } from '@deta/types'
+  import { ResourceTagsBuiltInKeys, ResourceTypes, type ViewLocation } from '@deta/types'
   import { type MessagePortClient } from '@deta/services/messagePort'
   import { handleResourceClick } from '../handlers/notebookOpenHandlers'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookContents from '../components/notebook/NotebookContents.svelte'
+  import { MentionItemType } from '@deta/editor'
+  import { useConfig, useTeletypeService } from '@deta/services'
+  import { provideAI } from '@deta/services/ai'
+  import { BUILT_IN_PAGE_PROMPTS } from '@deta/services/constants'
+  import PromptPills from '../components/PromptPills.svelte'
 
   let {
     messagePort,
     resourcesPanelOpen = false
   }: { messagePort: MessagePortClient; resourcesPanelOpen?: boolean } = $props()
 
+  const log = useLogScope('DraftsRoute')
   const resourceManager = useResourceManager()
+  const config = useConfig()
+  const ai = provideAI(resourceManager, config, false)
+  const teletype = useTeletypeService()
+
+  const contextManager = ai.contextManager
+  const { generatedPrompts, generatingPrompts } = contextManager
+  const ttyQuery = teletype.query
+  const mentions = teletype.mentions
+
+  let hasMentions = $derived($mentions.length > 0)
+  let hasActiveTabMention = $derived($mentions.some((m) => m.type === MentionItemType.ACTIVE_TAB))
+  let mentionsHash = $derived(JSON.stringify($mentions))
+
+  let prevMentionsHash = $state('')
+  let viewLocation = $state<ViewLocation | null>(null)
 
   let showAllNotes = $state(false)
   let isRenamingNote = $state(null)
+
+  const suggestedPrompts = $derived.by(() => {
+    if ($generatingPrompts) {
+      return [
+        {
+          label: hasActiveTabMention
+            ? 'Analyzing Page'
+            : hasMentions
+              ? 'Analyzing Mentions'
+              : 'Generating Prompts',
+          prompt: '',
+          loading: true
+        }
+      ]
+    }
+
+    if ($generatedPrompts.length === 0) return []
+
+    return [
+      ...BUILT_IN_PAGE_PROMPTS.filter((p) =>
+        $generatedPrompts.every((gp) => gp.label !== p.label && gp.label !== 'Summary')
+      ),
+      ...$generatedPrompts
+        .slice(0, 4)
+        .sort((a, b) => (a.label?.length ?? 0) - (b.label?.length ?? 0))
+    ]
+  })
 
   const handleCreateNote = async () => {
     await messagePort.createNote.send({ isNewTabPage: true })
@@ -62,9 +110,48 @@
     isRenamingNote = undefined
   }, 75)
 
+  const handleRunPrompt = (e: CustomEvent<ChatPrompt>) => {
+    const prompt = e.detail
+    log.debug('Running prompt', prompt)
+    teletype.ask({ query: prompt.prompt, queryLabel: prompt.label })
+  }
+
+  $effect(() => {
+    if (hasMentions && mentionsHash !== prevMentionsHash && !$generatingPrompts) {
+      prevMentionsHash = mentionsHash
+      contextManager.getPrompts({ mentions: $mentions })
+    }
+  })
+
   onMount(async () => {
     const unsubs = [resourceManager.on(ResourceManagerEvents.Deleted, () => (refreshKey = {}))]
     return () => unsubs.forEach((f) => f())
+  })
+
+  onMount(() => {
+    let unsubs = [
+      messagePort.viewMounted.handle(({ location }) => {
+        log.debug('Received view-mounted event', location)
+        viewLocation = location
+
+        if (hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        } /*else {
+          contextManager.getPrompts({ text: 'generate prompts that are useful for the user to kick off a new research session. make them insightful and relevant' })
+        }*/
+      }),
+
+      messagePort.activeTabChanged.handle(() => {
+        log.debug('Received active-tab-changed event', viewLocation, contextManager)
+        if (hasMentions) {
+          contextManager.getPrompts({ mentions: $mentions })
+        }
+      })
+    ]
+
+    return () => {
+      unsubs.forEach((u) => u())
+    }
   })
 </script>
 
@@ -92,75 +179,23 @@
       </div>
       <TeletypeEntry open={true} hideNavigation />
     </div>
-    <section class="contents-wrapper">
-      <NotebookContents notebookId="drafts" />
-      <!-- <SurfLoader
-        excludeWithinSpaces
-        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
-        search={{
-          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
-          parameters: {
-            semanticSearch: false
-          }
-        }}
-      >
-        {#snippet children([resources, searchResult, searching])}
-          <header>
-            <label>Notes</label>
-            <Button
-              size="md"
-              onclick={() => (showAllNotes = !showAllNotes)}
-              disabled={(searchResult ?? resources).length <= 6}
-            >
-              <span class="typo-title-sm" style="opacity: 0.75;"
-                >{showAllNotes ? 'Hide' : 'Show'} All</span
-              >
-            </Button>
-          </header>
 
-          {#if (searchResult ?? resources).length > 0}
-            <ul class:showAllNotes={showAllNotes || (searchResult ?? resources).length <= 6}>
-              {#each (searchResult ?? resources).slice(0, showAllNotes ? Infinity : 7) as resource (resource.id)}
-                <li>
-                  <ResourceLoader {resource}>
-                    {#snippet children(resource: Resource)}
-                      <PageMention
-                        {resource}
-                        editing={isRenamingNote === resource.id}
-                        onchange={(v) => {
-                          handleRenameNote(resource.id, v)
-                          isRenamingNote = undefined
-                        }}
-                        oncancel={handleCancelRenameNote}
-                        onclick={async (event) => {
-                          if (isRenamingNote) return
-                          handleResourceClick(resource.id, event)
-                        }}
-                        onrename={() => (isRenamingNote = resource.id)}
-                      />
-                    {/snippet}
-                  </ResourceLoader>
-                </li>
-              {/each}
-            </ul>
-          {:else}
-            <div class="empty">
-              <Button size="md" onclick={handleCreateNote}>
-                <span class="typo-title-sm">Create New Note</span>
-              </Button>
-              <p class="typo-title-sm"></p>
-            </div>
-          {/if}
-        {/snippet}
-      </SurfLoader> -->
+    {#if ($generatingPrompts || suggestedPrompts.length > 0) && hasMentions}
+      <div class="prompts-wrapper">
+        <PromptPills
+          promptItems={suggestedPrompts}
+          direction={'vertical'}
+          on:click={handleRunPrompt}
+        />
+      </div>
+    {/if}
 
-      <!--    {#if !showAllNotes}
-        <span class="more typo-title-sm">+ {(searchResult ?? resources).length - 6} more</span>
-      {/if}-->
-    </section>
+    {#if !hasMentions}
+      <section class="contents-wrapper">
+        <NotebookContents notebookId="drafts" />
+      </section>
+    {/if}
   </main>
-
-  <!-- <NotebookSidebar title="Drafts" notebookId="drafts" bind:open={resourcesPanelOpen} /> -->
 </NotebookLayout>
 
 <style lang="scss">
@@ -280,5 +315,9 @@
       margin: 0 auto;
       padding-inline: 1.5rem;
     }
+  }
+
+  .prompts-wrapper {
+    padding-left: 1.25rem;
   }
 </style>

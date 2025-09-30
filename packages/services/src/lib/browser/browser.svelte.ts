@@ -276,13 +276,18 @@ export class BrowserService {
         notebookId = id
       }
 
-      this.log.debug(
-        `Asking question from ${viewId} in ${target}:`,
-        payload.query,
-        payload.mentions,
-        payload.tools,
-        notebookId
-      )
+      this.log.debug(`Asking question from ${viewId} in ${target}:`, payload, notebookId)
+
+      if (payload.openTabUrl) {
+        this.log.debug('Ask action has openTabUrl, opening URL first:', payload.openTabUrl)
+        await this.navigateToUrl(payload.openTabUrl, { target: 'tab' })
+        payload.mentions.unshift({
+          id: 'active_tab',
+          label: 'Active Tab',
+          type: MentionItemType.ACTIVE_TAB,
+          icon: 'sparkles'
+        })
+      }
 
       if (payload.mentions.length === 1) {
         payload.mentions[0] = {
@@ -323,7 +328,7 @@ export class BrowserService {
       }
 
       await this.createNoteAndRunAIQuery(payload, {
-        target: target === 'tab' ? 'active_tab' : target,
+        target: payload.openTabUrl ? 'sidebar' : target === 'tab' ? 'active_tab' : target,
         notebookId: notebookId ?? 'auto'
       })
 

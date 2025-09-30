@@ -30,7 +30,7 @@
   const handleAsk = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
     const { query, mentions } = event.detail
     log.debug('Ask requested:', query, mentions)
-    teletypeService.ask(query, mentions)
+    teletypeService.ask({ query, mentions })
   }
 
   const handleCreateNote = (event: CustomEvent<{ content: string }>) => {

@@ -16,11 +16,9 @@ import type {
   WebContentsViewEvent,
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
-  ControlWindow,
-  WebContentsViewContextManagerActionEvent
+  ControlWindow
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
-import { type MentionItem } from '../mentions/mention.types'
 
 export const ipcService = createIPCService()
 
@@ -173,11 +171,6 @@ export type SpaceBasicData = {
   linked: boolean
 }
 
-export interface MentionSearch extends IPCEvent {
-  payload: { query: string }
-  output: MentionItem[]
-}
-
 export type UpdateViewBounds = {
   viewId: string
   bounds: Electron.Rectangle
@@ -282,8 +275,7 @@ const IPC_EVENTS = ipcService.registerEvents({
     'webcontentsview-manager-action'
   ),
   webContentsViewAction:
-    ipcService.addEventWithReturn<WebContentsViewActionEvent>('webcontentsview-action'),
-  fetchMentions: ipcService.addEventWithReturn<MentionSearch>('fetch-mentions')
+    ipcService.addEventWithReturn<WebContentsViewActionEvent>('webcontentsview-action')
 })
 
 export const IPC_EVENTS_MAIN = IPC_EVENTS.main

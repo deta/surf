@@ -3,6 +3,7 @@ import type { ChatPrompt, SearchResultLink } from '@deta/types'
 
 export type GeneratePromptsPayload = {
   mentions?: MentionItem[]
+  text?: string
 }
 
 export enum WebContentsViewContextManagerActionType {

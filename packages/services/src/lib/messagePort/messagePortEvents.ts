@@ -16,6 +16,8 @@ import type {
   WebContentsViewContextManagerActionType
 } from './contextManagerEvents'
 
+import type { MentionItem as MentionItemService } from '../mentions/mention.types'
+
 export interface TeletypeActionSerialized {
   id: string
   name: string
@@ -30,6 +32,7 @@ export interface TeletypeActionSerialized {
 export type AIQueryPayload = {
   query: string
   queryLabel?: string
+  openTabUrl?: string
   mentions: MentionItem[]
   tools?: {
     websearch?: boolean
@@ -150,6 +153,14 @@ export interface MPActiveTabChanged extends MessagePortEvent {
   }
 }
 
+export interface MPFetchMentions extends MessagePortEvent {
+  payload: {
+    query: string
+    notResourceId?: string
+  }
+  output: MentionItemService[]
+}
+
 export type MPContextManagerAction = {
   [K in WebContentsViewContextManagerActionType]: {
     payload: {
@@ -185,6 +196,7 @@ type MessagePortEventRegistry = {
   activeTabChanged: MPActiveTabChanged
   viewMounted: MPViewMounted
   contextManagerAction: MPContextManagerAction
+  fetchMentions: MPFetchMentions
 }
 
 const createMessagePortEvents = <IsPrimary extends boolean>(
@@ -237,7 +249,8 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     activeTabChanged: messagePortService.addEvent<MPActiveTabChanged>('active-tab-changed'),
     viewMounted: messagePortService.addEvent<MPViewMounted>('view-mounted'),
     contextManagerAction:
-      messagePortService.addEventWithReturn<MPContextManagerAction>('context-manager-action')
+      messagePortService.addEventWithReturn<MPContextManagerAction>('context-manager-action'),
+    fetchMentions: messagePortService.addEventWithReturn<MPFetchMentions>('fetch-mentions')
   })
 }
 

@@ -22,10 +22,10 @@ import type {
 import { NavigationProvider } from './providers/NavigationProvider'
 import { AskProvider } from './providers/AskProvider'
 import { CurrentQueryProvider } from './providers/CurrentQueryProvider'
-import { useMessagePortClient } from '../messagePort'
+import { type AIQueryPayload, useMessagePortClient } from '../messagePort'
 import { MentionItemType, type MentionItem } from '@deta/editor'
 import type { TeletypeSystem } from '@deta/teletype'
-import type { Fn } from '@deta/types'
+import type { Fn, Optional } from '@deta/types'
 import { promptForFilesAndTurnIntoResourceMentions } from '../mediaImporter'
 import { useResourceManager } from '../resources'
 import { AI_TOOLS } from '../constants'
@@ -276,19 +276,21 @@ export class TeletypeService {
     })
   }
 
-  async ask(query: string, mentions?: MentionItem[], queryLabel?: string): Promise<void> {
-    this.log.debug('Asking question:', query, mentions)
-
-    if (!mentions) {
-      mentions = this.mentionsValue
-    }
+  async ask(payload: Optional<AIQueryPayload, 'tools' | 'mentions'>): Promise<void> {
+    this.log.debug('Asking question:', payload)
 
     const tools = {
       websearch: this.isToolActive('websearch'),
       surflet: this.isToolActive('surflet')
     }
 
-    await this.messagePort.teletypeAsk.send({ query, queryLabel, mentions, tools })
+    const fullPayload = {
+      tools,
+      mentions: this.mentionsValue,
+      ...payload
+    } as AIQueryPayload
+
+    await this.messagePort.teletypeAsk.send(fullPayload)
     this.clear()
   }
 
@@ -662,9 +664,12 @@ export class TeletypeService {
       return
     }
 
+    this.log.debug(`Inserting ${mentions.length} file mentions:`, mentions)
     for (const mentionItem of mentions) {
       this.insertMention(mentionItem)
     }
+
+    this.teletype.editorComponent.focusEnd()
   }
 
   /**
