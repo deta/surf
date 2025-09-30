@@ -11,7 +11,6 @@ export class ExtensionsManager {
   private extensions: ElectronChromeExtensions | null = null
   private mainWindow: BrowserWindow | null = null
   private extensionsSession: Session | null = null
-  private activeWebContents: WebContents | null = null
   private constructor() {}
   private api: AuthenticatedAPI | null = null
 
@@ -98,58 +97,25 @@ export class ExtensionsManager {
         if (!details.browserWindow || details.browserWindow.isDestroyed()) {
           return { action: 'deny' }
         }
-        if (!this.api) {
-          await this.showErrorMessage(
-            details.browserWindow,
-            'Extensions manager was not initialized properly'
-          )
-          return { action: 'deny' }
-        }
-        if (!isDev) {
-          try {
-            const res = await this.api.checkIfExtensionIsAllowed(details.id)
-            if (!res.ok) {
-              console.error('Failed to check if extension is allowed', res)
-              await this.showErrorMessage(
-                details.browserWindow,
-                'Sorry we ran into an internal error while checking if the extension is supported.',
-                details.icon
-              )
-              return { action: 'deny' }
-            }
-            if (!res.data.allowed) {
-              await this.showErrorMessage(
-                details.browserWindow,
-                `Sorry "${details.localizedName}" is not supported at the moment.`,
-                details.icon
-              )
-              return { action: 'deny' }
-            }
-          } catch (error) {
-            console.error('Failed to check if extension is allowed', error)
-            await this.showErrorMessage(details.browserWindow, `${error}`)
-            return { action: 'deny' }
-          }
-        }
-
         const title = `Install “${details.localizedName}”?`
-
         let message = `${title}`
-        let messageDetail: string | undefined
+        let messageDetail: string =
+          'Warning: Extensions are experimental in Surf and may not work as expected!\n\n'
         if (details.manifest.permissions) {
-          messageDetail = formatPermissionsForUser(details.manifest.permissions)
+          messageDetail = `${messageDetail} ${formatPermissionsForUser(details.manifest.permissions)}`
         }
         const returnValue = await dialog.showMessageBox(details.browserWindow, {
           title,
           message,
           detail: messageDetail,
           icon: details.icon,
-          buttons: ['Cancel', 'Install']
+          type: 'warning',
+          buttons: ['Cancel', 'Install (Experimental)']
         })
         const action = returnValue.response === 0 ? 'deny' : 'allow'
         if (action === 'allow' && !isDev) {
           this.api
-            .trackInstalledExtension(details.id, true)
+            ?.trackInstalledExtension(details.id, true)
             .then((res) => {
               if (!res.ok) {
                 console.error('Failed to track installed extension', res)

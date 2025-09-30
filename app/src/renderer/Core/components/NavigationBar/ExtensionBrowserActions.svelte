@@ -66,17 +66,7 @@
     {#if $hasNoExtensionsEnabled}
       <div class="empty-state">
         <div class="description">
-          <p>
-            Surf comes with experimental extension support, currently limited to most popular <b
-              >password managers</b
-            >.
-          </p>
-
-          <p>
-            Find your favorite password manager in the Chrome Web Store and install it to use it
-            with Surf.
-          </p>
-
+          <p class="info">Surf comes with experimental extension support.</p>
           <button class="action-button" onclick={handleOpenExtenionStore}> Open Web Store </button>
         </div>
       </div>
@@ -113,6 +103,8 @@
     border-radius: 12px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
 
     &:has(.empty-state) {
       width: 280px;
@@ -196,5 +188,9 @@
       gap: 0.75rem;
       padding: 0.5rem;
     }
+  }
+
+  .info {
+    font-size: 0.9rem;
   }
 </style>

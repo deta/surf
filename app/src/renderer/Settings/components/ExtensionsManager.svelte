@@ -53,16 +53,10 @@
       {#if noExtensions}
         <h2>You don't have any extensions yet.</h2>
       {/if}
-      <p>
-        Surf comes with experimental extension support, currently limited to most popular password
-        managers.
-      </p>
+      <p>Surf comes with experimental extension support.</p>
     </div>
   </div>
   <div class="default-wrapper">
-    {#if noExtensions}
-      <p>Install your favorite password manager from the Chrome Web Store.</p>
-    {/if}
     <button on:click={() => window.api.openURL(CHROME_WEB_STORE_URL, true)}>
       Open Chrome Web Store
     </button>
@@ -210,6 +204,7 @@
     flex-direction: column;
     gap: 0.75rem;
     width: 100%;
+    overflow-y: auto;
   }
 
   .extension-item {
