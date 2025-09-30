@@ -60,6 +60,7 @@ export enum WebContentsViewActionType {
   FOCUS = 'focus',
   SET_AUDIO_MUTED = 'set-audio-muted',
   SET_ZOOM_FACTOR = 'set-zoom-factor',
+  GET_ZOOM_FACTOR = 'get-zoom-factor',
   OPEN_DEV_TOOLS = 'open-dev-tools',
   SEND = 'send',
   FIND_IN_PAGE = 'find-in-page',
@@ -86,6 +87,7 @@ export interface WebContentsViewActionPayloads {
   [WebContentsViewActionType.FOCUS]: undefined
   [WebContentsViewActionType.SET_AUDIO_MUTED]: boolean
   [WebContentsViewActionType.SET_ZOOM_FACTOR]: number
+  [WebContentsViewActionType.GET_ZOOM_FACTOR]: undefined
   [WebContentsViewActionType.OPEN_DEV_TOOLS]: { mode?: Electron.OpenDevToolsOptions['mode'] }
   [WebContentsViewActionType.SEND]: { channel: string; args?: any[] }
   [WebContentsViewActionType.FIND_IN_PAGE]: { text: string; options?: Electron.FindInPageOptions }
@@ -116,6 +118,7 @@ export interface WebContentsViewActionOutputs {
   [WebContentsViewActionType.FOCUS]: boolean
   [WebContentsViewActionType.SET_AUDIO_MUTED]: boolean
   [WebContentsViewActionType.SET_ZOOM_FACTOR]: boolean
+  [WebContentsViewActionType.GET_ZOOM_FACTOR]: boolean
   [WebContentsViewActionType.OPEN_DEV_TOOLS]: boolean
   [WebContentsViewActionType.SEND]: boolean
   [WebContentsViewActionType.FIND_IN_PAGE]: number

@@ -8,6 +8,12 @@ interface KeyboardShortcut {
   priority: ShortcutPriority
 }
 
+function splitAtFirst(str: string, delimiter: string) {
+  const index = str.indexOf(delimiter)
+  if (index === -1) return [str] // delimiter not found
+  return [str.slice(0, index), str.slice(index + delimiter.length)]
+}
+
 export class KeyboardManager {
   private shortcuts: KeyboardShortcut[] = []
   private idCounter = 0
@@ -17,7 +23,7 @@ export class KeyboardManager {
   }
 
   private parseKeyCombo(combo: string): { key: string; modifiers: string[] } {
-    const parts = combo.split('+')
+    const parts = splitAtFirst(combo, '+')
     const key = parts.pop()!.toLowerCase()
     const modifiers = parts
       .map((mod) => mod.toLowerCase())

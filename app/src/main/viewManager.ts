@@ -287,6 +287,10 @@ export class WCView {
     this.wcv.webContents.setZoomFactor(factor)
   }
 
+  getZoomFactor() {
+    return this.wcv.webContents.getZoomFactor()
+  }
+
   openDevTools(mode: Electron.OpenDevToolsOptions['mode'] = 'detach') {
     this.wcv.webContents.openDevTools({ mode })
   }
@@ -1118,6 +1122,9 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
             return true
           } else if (type === WebContentsViewActionType.SET_ZOOM_FACTOR) {
             view.setZoomFactor(payload)
+            return true
+          } else if (type === WebContentsViewActionType.GET_ZOOM_FACTOR) {
+            return await view.getZoomFactor()
             return true
           } else if (type === WebContentsViewActionType.OPEN_DEV_TOOLS) {
             view.openDevTools(payload.mode)

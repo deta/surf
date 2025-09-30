@@ -17,9 +17,12 @@ export enum ShortcutActions {
   SWITCH_TO_TAB_7 = 'SWITCH_TO_TAB_7',
   SWITCH_TO_TAB_8 = 'SWITCH_TO_TAB_8',
   SWITCH_TO_TAB_9 = 'SWITCH_TO_TAB_9',
-  SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB',
+  //SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB',
   TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR',
-  TOGGLE_TAB_ORIENTATION = 'TOGGLE_TAB_ORIENTATION'
+  TOGGLE_TAB_ORIENTATION = 'TOGGLE_TAB_ORIENTATION',
+  INCREASE_PAGE_ZOOM = 'INCREASE_PAGE_ZOOM',
+  DECREASE_PAGE_ZOOM = 'DECREASE_PAGE_ZOOM',
+  RESET_PAGE_ZOOM = 'RESET_PAGE_ZOOM'
 }
 
 // Default shortcut definitions
@@ -114,12 +117,12 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     description: 'Switch to tab 9',
     priority: ShortcutPriority.Normal
   },
-  [ShortcutActions.SWITCH_TO_LAST_TAB]: {
-    action: ShortcutActions.SWITCH_TO_LAST_TAB,
-    defaultCombo: 'CmdOrCtrl+0',
-    description: 'Switch to last tab',
-    priority: ShortcutPriority.Normal
-  },
+  //[ShortcutActions.SWITCH_TO_LAST_TAB]: {
+  //  action: ShortcutActions.SWITCH_TO_LAST_TAB,
+  //  defaultCombo: 'CmdOrCtrl+0',
+  //  description: 'Switch to last tab',
+  //  priority: ShortcutPriority.Normal
+  //},
   [ShortcutActions.TOGGLE_SIDEBAR]: {
     action: ShortcutActions.TOGGLE_SIDEBAR,
     defaultCombo: 'CmdOrCtrl+E',
@@ -130,6 +133,24 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.TOGGLE_TAB_ORIENTATION,
     defaultCombo: 'CmdOrCtrl+O',
     description: 'Toggle Tab Orientation (Horizontal/Vertical)',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.INCREASE_PAGE_ZOOM]: {
+    action: ShortcutActions.INCREASE_PAGE_ZOOM,
+    defaultCombo: 'CmdOrCtrl++',
+    description: 'Increase tab Zoom',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.DECREASE_PAGE_ZOOM]: {
+    action: ShortcutActions.DECREASE_PAGE_ZOOM,
+    defaultCombo: 'CmdOrCtrl+-',
+    description: 'Decrease Tab Zoom',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.RESET_PAGE_ZOOM]: {
+    action: ShortcutActions.RESET_PAGE_ZOOM,
+    defaultCombo: 'CmdOrCtrl+0',
+    description: 'Reset Tab Zoom',
     priority: ShortcutPriority.Normal
   }
 } as const

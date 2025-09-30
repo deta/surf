@@ -344,6 +344,10 @@ export function createWindow() {
   })
 
   mainWindow.on('ready-to-show', () => {
+    mainWindow?.webContents.setZoomLevel(0)
+    mainWindow?.webContents.setZoomFactor(1.0)
+    mainWindow?.webContents.setVisualZoomLevelLimits(1, 1)
+
     if (winState.state.isMaximized) {
       mainWindow?.maximize()
     } else if (!is.dev) {

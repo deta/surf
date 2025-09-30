@@ -842,6 +842,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
     await this.action(WebContentsViewActionType.SET_ZOOM_FACTOR, factor)
   }
 
+  async getZoomFactor(): number {
+    return await this.action(WebContentsViewActionType.GET_ZOOM_FACTOR)
+  }
+
   async openDevTools(mode: 'right' | 'bottom' | 'detach' = 'detach') {
     await this.action(WebContentsViewActionType.OPEN_DEV_TOOLS, { mode })
   }

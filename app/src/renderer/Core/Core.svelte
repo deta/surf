@@ -163,15 +163,15 @@
       })
     })
 
-    shortcutsManager.registerHandler(ShortcutActions.SWITCH_TO_LAST_TAB, () => {
-      const tabs = tabsService.tabs
-      if (tabs.length > 0) {
-        const lastTab = tabs.at(-1)
-        log.debug(`Switching to last tab (${lastTab.id})`)
-        tabsService.setActiveTab(lastTab.id, true)
-      }
-      return true
-    })
+    //shortcutsManager.registerHandler(ShortcutActions.SWITCH_TO_LAST_TAB, () => {
+    //  const tabs = tabsService.tabs
+    //  if (tabs.length > 0) {
+    //    const lastTab = tabs.at(-1)
+    //    log.debug(`Switching to last tab (${lastTab.id})`)
+    //    tabsService.setActiveTab(lastTab.id, true)
+    //  }
+    //  return true
+    //})
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_SIDEBAR, () => {
       if (
@@ -188,6 +188,35 @@
       toggleTabOrientation().catch((error) => {
         log.error('Failed to toggle tab orientation:', error)
       })
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.INCREASE_PAGE_ZOOM, async () => {
+      log.debug('Increasing page zoom')
+
+      const webContents = tabsService.activeTab.view?.webContents
+      if (!webContents) return true
+      const currZoom = (await webContents.getZoomFactor()) || 1.0
+      webContents.setZoomFactor(currZoom + 0.1)
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.DECREASE_PAGE_ZOOM, async () => {
+      log.debug('Decreasing page zoom')
+
+      const webContents = tabsService.activeTab.view?.webContents
+      if (!webContents) return true
+      const currZoom = (await webContents.getZoomFactor()) || 1.0
+      webContents.setZoomFactor(currZoom - 0.1)
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.RESET_PAGE_ZOOM, async () => {
+      log.debug('Reset page zoom')
+
+      const webContents = tabsService.activeTab.view?.webContents
+      if (!webContents) return true
+      webContents.setZoomFactor(1.0)
       return true
     })
 
