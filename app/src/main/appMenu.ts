@@ -1,5 +1,4 @@
 import { app, Menu, shell } from 'electron'
-import { useLogScope } from '@deta/utils/io'
 import { isMac, isWindows, isLinux } from '@deta/utils/system'
 import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
@@ -12,6 +11,7 @@ import { updateUserConfig, getUserConfig } from './config'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { importFiles } from './importer'
+import { useLogScope } from '@deta/utils'
 
 const log = useLogScope('Main App Menu')
 const execFileAsync = promisify(execFile)

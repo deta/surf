@@ -61,7 +61,6 @@
   ]);
 
   async function handleDrop(drag: DragculaDragEvent<{ item: IShape }>) {
-    console.log("DROP", drag);
     const from =
       drag.from === null
         ? null
@@ -128,7 +127,6 @@
     axis="vertical"
     use:HTMLAxisDragZone.action={{
       accepts: (drag) => {
-        console.log(drag);
         return true;
       }
     }}

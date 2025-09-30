@@ -3,7 +3,6 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { readdir, unlink, stat } from 'fs/promises'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
-import { useLogScope } from '@deta/utils/io'
 import { isDev, isMac, isWindows } from '@deta/utils/system'
 import { AuthenticatedAPI } from '@deta/api'
 import { TelemetryEventTypes } from '@deta/types'
@@ -23,8 +22,9 @@ import { AppUpdater, silentCheckForUpdates } from './appUpdates'
 import { ExtensionsManager } from './extensions'
 import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
+import { useLogScope } from '@deta/utils'
 
-const log = useLogScope('Main Index')
+const log = useLogScope('Main')
 
 const CONFIG = {
   appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
@@ -195,7 +195,7 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
 }
 
 const initializeApp = async () => {
-  console.log('initilizing app', is.dev ? 'in development mode' : 'in production mode')
+  log.log('initilizing app', is.dev ? 'in development mode' : 'in production mode')
 
   isAppLaunched = true
   setInterval(cleanupTempFiles, 60 * 60 * 1000)
@@ -209,7 +209,7 @@ const initializeApp = async () => {
   setupIpc(backendRootPath)
 
   if (!is.dev) {
-    console.log('Checking if app is setup')
+    log.log('Checking if app is setup')
 
     if (!userConfig.api_key) {
       log.debug('No api key found, prompting user to enter invite token')
@@ -240,7 +240,7 @@ const initializeApp = async () => {
   }
 
   if (isDev) {
-    console.log('Running in development mode, setting app icon to dev icon')
+    log.log('Running in development mode, setting app icon to dev icon')
     app.dock?.setIcon(join(app.getAppPath(), 'build/resources/dev/icon.png'))
   }
 

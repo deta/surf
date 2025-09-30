@@ -8,10 +8,18 @@ interface KeyboardShortcut {
   priority: ShortcutPriority
 }
 
-function splitAtFirst(str: string, delimiter: string) {
-  const index = str.indexOf(delimiter)
-  if (index === -1) return [str] // delimiter not found
-  return [str.slice(0, index), str.slice(index + delimiter.length)]
+function splitKeyCombo(str: string): string[] {
+  return (
+    str
+      // Turn "++" into a placeholder (so it's not treated as a delimiter)
+      .replace(/\+\+/g, '\u0000')
+      // Split at remaining "+"
+      .split('+')
+      // Restore placeholders as "+"
+      .map((part) => part.replace(/\u0000/g, '+'))
+      // Remove empties (if any)
+      .filter(Boolean)
+  )
 }
 
 export class KeyboardManager {
@@ -23,7 +31,7 @@ export class KeyboardManager {
   }
 
   private parseKeyCombo(combo: string): { key: string; modifiers: string[] } {
-    const parts = splitAtFirst(combo, '+')
+    const parts = splitKeyCombo(combo)
     const key = parts.pop()!.toLowerCase()
     const modifiers = parts
       .map((mod) => mod.toLowerCase())

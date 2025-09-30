@@ -8,6 +8,9 @@ import { createAnnouncementsWindow } from './announcementsWindow'
 import type { Announcement } from '@deta/types'
 import { AnnouncementsManager } from './announcements'
 import { updateUserConfig } from './config'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('AppUpdates')
 
 let isSilent = false
 
@@ -127,7 +130,7 @@ function configureUpdaterEvents(updater: Updater) {
         show_changelog: true
       })
     } catch (e) {
-      console.warn('Error updating user config to show changelog after update:', e)
+      log.warn('Error updating user config to show changelog after update:', e)
     }
     closeUpdatesWindow()
     updater.quitAndInstall(false)
@@ -149,7 +152,7 @@ export function getAnnouncements(): Announcement[] {
   try {
     return AppUpdater.getInstance().getAnnouncements()
   } catch (e) {
-    console.error(e)
+    log.error(e)
     return []
   }
 }
@@ -159,7 +162,7 @@ export async function checkForUpdates(silent = false) {
     isSilent = silent
     await AppUpdater.getInstance().checkForUpdatesAndNotify(silent)
   } catch (e) {
-    console.error(e)
+    log.error(e)
   } finally {
     isSilent = false
   }
@@ -201,11 +204,11 @@ export class AppUpdater {
     this.announcementsManager = AnnouncementsManager.getInstance()
     this.showTestAnnouncements = config.showTestAnnouncements || false
 
-    this.fetchAnnouncements().catch(console.error)
+    this.fetchAnnouncements().catch(log.error)
     if (this.announcementsUrl) {
       this.announcementsInterval = setInterval(
         () => {
-          this.fetchAnnouncements().catch(console.error)
+          this.fetchAnnouncements().catch(log.error)
         },
         2000 * 60 * 60 * 2
       ) // 2 hours
@@ -215,7 +218,7 @@ export class AppUpdater {
       this.updater = initializeUpdater(config.authToken, config.proxyUrl, config.channel)
       configureUpdaterEvents(this.updater)
     } catch (e) {
-      console.error(e)
+      log.error(e)
     }
   }
 
@@ -243,10 +246,10 @@ export class AppUpdater {
         if (Array.isArray(data)) {
           this.announcementsManager.setAnnouncements(data)
         } else {
-          console.error('Announcements data is not an array:', data)
+          log.error('Announcements data is not an array:', data)
         }
       } catch (error) {
-        console.error('Error fetching announcements:', error)
+        log.error('Error fetching announcements:', error)
       }
     }
     const visibleAnnouncements = this.announcementsManager.getVisibleAnnouncements(false)

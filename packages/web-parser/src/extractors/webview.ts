@@ -43,7 +43,6 @@ export class WebViewExtractor {
   }
 
   initializeWebview(timeout: number = DEFAULT_INITIALIZING_TIMEOUT) {
-    console.log('Initializing webview with location', this.url)
     this.webview = document.createElement('webview')
     if (!this.webview) return
 
@@ -57,7 +56,6 @@ export class WebViewExtractor {
     })
 
     this.webview.addEventListener('console-message', (e) => {
-      console.log('Webview console:', e.message)
       this.consoleMessages.push(e.message)
     })
 
@@ -74,12 +72,10 @@ export class WebViewExtractor {
       if (!eventType) return
 
       if (eventType === WebViewEventSendNames.DetectedApp) {
-        console.log('Detected app', eventData)
         if (this.appDetectionCallback) {
           this.appDetectionCallback(eventData.appName)
         }
       } else if (eventType === WebViewEventSendNames.DetectedResource) {
-        console.log('Detected resource', eventData)
         if (this.resourceDetectionCallback) {
           this.resourceDetectionCallback(eventData)
         }
@@ -112,7 +108,6 @@ export class WebViewExtractor {
 
     return new Promise<void>((resolve, reject) => {
       const handleLoad = () => {
-        console.log('Webview loaded')
         if (timeoutId) {
           clearTimeout(timeoutId)
         }
@@ -121,7 +116,6 @@ export class WebViewExtractor {
       }
 
       timeoutId = setTimeout(() => {
-        console.log('webview still loading after timeout, running immidiately')
         this.webview?.removeEventListener('did-finish-load', handleLoad)
         handleLoad()
       }, timeout)
@@ -157,7 +151,6 @@ export class WebViewExtractor {
       }
 
       this.resourceDetectionCallback = (resource) => {
-        console.log('Detected resource', resource)
         this.resourceDetectionCallback = null
         this.destroyWebview()
         resolve(resource ?? null)
@@ -168,7 +161,6 @@ export class WebViewExtractor {
       this.webview?.send('webview-event', { type: WebViewEventReceiveNames.GetResource })
 
       setTimeout(() => {
-        console.log('Resource detection timed out')
         this.resourceDetectionCallback = null
         this.destroyWebview()
         resolve(null)
@@ -181,7 +173,6 @@ export class WebViewExtractor {
     inputs?: WebServiceActionInputs,
     timeoutNum: number = DEFAULT_ACTION_TIMEOUT
   ) {
-    console.log('Running action', id, inputs)
     return new Promise<DetectedResource | null>(async (resolve) => {
       if (this.webview === null) {
         await this.initializeWebview()

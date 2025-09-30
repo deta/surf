@@ -99,7 +99,6 @@
   }
 
   const handleSettingsUpdate = async () => {
-    console.log('updating settings', userConfigSettings)
     // @ts-ignore
     await window.api.updateUserConfigSettings(userConfigSettings)
 
@@ -112,7 +111,6 @@
   }
 
   const handleSelectModel = (e: CustomEvent<string>) => {
-    console.log('selected model', e.detail)
     selectedModel.set(e.detail)
     userConfigSettings.selected_model = e.detail
     handleSettingsUpdate()
@@ -120,8 +118,6 @@
 
   const handleUpdateModel = async (e: CustomEvent<ModelUpdate>) => {
     let { id, updates } = e.detail
-
-    console.log('updating model', id, updates)
 
     const updateModel = (model: Model, updates: Partial<Model>) => {
       if (model.provider === Provider.Custom) {
@@ -155,7 +151,6 @@
   }
 
   const handleCreatedModel = async (e: CustomEvent<Model>) => {
-    console.log('created model', e.detail)
     models.update((models) => [...models, e.detail])
     await tick()
 
@@ -166,7 +161,6 @@
 
   const handleDeleteModel = async (e: CustomEvent<string>) => {
     const id = e.detail
-    console.log('deleting model', id)
 
     if (id === $selectedModel) {
       selectedModel.set(DEFAULT_AI_MODEL)
@@ -224,12 +218,10 @@
   onMount(prepareContextMenu)
   onMount(async () => {
     userConfig = await window.api.getUserConfig()
-    console.log('loaded user config', userConfig)
     userConfigSettings = userConfig.settings
     currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
-    console.log('loaded settings', userConfigSettings)
 
     models.set(userConfigSettings.model_settings)
     selectedModel.set(userConfigSettings.selected_model)
@@ -245,7 +237,6 @@
     window.api.getPrompts()
 
     window.api.onUserConfigSettingsChange((settings: UserSettings) => {
-      console.log('user config settings change', settings)
       userConfigSettings = settings
       models.set(userConfigSettings.model_settings)
       selectedModel.set(userConfigSettings.selected_model)

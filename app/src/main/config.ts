@@ -4,6 +4,9 @@ import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { type UserConfig, type UserStats } from '@deta/types'
 import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@deta/types/src/ai.types'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('Config')
 
 export type Config = {
   [key: string]: any
@@ -40,7 +43,7 @@ export const getConfig = <T extends Config>(
       return {} as T
     }
   } catch (error) {
-    console.error('Error reading config file:', error)
+    log.error('Error reading config file:', error)
     return {} as T
   }
 }
@@ -54,7 +57,7 @@ export const setConfig = <T extends Config>(
     const fullPath = path.join(configPath, fileName)
     fs.writeFileSync(fullPath, JSON.stringify(config))
   } catch (error) {
-    console.error('Error writing config file:', error)
+    log.error('Error writing config file:', error)
   }
 }
 

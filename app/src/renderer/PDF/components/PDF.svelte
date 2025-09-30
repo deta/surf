@@ -162,7 +162,6 @@
       >
     ) => {
       const { type, data } = event.detail
-      console.log('pdf-renderer-event', type, data)
 
       switch (type) {
         case WebViewEventReceiveNames.GoToPDFPage: {

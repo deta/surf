@@ -11,12 +11,10 @@
   let rafID: number | null = null
 
   const handleMouseEnter = () => {
-    console.log('Mouse entered the overlay')
     outOfView = false
   }
 
   const handleMouseLeave = () => {
-    console.log('Mouse left the overlay')
     outOfView = true
   }
 
@@ -35,8 +33,6 @@
   }
 
   onMount(() => {
-    console.log('Overlay mounted with ID:', overlayId)
-
     document.body.classList.remove('hide-everything')
     // // Check if the mouse is within the bounds of the overlay
     // const checkMouseInOverlay = () => {

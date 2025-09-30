@@ -28,7 +28,6 @@ export class HistoryEntriesManager {
     const allEntries = await this.sffs.getHistoryEntries()
     const entriesMap = new Map(allEntries.map((entry) => [entry.id, entry]))
     this.entries.set(entriesMap)
-    console.log('HistoryEntriesManager initialized with', allEntries.length, 'entries')
   }
 
   get entriesStore() {

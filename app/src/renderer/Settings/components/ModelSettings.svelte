@@ -253,8 +253,6 @@
   const handleSelectedModelChange = (event: CustomEvent<string>) => {
     const model = $allModels.find((model) => model.id === event.detail)
 
-    console.log('selected model', model)
-
     if (model) {
       selectModel(model.id)
 
@@ -292,8 +290,6 @@
         icon: 'trash',
         disabled: model?.provider !== Provider.Custom,
         action: () => {
-          console.log('delete model', model)
-
           if ($selectedProvider.model.id === model.id) {
             selectedProvider.set(null)
             showProviderSettings.set(false)
@@ -317,7 +313,6 @@
         icon: 'trash',
         disabled: model?.provider !== Provider.Custom,
         action: () => {
-          console.log('delete model', model)
           dispatch('delete-model', model.id)
         }
       }
@@ -328,7 +323,6 @@
     try {
       fetchingQuotas.set(true)
       const fetchedQuotas = await sffs.getQuotas()
-      console.log('quotas', fetchedQuotas)
       quotas.set(fetchedQuotas)
     } catch (error) {
       console.error('error fetching quotas', error)
@@ -358,7 +352,6 @@
 
         if (provider.model?.provider_url) {
           if (provider.model?.skip_append_open_ai_suffix !== true) {
-            console.log('open ai prefix was previously used in the backend, setting it explicitly')
             customProviderUrl = appendURLPath(provider.model.provider_url, OPEN_AI_PATH_SUFFIX)
             updateModel(provider.model.id, {
               provider_url: customProviderUrl,

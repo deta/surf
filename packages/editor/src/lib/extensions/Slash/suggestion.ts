@@ -29,7 +29,6 @@ export default {
             query: props.query,
             loading: props.loading,
             callback: (payload: SlashCommandPayload) => {
-              console.log('slash command callback', payload)
               props.command(payload)
             }
           }

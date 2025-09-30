@@ -36,21 +36,15 @@ export default {
 
   render: () => {
     return {
-      onStart: (props) => {
-        console.log('onStart', props)
-      },
+      onStart: (props) => {},
 
-      onUpdate(props) {
-        console.log('onUpdate', props)
-      },
+      onUpdate(props) {},
 
       onKeyDown(props) {
-        console.log('onKeyDown', props)
         return false
       },
 
       onExit(props) {
-        console.log('onExit', props)
         if (props.query === '') {
           return false
         }

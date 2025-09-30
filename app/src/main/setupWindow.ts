@@ -3,6 +3,9 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { applyCSPToSession } from './csp'
 import { isDev } from '@deta/utils/system'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('SetupWindow')
 
 let setupWindow: BrowserWindow | undefined
 
@@ -24,7 +27,7 @@ export function createSetupWindow(options?: { presetInviteCode?: string; presetE
     additionalArgs.push(`--presetEmail=${options.presetEmail}`)
   }
 
-  console.log('createSetupWindow called: all additional args', additionalArgs, 'options', options)
+  log.log('createSetupWindow called: all additional args', additionalArgs, 'options', options)
 
   setupWindow = new BrowserWindow({
     width: 1270,

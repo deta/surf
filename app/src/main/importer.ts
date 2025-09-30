@@ -1,9 +1,9 @@
 import { dialog } from 'electron'
 
-import { useLogScope } from '@deta/utils/io'
 import { BrowserType } from '@deta/types'
 
 import { ipcSenders } from './ipcHandlers'
+import { useLogScope } from '@deta/utils'
 
 const log = useLogScope('Importer')
 

@@ -6,8 +6,6 @@ export class APIExtractor {
   }
 
   async get(path: string, headers: any = {}) {
-    console.log('Requesting', path)
-
     const url = new URL(path, this.baseURL)
     const res = await fetch(url, {
       method: 'GET',
@@ -16,15 +14,11 @@ export class APIExtractor {
         ...headers
       }
     })
-
-    console.log('Response', res)
 
     return res
   }
 
   async getJSON(path: string, headers: any = {}) {
-    console.log('Requesting', path)
-
     const url = new URL(path, this.baseURL)
     const res = await fetch(url, {
       method: 'GET',
@@ -33,8 +27,6 @@ export class APIExtractor {
         ...headers
       }
     })
-
-    console.log('Response', res)
 
     if (!res.ok) {
       throw new Error('Failed to fetch data')
@@ -44,8 +36,6 @@ export class APIExtractor {
   }
 
   async postJSON(path: string, body: any, headers: any = {}) {
-    console.log('Requesting', path)
-
     const url = new URL(path, this.baseURL)
     const res = await fetch(url, {
       method: 'POST',
@@ -55,8 +45,6 @@ export class APIExtractor {
       },
       body: JSON.stringify(body)
     })
-
-    console.log('Response', res)
 
     return res.json()
   }

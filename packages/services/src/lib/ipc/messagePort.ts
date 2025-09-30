@@ -1,5 +1,8 @@
 import { ipcRenderer } from 'electron'
 import type { MessagePortCallbackClient, MessagePortCallbackPrimary } from '../messagePort/types'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('MessagePort')
 
 /**
  * Sets up a message port for communication between two renderer processes, handling the client side.
@@ -22,11 +25,11 @@ export function setupMessagePortClient() {
 
   ipcRenderer.on('port', (event, payload) => {
     try {
-      console.log('received messagePort', payload)
+      log.debug('received messagePort', payload)
       port = event.ports[0]
 
       port.onmessage = (event) => {
-        console.log('received messagePort message', event)
+        log.debug('received messagePort message', event)
         if (storedCallback) {
           storedCallback(event.data)
         } else {
@@ -83,14 +86,14 @@ export function setupMessagePortPrimary() {
   const onMessage = (callback: MessagePortCallbackPrimary) => {
     ipcRenderer.on('port', (event, payload) => {
       try {
-        console.log('received messagePort', payload)
+        log.debug('received messagePort', payload)
         const port = event.ports[0]
         const portId = payload.portId
 
         messagePorts.set(portId, port)
 
         port.onmessage = (event) => {
-          console.log('received messagePort message', event)
+          log.debug('received messagePort message', event)
           callback({ portId: portId, payload: event.data })
         }
       } catch (error) {

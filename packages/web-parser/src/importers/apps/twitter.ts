@@ -51,8 +51,6 @@ export class TwitterImporter extends AppImporter {
       // Dang. The partition here MUST not be the `persist:horizon` partition.
       .interceptRequestsHeaders(['https://x.com/i/api/*'], this.webviewExtractor.partition)
       .then((data: any) => {
-        console.log('Intercepted', data)
-
         this.authData = {
           uid: 'yzqS_xq0glDD7YZJ2YDaiA',
           authorization: data.headers.authorization,
@@ -78,8 +76,6 @@ export class TwitterImporter extends AppImporter {
       limit,
       cursor
     })
-
-    console.log('Extracted resource', extractedResource)
 
     return extractedResource?.data as any as { posts: ResourceDataPost[]; cursor: string }
   }

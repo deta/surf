@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  import { useLogScope } from '@deta/utils/io'
+  import { useLogScope, setLogLevel } from '@deta/utils/io'
   import { TelemetryCreateTabSource, ViewLocation, ViewType, type Fn } from '@deta/types'
 
   import { ShortcutActions } from '@deta/services/shortcuts'
@@ -54,6 +54,11 @@
     wait(500).then(() => (unsub = prepareContextMenu(true)))
     return () => unsub?.()
   })
+  onDestroy(
+    debugMode.subscribe((v) => {
+      window.LOG_DEBUG = v
+    })
+  )
   onMount(async () => {
     log.debug('Core component mounted')
     await telemetry.init({ configService: config })
@@ -72,25 +77,22 @@
 
     // @ts-ignore
     window.setLogLevel = (level: LogLevel) => {
-      // @ts-ignore
-      window.LOG_LEVEL = level
-      log.debug(`[Logger]: Log level set to '${level}'`)
+      setLogLevel(level)
 
       return level
     }
 
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_DEBUG_MODE, () => {
-      log.debug('Toggling debug mode')
       debugMode.update((mode) => !mode)
 
-      // @ts-ignore
-      if (window.LOG_LEVEL === 'debug') {
-        // @ts-ignore
-        window.setLogLevel('info')
+      if ($debugMode) {
+        log.info('Setting log to warn')
+        setLogLevel('warn')
       } else {
-        // @ts-ignore
-        window.setLogLevel('debug')
+        setLogLevel('verbose')
+        log.info('Setting log to verbose')
       }
+
       return true
     })
 

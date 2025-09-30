@@ -157,8 +157,6 @@
   }
 
   let showAllNotes = true
-
-  $inspect($ttyQuery).with((...e) => console.log('TTY Query changed:', ...e))
 </script>
 
 {#snippet notesList(visibleItems, allItems)}

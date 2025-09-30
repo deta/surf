@@ -346,8 +346,6 @@ export const Mention = Node.create<MentionOptions>({
     return ({ node }) => {
       const container = document.createElement('span')
 
-      console.log('mention node', node)
-
       const component = mount(MentionComp, {
         target: container,
         props: {

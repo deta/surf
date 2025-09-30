@@ -107,8 +107,6 @@ export const Resource = Node.create<ResourceOptions>({
         container.setAttribute(`data-${key}`, `${value}`)
       })
 
-      console.log('resource node', node)
-
       const component = createClassComponent({
         component: this.options.component,
         target: container,

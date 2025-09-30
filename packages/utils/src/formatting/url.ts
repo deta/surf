@@ -197,7 +197,6 @@ export const checkIfIPAddress = (raw: string) => {
 
 export const parseStringIntoBrowserLocation = (raw: string) => {
   const url = optimisticCheckIfUrl(raw)
-  console.log('parsed optimistic url: ', url)
   if (url) {
     return url.href
   }

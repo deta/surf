@@ -9,13 +9,14 @@ import {
 import { app, BrowserWindow, WebContentsView, session } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@deta/services/ipc'
-import { EventEmitterBase } from '@deta/utils'
-import path, { join } from 'path'
-import { is } from '@electron-toolkit/utils'
+import { EventEmitterBase, useLogScope } from '@deta/utils'
+import path from 'path'
 import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 import { MessageChannelMain } from 'electron/main'
 import { ExtensionsManager } from './extensions'
+
+const log = useLogScope('ViewManager')
 
 type ContentData = {
   title: string
@@ -39,7 +40,7 @@ export class WCView {
     this.manager = manager
     this.opts = opts
 
-    console.log('[main] webcontentsview-create: creating new WebContentsView with options', opts)
+    log.log('[main] webcontentsview-create: creating new WebContentsView with options', opts)
 
     const parition = opts.partition || 'persist:horizon'
     const wcvSession = session.fromPartition(parition)
@@ -68,7 +69,7 @@ export class WCView {
     this.attached = false
 
     if (opts.bounds) {
-      console.log(
+      log.log(
         '[main] webcontentsview-create: setting bounds for view with id',
         this.id,
         'to',
@@ -83,7 +84,7 @@ export class WCView {
       opts.navigationHistory.length > 0 &&
       opts.navigationHistoryIndex >= 0
     ) {
-      console.log(
+      log.log(
         '[main] webcontentsview-create: setting navigation history for view with id',
         this.id,
         'to',
@@ -95,11 +96,11 @@ export class WCView {
       })
     }
 
-    console.log('[main] webcontentsview-create: view created successfully with id', this.id)
+    log.log('[main] webcontentsview-create: view created successfully with id', this.id)
   }
 
   setBounds(bounds: Partial<Electron.Rectangle>) {
-    console.log(
+    log.log(
       '[main] webcontentsview-setBounds: setting bounds for view with id',
       this.id,
       'to',
@@ -125,7 +126,7 @@ export class WCView {
     this.wcv.webContents.removeAllListeners()
     this.wcv.webContents.close()
 
-    console.log('[main] webcontentsview-recreate: re-creating WebContentsView with new preferences')
+    log.log('[main] webcontentsview-recreate: re-creating WebContentsView with new preferences')
 
     const wcvSession = session.fromPartition('persist:horizon')
     this.wcv = new WebContentsView({
@@ -159,15 +160,15 @@ export class WCView {
     try {
       extensionsManager.addTab(this.wcv.webContents.id)
     } catch (e) {
-      console.warn('[main] Could not transfer extension tabs to new WebContentsView', e)
+      log.warn('[main] Could not transfer extension tabs to new WebContentsView', e)
     }
     this.manager.recreatedWCV(this)
   }
   loadRightPreload(newUrl: string, oldUrl: string) {
-    console.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
+    log.log('[main] webcontentsview: check if we need to re-create WCV', newUrl, oldUrl)
 
     if (!oldUrl) {
-      console.log('[main] webcontentsview: no old URL to compare against')
+      log.log('[main] webcontentsview: no old URL to compare against')
       return
     }
 
@@ -176,7 +177,7 @@ export class WCView {
 
     // if we load a surf:// URL, we need to re-create the WebContentsView with a different preload
     if (newIsSurfUrl && !oldIsSurfUrl) {
-      console.log(
+      log.log(
         '[main] webcontentsview: loading surf:// URL, re-creating WCV with resource view preload'
       )
       this.recreateWCVWithDifferentWebPreferences({
@@ -186,7 +187,7 @@ export class WCView {
         preload: path.resolve(__dirname, '../preload/resource.js')
       })
     } else if (!newIsSurfUrl && oldIsSurfUrl) {
-      console.log(
+      log.log(
         '[main] webcontentsview: loading non-surf:// URL, re-creating WCV with webcontents preload'
       )
       this.recreateWCVWithDifferentWebPreferences({
@@ -203,7 +204,7 @@ export class WCView {
 
       await this.wcv.webContents.loadURL(url)
     } catch (error) {
-      console.error(`[main] Failed to load URL for WebContentsView ${this.id}:`, error)
+      log.error(`[main] Failed to load URL for WebContentsView ${this.id}:`, error)
     }
   }
 
@@ -242,13 +243,13 @@ export class WCView {
       const newUrl = this.wcv.webContents.navigationHistory.getEntryAtIndex(
         this.wcv.webContents.navigationHistory.getActiveIndex() - 1
       )?.url
-      console.log('[main] WebContentsView', this.id, 'navigating back to URL', newUrl)
+      log.log('[main] WebContentsView', this.id, 'navigating back to URL', newUrl)
 
       this.loadRightPreload(newUrl, this.wcv.webContents.getURL())
 
       this.wcv.webContents.navigationHistory.goBack()
     } else {
-      console.warn(`[main] WebContentsView ${this.id} cannot go back`)
+      log.warn(`[main] WebContentsView ${this.id} cannot go back`)
     }
   }
 
@@ -257,13 +258,13 @@ export class WCView {
       const newUrl = this.wcv.webContents.navigationHistory.getEntryAtIndex(
         this.wcv.webContents.navigationHistory.getActiveIndex() + 1
       )?.url
-      console.log('[main] WebContentsView', this.id, 'navigating forward to URL', newUrl)
+      log.log('[main] WebContentsView', this.id, 'navigating forward to URL', newUrl)
 
       this.loadRightPreload(newUrl, this.wcv.webContents.getURL())
 
       this.wcv.webContents.navigationHistory.goForward()
     } else {
-      console.warn(`[main] WebContentsView ${this.id} cannot go forward`)
+      log.warn(`[main] WebContentsView ${this.id} cannot go forward`)
     }
   }
 
@@ -328,13 +329,13 @@ export class WCView {
 
   async capturePage(rect?: Electron.Rectangle, quality: 'low' | 'medium' | 'high' = 'low') {
     if (!this.wcv || !this.wcv.webContents || this.wcv.webContents.isDestroyed()) {
-      console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: no web contents`)
+      log.warn(`[main] WebContentsView ${this.id} screenshot capture failed: no web contents`)
       return null
     }
 
     const nativeImage = await this.wcv.webContents.capturePage(rect)
     if (nativeImage.isEmpty()) {
-      console.warn(`[main] WebContentsView ${this.id} screenshot capture failed: empty image`)
+      log.warn(`[main] WebContentsView ${this.id} screenshot capture failed: empty image`)
       return null
     }
 
@@ -381,7 +382,7 @@ export class WCView {
   }
 
   onDestroy() {
-    console.log('[main] webcontentsview-destroy: destroying view with id', this.id)
+    log.log('[main] webcontentsview-destroy: destroying view with id', this.id)
     this.eventListeners.forEach((unsub) => unsub())
     this.wcv.webContents.removeAllListeners()
     this.wcv.webContents.close()
@@ -408,17 +409,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.views = new Map<string, WCView>()
 
     this.window.on('close', () => {
-      console.log('[main] webcontentsview-destroy: main window closed, cleaning up')
+      log.log('[main] webcontentsview-destroy: main window closed, cleaning up')
       this.cleanup()
     })
 
     this.window.webContents.on('destroyed', () => {
-      console.log('[main] webcontentsview-destroy: web contents destroyed, cleaning up')
+      log.log('[main] webcontentsview-destroy: web contents destroyed, cleaning up')
       this.cleanup()
     })
 
     this.window.webContents.on('did-navigate', () => {
-      console.log(
+      log.log(
         '[main] webcontentsview-destroy: web contents finished load, removing left over views'
       )
       this.destoryAllViews()
@@ -447,7 +448,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       const newIsSurfUrl = url ? checkIfSurfProtocolUrl(url) : false
 
-      console.log('[main] webcontentsview-create: creating new view with options', logOptions, {
+      log.log('[main] webcontentsview-create: creating new view with options', logOptions, {
         url,
         newIsSurfUrl
       })
@@ -473,7 +474,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         this
       )
 
-      console.log('[main] webcontentsview-create: registering id', view.id)
+      log.log('[main] webcontentsview-create: registering id', view.id)
       this.views.set(view.id, view)
 
       if (opts.activate) {
@@ -490,19 +491,14 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         this.addChildView(view)
       }
 
-      console.log('[main] webcontentsview-create: added view to window with id', view.id)
+      log.log('[main] webcontentsview-create: added view to window with id', view.id)
 
       this.attachViewIPCEvents(view)
 
       this.emit('create', view)
 
       if (opts.url && (opts.navigationHistory ?? []).length === 0) {
-        console.log(
-          '[main] webcontentsview-create: loading URL',
-          opts.url,
-          'for view with id',
-          view.id
-        )
+        log.log('[main] webcontentsview-create: loading URL', opts.url, 'for view with id', view.id)
         view.loadURL(opts.url)
       } /*else if (
         opts.navigationHistory
@@ -518,7 +514,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       return view
     } catch (e) {
-      console.error('[main] webcontentsview-create: error creating view', e)
+      log.error('[main] webcontentsview-create: error creating view', e)
       return null
     }
   }
@@ -532,7 +528,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       ...(process.env.DISABLE_TAB_SWITCHING_SHORTCUTS ? ['--disable-tab-switching-shortcuts'] : [])
     ]
 
-    console.log('createOverlayView with opts', opts, 'and args', additionalArgs)
+    log.log('createOverlayView with opts', opts, 'and args', additionalArgs)
 
     const view = new WCView(
       {
@@ -549,17 +545,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     // view.wcv.setBorderRadius(18)
 
-    console.log('[main] webcontentsview-create: registering id', view.id)
+    log.log('[main] webcontentsview-create: registering id', view.id)
     this.views.set(view.id, view)
     this.activeOverlayViewId = view.id
 
     //this.addChildView(view)
-    console.log('[main] webcontentsview-create: added view to window with id', view.id)
+    log.log('[main] webcontentsview-create: added view to window with id', view.id)
 
     this.emit('create', view)
 
     if (opts.overlayId) {
-      console.log(
+      log.log(
         '[main] webcontentsview-create: loading overlay for view with id',
         view.id,
         'and overlayId',
@@ -570,7 +566,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     }
 
     // view.wcv.webContents.on('blur', () => {
-    //   console.log('[main] webcontentsview-blur: view with id', view.id, 'lost focus, hiding it')
+    //   log.log('[main] webcontentsview-blur: view with id', view.id, 'lost focus, hiding it')
     //   this.hideView(view.id)
     // })
 
@@ -579,13 +575,13 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   positionOverlays() {
     if (!this.activeOverlayViewId) {
-      console.log('[main] webcontentsview-positionOverlays: no active overlay view to position')
+      log.log('[main] webcontentsview-positionOverlays: no active overlay view to position')
       return
     }
 
     const overlayView = this.views.get(this.activeOverlayViewId)
     if (!overlayView) {
-      console.warn(
+      log.warn(
         '[main] webcontentsview-positionOverlays: no overlay view found with id',
         this.activeOverlayViewId
       )
@@ -596,7 +592,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   recreatedWCV(view: WCView) {
-    console.log('[main] webcontentsview-recreated: view with id', view.id, 'was re-created')
+    log.log('[main] webcontentsview-recreated: view with id', view.id, 'was re-created')
     this.views.set(view.id, view)
 
     this.attachViewIPCEvents(view)
@@ -606,15 +602,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   setViewBounds(id: string, bounds: Electron.Rectangle) {
-    console.log(
-      '[main] webcontentsview-setBounds: setting bounds for view with id',
-      id,
-      'to',
-      bounds
-    )
+    log.log('[main] webcontentsview-setBounds: setting bounds for view with id', id, 'to', bounds)
     const view = this.views.get(id)
     if (!view) {
-      console.warn('[main] webcontentsview-setBounds: no view found with id', id)
+      log.warn('[main] webcontentsview-setBounds: no view found with id', id)
       return
     }
 
@@ -622,10 +613,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   async loadViewURL(id: string, url: string) {
-    console.log('[main] webcontentsview-loadURL: loading URL', url, 'for view with id', id)
+    log.log('[main] webcontentsview-loadURL: loading URL', url, 'for view with id', id)
     const view = this.views.get(id)
     if (!view) {
-      console.warn('[main] webcontentsview-loadURL: no view found with id', id)
+      log.warn('[main] webcontentsview-loadURL: no view found with id', id)
       return
     }
 
@@ -644,18 +635,18 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   bringViewToFront(id: string) {
     try {
-      console.log('[main] webcontentsview-bringToFront: bringing view with id', id, 'to front')
+      log.log('[main] webcontentsview-bringToFront: bringing view with id', id, 'to front')
 
       const view = this.views.get(id)
       if (!view) {
-        console.warn('[main] webcontentsview-bringToFront: no view found with id', id)
+        log.warn('[main] webcontentsview-bringToFront: no view found with id', id)
         return false
       }
 
       // Remove and re-add to bring to front
       this.removeChildView(view)
       this.addChildView(view)
-      console.log('[main] Activated WebContentsView, brought to top for id:', view.id)
+      log.log('[main] Activated WebContentsView, brought to top for id:', view.id)
 
       if (view.isOverlay) {
         this.activeOverlayViewId = view.id
@@ -665,17 +656,17 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       return true
     } catch (e) {
-      console.warn('[main] Could not activate WebContentsView', e)
+      log.warn('[main] Could not activate WebContentsView', e)
       return false
     }
   }
 
   activateView(id: string) {
-    console.log('[main] webcontentsview-activate: activating view with id', id)
+    log.log('[main] webcontentsview-activate: activating view with id', id)
 
     const view = this.views.get(id)
     if (!view) {
-      console.warn('[main] webcontentsview-activate: no view found with id', id)
+      log.warn('[main] webcontentsview-activate: no view found with id', id)
       return false
     }
 
@@ -689,31 +680,31 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   showActiveView(id?: string) {
     const activeViewId = id || this.activeViewId
-    console.log('[main] webcontentsview-showActiveView: showing active view with id', activeViewId)
+    log.log('[main] webcontentsview-showActiveView: showing active view with id', activeViewId)
 
     if (!activeViewId) {
-      console.warn('[main] webcontentsview-showActiveView: no active view to show')
+      log.warn('[main] webcontentsview-showActiveView: no active view to show')
       return
     }
 
     const view = this.views.get(activeViewId)
     if (!view) {
-      console.warn('[main] webcontentsview-activate: no view found with id', id)
+      log.warn('[main] webcontentsview-activate: no view found with id', id)
       return false
     }
 
     if (!this.activeOverlayViewId || view.isOverlay) {
-      console.log('[main] webcontentsview-activate: activating view with id', activeViewId)
+      log.log('[main] webcontentsview-activate: activating view with id', activeViewId)
       return this.activateView(activeViewId)
     }
 
     const overlayView = this.views.get(this.activeOverlayViewId)
     if (!overlayView) {
-      console.warn('[main] webcontentsview-activate: no active overlay view found')
+      log.warn('[main] webcontentsview-activate: no active overlay view found')
       return false
     }
 
-    console.log(
+    log.log(
       '[main] webcontentsview-activate: activating overlay view with id',
       this.activeOverlayViewId
     )
@@ -721,18 +712,18 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   hideView(id: string) {
-    console.log('[main] webcontentsview-hide: hiding view with id', id)
+    log.log('[main] webcontentsview-hide: hiding view with id', id)
     const view = this.views.get(id)
     if (!view) {
-      console.warn('[main] webcontentsview-hide: no view found with id', id)
+      log.warn('[main] webcontentsview-hide: no view found with id', id)
       return
     }
 
     try {
       this.removeChildView(view)
-      console.log('[main] webcontentsview-hide: view with id', id, 'hidden successfully')
+      log.log('[main] webcontentsview-hide: view with id', id, 'hidden successfully')
     } catch (e) {
-      console.warn('[main] Could not hide WebContentsView', e)
+      log.warn('[main] Could not hide WebContentsView', e)
     }
   }
 
@@ -741,21 +732,21 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       hidePermanentlyActive: opts?.hidePermanentlyActive ?? false
     }
 
-    console.log('[main] webcontentsview-hideAllViews: hiding all views with options', options)
+    log.log('[main] webcontentsview-hideAllViews: hiding all views with options', options)
     this.views.forEach((view) => {
       try {
         if (view.opts.permanentlyActive && !options.hidePermanentlyActive) {
-          console.log(
+          log.log(
             '[main] webcontentsview-hideAllViews: skipping permanently active view with id',
             view.id
           )
           return
         }
 
-        console.log('[main] webcontentsview-hideAllViews: hiding view with id', view.id)
+        log.log('[main] webcontentsview-hideAllViews: hiding view with id', view.id)
         this.removeChildView(view)
       } catch (e) {
-        console.warn('[main] Could not hide WebContentsView', e)
+        log.warn('[main] Could not hide WebContentsView', e)
       }
     })
 
@@ -765,33 +756,33 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
   destroyView(view: WCView) {
     try {
-      console.log('[main] webcontentsview-destroy: destroying view with id', view.id)
+      log.log('[main] webcontentsview-destroy: destroying view with id', view.id)
 
       view.onDestroy()
 
       if (this.activeViewId === view.id) {
-        console.log('[main] webcontentsview-destroy: clearing active view id', view.id)
+        log.log('[main] webcontentsview-destroy: clearing active view id', view.id)
         this.activeViewId = null
       }
 
       if (this.activeOverlayViewId === view.id) {
-        console.log('[main] webcontentsview-destroy: clearing active overlay view id', view.id)
+        log.log('[main] webcontentsview-destroy: clearing active overlay view id', view.id)
         this.activeOverlayViewId = null
       }
 
       this.window.contentView.removeChildView(view.wcv)
-      console.log('[main] Removed WebContentsView from window for id:', view.id)
+      log.log('[main] Removed WebContentsView from window for id:', view.id)
 
       this.emit('destroy', view)
     } catch (e) {
-      console.warn('[main] Could not remove child view', e)
+      log.warn('[main] Could not remove child view', e)
     }
 
     this.views.delete(view.id)
   }
 
   destoryAllViews() {
-    console.log('[main] webcontentsview-destroy: destroying all views')
+    log.log('[main] webcontentsview-destroy: destroying all views')
 
     this.views.forEach((view) => {
       this.destroyView(view)
@@ -799,7 +790,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     const remainingViews = this.window.contentView.children
     if (remainingViews.length > 0) {
-      console.warn(
+      log.warn(
         '[main] webcontentsview-destroy: some views were not removed, remaining:',
         remainingViews.length
       )
@@ -810,13 +801,13 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   setupMessagePort(view: WCView) {
-    console.log('Creating new messagePort channel')
+    log.log('Creating new messagePort channel')
     const { port1, port2 } = new MessageChannelMain()
 
-    console.log('Sending port1 to core renderer')
+    log.log('Sending port1 to core renderer')
     this.window.webContents.postMessage('port', { portId: view.id }, [port1])
 
-    console.log('Sending port2 to WebContentsView')
+    log.log('Sending port2 to WebContentsView')
     view.wcv.webContents.postMessage('port', null, [port2])
   }
 
@@ -1029,13 +1020,13 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   attachIPCEvents() {
-    console.log('[main] webcontentsview-attachIPCEvents: attaching IPC event listeners')
+    log.log('[main] webcontentsview-attachIPCEvents: attaching IPC event listeners')
     this.ipcEventListeners = [
       IPC_EVENTS_MAIN.webContentsViewManagerAction.handle(async (event, { type, payload }) => {
         try {
           if (!validateIPCSender(event)) return null
 
-          console.log('[main] webcontentsview-manager-action: IPC event received', type)
+          log.log('[main] webcontentsview-manager-action: IPC event received', type)
 
           if (type === WebContentsViewManagerActionType.CREATE) {
             const view = await (payload.overlayId
@@ -1047,20 +1038,18 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
               return null
             }
           } else if (type === WebContentsViewManagerActionType.HIDE_ALL) {
-            console.log('[main] webcontentsview-hideAll: IPC event received, hiding all views')
+            log.log('[main] webcontentsview-hideAll: IPC event received, hiding all views')
             this.hideAllViews()
             return true
           } else if (type === WebContentsViewManagerActionType.SHOW_ACTIVE) {
-            console.log(
-              '[main] webcontentsview-showActive: IPC event received, showing active view'
-            )
+            log.log('[main] webcontentsview-showActive: IPC event received, showing active view')
             this.showActiveView(payload?.id)
             return true
           } else {
             return null
           }
         } catch (error) {
-          console.error('[main] webcontentsview-manager-action: error handling IPC event', error)
+          log.error('[main] webcontentsview-manager-action: error handling IPC event', error)
           return null
         }
       }),
@@ -1071,10 +1060,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
           const { type, payload } = action
 
-          console.log('[main] webcontentsview-action: IPC event received', viewId, type, payload)
+          log.log('[main] webcontentsview-action: IPC event received', viewId, type, payload)
           const view = this.views.get(viewId)
           if (!view) {
-            console.warn('[main] webcontentsview-activate: no view found with id', viewId)
+            log.warn('[main] webcontentsview-activate: no view found with id', viewId)
             return true
           }
 
@@ -1164,7 +1153,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
           return false
         } catch (error) {
-          console.error('[main] webcontentsview-create: error handling IPC event', error)
+          log.error('[main] webcontentsview-create: error handling IPC event', error)
           return null
         }
       })
@@ -1172,7 +1161,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   removeIPCEvents() {
-    console.log(
+    log.log(
       '[main] webcontentsview-removeIPCEvents: removing IPC event listeners',
       this.ipcEventListeners.length
     )

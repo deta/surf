@@ -32,8 +32,6 @@
         $resourceCreatedByUser
       ))
   )
-
-  $inspect(breadcrumbs).with((...e) => console.log('Breadcrumbs changed', ...e))
 </script>
 
 {#each breadcrumbs as item, i}

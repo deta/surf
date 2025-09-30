@@ -1,6 +1,9 @@
 import { app, nativeImage } from 'electron'
 import fs from 'fs/promises'
 import path from 'path'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('drag')
 
 const getPreviewImage = (filePath: string, fileType: string) => {
   if (fileType.startsWith('image')) {
@@ -25,7 +28,7 @@ export const handleDragStart = async (
   fileType: string
 ) => {
   try {
-    console.log('Start drag', filePath)
+    log.log('Start drag', filePath)
 
     const previewImage = getPreviewImage(filePath, fileType)
 
@@ -38,7 +41,7 @@ export const handleDragStart = async (
         `space_resource_${resourceId}.${imageType}`
       )
 
-      console.log('Temp file path', tempFilePath)
+      log.log('Temp file path', tempFilePath)
 
       await fs.copyFile(filePath, tempFilePath)
 
@@ -58,6 +61,6 @@ export const handleDragStart = async (
       })
     }
   } catch (error) {
-    console.error('Error starting drag', error)
+    log.error('Error starting drag', error)
   }
 }

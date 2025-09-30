@@ -5,7 +5,6 @@ import { attachContextMenu } from './contextMenu'
 import { WindowState } from './winState'
 import { initAdblocker } from './adblocker'
 import { initDownloadManager } from './downloadManager'
-import { useLogScope } from '@deta/utils/io'
 import { isDev, isMac } from '@deta/utils/system'
 import { PDFViewerParams, parseURL } from '@deta/utils/formatting'
 
@@ -30,11 +29,12 @@ import {
 } from './surfProtocolHandlers'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('MainWindow')
 
 let mainWindow: BrowserWindow | undefined
 let viewManager: WCViewManager | undefined
-
-const log = useLogScope('MainWindow')
 
 // electronDragClick()
 
@@ -183,13 +183,13 @@ export function createWindow() {
       shouldBlockSurfRequest || shouldBlockSurfletRequest || shouldBlockInternalRequest
 
     if (shouldBlock) {
-      // console.warn('Blocking request:', details.url, url, {
+      // log.warn('Blocking request:', details.url, url, {
       //   shouldBlockSurfRequest,
       //   shouldBlockSurfletRequest,
       //   shouldBlockInternalRequest
       // })
 
-      console.warn('Blocked request:', details.url, url, details.frame, details.webContents?.id)
+      log.warn('Blocked request:', details.url, url, details.frame, details.webContents?.id)
     }
 
     callback({ cancel: shouldBlock })
@@ -421,7 +421,7 @@ function setupMainWindowWebContentsHandlers(
       action: 'allow',
       outlivesOpener: true,
       createWindow: ({ webPreferences, ...constructorOptions }) => {
-        console.log('Window open handler called with details:', details, constructorOptions)
+        log.log('Window open handler called with details:', details, constructorOptions)
 
         const componentId = details.features?.match(/componentId=([^;]+)/)?.[1]
 
@@ -515,7 +515,7 @@ function setupMainWindowWebContentsHandlers(
 function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents) {
   contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
     try {
-      console.log('WebContentsView Window open handler called with details:', details)
+      log.log('WebContentsView Window open handler called with details:', details)
       // If there is a frame name or features provided we assume the request
       // is part of a auth flow and we create a new isolated window for it
       const shouldCreateWindow =
@@ -549,13 +549,13 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
         url.protocol === 'surflet:' ||
         url.protocol === 'surf-internal:'
       ) {
-        console.warn('[main] Denied new window request:', details)
+        log.warn('[main] Denied new window request:', details)
         return { action: 'deny' }
       }
 
       const mainWindow = getMainWindow()
       if (mainWindow) {
-        console.log(
+        log.log(
           '[main] Sending new window request to main window:',
           contents.id,
           details.url,
@@ -567,12 +567,12 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
           webContentsId: contents.id
         })
       } else {
-        console.warn('[main] No main window, cannot send new window request:', details)
+        log.warn('[main] No main window, cannot send new window request:', details)
       }
 
       return { action: 'deny' }
     } catch (error) {
-      console.error('Error in setWindowOpenHandler:', error)
+      log.error('Error in setWindowOpenHandler:', error)
       return { action: 'deny' }
     }
   })

@@ -50,7 +50,6 @@
 
   const handleClickOutside = () => {
     if ($currentAction?.forceSelection === true) return
-    console.log('click outside')
 
     teletype.close()
     dispatch('close')

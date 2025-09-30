@@ -24,9 +24,6 @@ export class CurrentQueryProvider implements ActionProvider {
   async getActions(query: string, _mentions: MentionItem[]): Promise<TeletypeAction[]> {
     const trimmedQuery = query.trim()
     if (trimmedQuery.length < 2) return []
-
-    console.log('CurrentQueryProvider handling query:', trimmedQuery)
-
     // Return only the current query as instant search action
     return [this.createSearchAction(trimmedQuery)]
   }

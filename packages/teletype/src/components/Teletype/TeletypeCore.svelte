@@ -337,7 +337,6 @@
   }
 
   const handleCreateNote = () => {
-    console.log('Creating note with query:', $inputValue, mentions)
     const content = editorComponent.getParsedEditorContent()
     dispatch('create-note', { content: content.html ?? content.text })
     clearTeletype()

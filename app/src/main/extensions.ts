@@ -5,6 +5,9 @@ import { installChromeWebStore } from 'electron-chrome-web-store'
 import { formatPermissionsForUser } from './extensionsPermissions'
 import fs from 'fs'
 import { isDev } from '@deta/utils/system'
+import { useLogScope } from '@deta/utils'
+
+const log = useLogScope('Extensions')
 
 export class ExtensionsManager {
   private static instance: ExtensionsManager | null = null
@@ -118,11 +121,11 @@ export class ExtensionsManager {
             ?.trackInstalledExtension(details.id, true)
             .then((res) => {
               if (!res.ok) {
-                console.error('Failed to track installed extension', res)
+                log.error('Failed to track installed extension', res)
               }
             })
             .catch((error) => {
-              console.error('Failed to track installed extension', error)
+              log.error('Failed to track installed extension', error)
             })
         }
         return { action }
@@ -144,8 +147,8 @@ export class ExtensionsManager {
     if (this.extensions) {
       const addedWebContents = webContents.fromId(webContentsId)
       if (addedWebContents) {
-        console.log('Adding tab for webContentsId:', webContentsId)
-        console.log('session:', addedWebContents.session)
+        log.log('Adding tab for webContentsId:', webContentsId)
+        log.log('session:', addedWebContents.session)
         this.extensions.addTab(addedWebContents, this.mainWindow!)
       }
     }
@@ -154,7 +157,7 @@ export class ExtensionsManager {
   /*
   public closeTab(webContentsId: number): void {
     if (this.extensions) {
-      console.log('Closing tab for webContentsId:', webContentsId)
+      log.log('Closing tab for webContentsId:', webContentsId)
       const closedWebContents = webContents.fromId(webContentsId)
       if (closedWebContents && closedWebContents.id === this.activeWebContents?.id) {
         this.activeWebContents = null
@@ -201,11 +204,11 @@ export class ExtensionsManager {
           .trackInstalledExtension(extensionId, false)
           .then((res) => {
             if (!res.ok) {
-              console.error('Failed to track installed extension', res)
+              log.error('Failed to track installed extension', res)
             }
           })
           .catch((error) => {
-            console.error('Failed to track installed extension', error)
+            log.error('Failed to track installed extension', error)
           })
       }
     } catch (error: any) {
@@ -213,7 +216,7 @@ export class ExtensionsManager {
         return
       }
 
-      console.error('failed to remove extension', error)
+      log.error('failed to remove extension', error)
     }
   }
 

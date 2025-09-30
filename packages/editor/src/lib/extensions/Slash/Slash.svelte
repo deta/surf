@@ -41,7 +41,6 @@
   }
 
   function runCommand(item: SlashMenuItem) {
-    console.log('runCommand', item)
     callback({ item, query, editor })
   }
 

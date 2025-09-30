@@ -16,13 +16,10 @@
   const ANALYTICS_URL = 'https://deta.notion.site/analytics'
 
   const handleSubmit = async () => {
-    console.log('Analytics consent submitted:', anonymized)
-
     if (!anonymized) {
       try {
         // @ts-ignore
         const result = await window.api.deanonymizeUser()
-        console.log('deanonymization result:', result)
       } catch (error) {
         console.error('Error during deanonymization:', error)
       }

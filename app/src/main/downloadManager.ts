@@ -1,4 +1,3 @@
-import { useLogScope } from '@deta/utils/io'
 import { session, ipcMain, app, shell, dialog } from 'electron'
 import { getMainWindow } from './mainWindow'
 import { randomUUID } from 'crypto'
@@ -8,6 +7,7 @@ import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
+import { useLogScope } from '@deta/utils'
 
 const log = useLogScope('Download Manager')
 

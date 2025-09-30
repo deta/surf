@@ -1,4 +1,3 @@
-import { useLogScope } from '@deta/utils/io'
 import { isMac } from '@deta/utils/system'
 import { app, BrowserWindow, dialog, session } from 'electron'
 import path from 'path'
@@ -35,8 +34,10 @@ import { ExtensionsManager } from './extensions'
 import fs from 'fs/promises'
 import tokenManager from './token'
 import { updateCachedSpaces } from './spaces'
+import { useLogScope } from '@deta/utils'
 
-const log = useLogScope('Main IPC Handlers')
+const log = useLogScope('IpcHandlers')
+
 // let prompts: EditablePrompt[] = []
 
 export function setupIpc(backendRootPath: string) {
@@ -110,7 +111,7 @@ function setupIpcHandlers(backendRootPath: string) {
 
       return buffer
     } catch (error) {
-      console.log('failed to read resource file', error)
+      log.log('failed to read resource file', error)
       return null
     } finally {
       if (fileHandle) {
