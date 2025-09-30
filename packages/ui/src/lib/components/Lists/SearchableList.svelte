@@ -43,7 +43,7 @@
 
 <div class="searchable-list">
   <div class="search-container">
-    <SearchInput bind:this={input} collapsed={false} bind:value={value} {autofocus} placeholder={searchPlaceholder} fullWidth />
+    <SearchInput bind:this={input} collapsed={false} bind:value={value} {autofocus} placeholder={searchPlaceholder} fullWidth animated={false}/>
   </div>
 
   <div class="list-container">

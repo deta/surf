@@ -10,7 +10,7 @@
     onsearchinput,
     autofocus = false,
     fullWidth = false,
-          animated = true,
+    animated = true,
   }: {
     placeholder?: string
     value?: string
@@ -18,7 +18,7 @@
     onsearchinput?: (value: string) => void
     autofocus?: boolean
     fullWidth?: boolean
-          animated?: boolean
+    animated?: boolean
   } = $props()
 
   let inputEl: HTMLInputElement
@@ -38,7 +38,7 @@
     class="input-container"
     class:full-width={fullWidth}
     class:collapsed
-                class:animated
+    class:animated
     {@attach clickOutside(() => inputEl?.blur())}
   >
     <input
@@ -78,12 +78,18 @@
       max-width: initial;
     }
 
-          &.animated {
-    @starting-style {
-      width: 0;
-      opacity: 0;
+    &.animated {
+      @starting-style {
+        width: 0;
+        opacity: 0;
+      }
+      &.collapsed {
+        animation: collapse-out 123ms ease-out forwards;
+        .icon {
+          opacity: 0;
+        }
+      }
     }
-          }
 
     @keyframes collapse-out {
       100% {
@@ -95,13 +101,6 @@
     &:focus-within {
       background: rgba(0, 0, 0, 0.045);
       border-color: rgba(0, 0, 0, 0.1);
-    }
-
-    &.collapsed {
-      animation: collapse-out 123ms ease-out forwards;
-      .icon {
-        opacity: 0;
-      }
     }
 
     .icon {
