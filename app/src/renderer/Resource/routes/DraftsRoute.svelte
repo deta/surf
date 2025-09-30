@@ -1,6 +1,13 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button, openDialog, PageMention, ResourceLoader, SurfLoader } from '@deta/ui'
+  import {
+    Button,
+    NotebookCover,
+    openDialog,
+    PageMention,
+    ResourceLoader,
+    SurfLoader
+  } from '@deta/ui'
   import { onMount } from 'svelte'
   import { MaskedScroll } from '@deta/ui'
   import { contextMenu, type CtxItem } from '@deta/ui'
@@ -68,7 +75,21 @@
 <NotebookLayout>
   <main>
     <div class="tty-wrapper">
-      <h1>Drafts</h1>
+      <div class="name">
+        <NotebookCover
+          title="Drafts"
+          height="5ch"
+          fontSize="0.3rem"
+          --round-base="6px"
+          --round-diff="-8px"
+          color={[
+            ['#5d5d62', '5d5d62'],
+            ['#2e2f34', '#2e2f34'],
+            ['#efefef', '#efefef']
+          ]}
+        />
+        <h1>Drafts</h1>
+      </div>
       <TeletypeEntry open={true} hideNavigation />
     </div>
     <section class="contents-wrapper">
@@ -216,11 +237,16 @@
   .tty-wrapper {
     width: 100%;
 
+    .name {
+      display: flex;
+      align-items: center;
+      gap: 2ch;
+      padding-inline: 1.5rem;
+    }
+
     h1 {
       font-size: 30px;
-      margin-bottom: 0.75rem;
       font-family: 'Gambarino';
-      text-align: center;
     }
   }
   .cover.title {
