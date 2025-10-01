@@ -41,6 +41,8 @@
     messagePort.citationClick.send(data)
   }
 
+  const isImageResource = $derived(resource?.type?.startsWith(ResourceTypes.IMAGE))
+
   onMount(async () => {
     log.debug('Resource mounted with ID:', resourceId)
 
@@ -83,6 +85,8 @@
         {messagePort}
         onCitationClick={handleCitationClick}
       />
+    {:else if isImageResource}
+      <img src={`surf://surf/resource/${resource.id}?raw`} />
     {:else}
       <div>
         <p><strong>Name:</strong> {resource.metadata.name}</p>
@@ -122,5 +126,19 @@
       font-size: 20px;
       margin-bottom: 5px;
     }
+  }
+
+  img {
+    max-height: 100vh;
+    max-width: 100vw;
+    height: auto;
+    width: auto;
+    display: block;
+    margin: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
   }
 </style>

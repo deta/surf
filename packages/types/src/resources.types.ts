@@ -149,6 +149,7 @@ export enum ResourceTypes {
   PDF = 'application/pdf',
   HTML = 'text/html',
   JAVASCRIPT = 'text/javascript',
+  IMAGE = 'image',
 
   SPACE = 'application/vnd.space',
 
