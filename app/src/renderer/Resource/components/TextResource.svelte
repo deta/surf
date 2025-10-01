@@ -2646,7 +2646,6 @@
     overflow: hidden;
     position: relative;
     //padding-top: 3em;
-    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2704,6 +2703,10 @@
     margin: auto;
     padding: 2em 2em;
     box-sizing: content-box;
+  }
+
+  :global(#app > .wrapper > .text-resource-wrapper > .content > .notes-editor-wrapper .tiptap) {
+    padding-bottom: 180px;
   }
 
   :global(body.custom .text-resource-wrapper .tiptap ::selection) {

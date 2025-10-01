@@ -251,7 +251,7 @@
         </button>
       {/if}
     </div>
-  {:else}
+  {:else if !(!isEditorEmpty || !showExamplePrompts || $contextManagementDialogOpen) && editor?.focused}
     <div class="prompts">
       <PromptPills
         promptItems={$suggestedPrompts}
@@ -330,20 +330,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    padding: 12px 8px;
-    margin-bottom: 4px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    animation: slideIn 0.2s ease-out;
+    gap: 0.3rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    animation: slideIn 234ms ease-out;
 
-    background: light-dark(rgba(255, 255, 255), rgba(15, 23, 42));
+    --background: light-dark(rgba(255, 255, 255), rgba(15, 23, 42));
+    background: var(--background);
     color: light-dark(rgb(37, 99, 235), rgb(147, 197, 253));
     backdrop-filter: blur(12px);
 
+    border: 1px solid color-mix(in srgb, var(--background), transparent 50%);
+
     &.error {
-      background: light-dark(rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15));
+      --background: light-dark(rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.15));
       color: light-dark(rgb(220, 38, 38), rgb(252, 165, 165));
     }
 
@@ -446,7 +448,7 @@
 
       &:hover {
         opacity: 1;
-        background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
+        background: light-dark(rgba(0, 0, 0, 0.075), rgba(255, 255, 255, 0.1));
       }
     }
 
@@ -522,10 +524,6 @@
       filter: grayscale(100%);
     }
 
-    &.loading {
-      opacity: 0.9;
-    }
-
     &:global(._starting) {
       transition-delay: 200ms;
       opacity: 0 !important;
@@ -534,8 +532,7 @@
     &.bottom {
       --chat-input-max-width: 800px;
       --chat-input-half-width: calc(var(--chat-input-max-width) / 2);
-      --chat-input-padding: 0.5rem;
-      --chat-input-padding-px: 24px;
+      --chat-input-padding: 1.75rem;
 
       transition-property: top, left, right, padding;
       bottom: 0;
@@ -683,7 +680,6 @@
     }
 
     // Background blur
-    /*
     &::before {
       transition-property: top;
       transition-duration: 134ms;
@@ -695,25 +691,24 @@
       z-index: -20;
 
       inset: 0;
-      top: -1.75rem;
+      top: -2.5rem;
       bottom: -2rem;
       left: -100vw;
       right: -100vw;
 
-      visibility: hidden;
-      &:not(.bottom) {
-        background: linear-gradient(
-          0deg,
-          light-dark(#fff, rgb(24, 24, 24)) 80%,
-          light-dark(rgba(255, 255, 255, 0), rgba(24, 24, 24, 0)) 100%
-        );
-      }
-      backdrop-filter: blur(1px);
+      //visibility: hidden;
+      background: linear-gradient(
+        to top,
+        light-dark(#fff, rgb(24, 24, 24)) 80%,
+        light-dark(rgba(255, 255, 255, 0), rgba(24, 24, 24, 0)) 100%
+      );
+      backdrop-filter: blur(2px);
+      mask: linear-gradient(to top, rgba(0, 0, 0, 1) 75%, rgba(0, 0, 0, 0)) 100%;
     }
-    &:has(> header)::before {
-      top: -2rem;
+    &:has(> .prompts)::before,
+    &:has(> .status-message)::before {
+      top: -4rem;
     }
-  */
   }
 
   .inline-controls {
