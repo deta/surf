@@ -608,7 +608,20 @@ export const promptForFilesAndTurnIntoResources = async (
   const files = await promptUserToSelectFiles({
     title: 'Select File to Use as Context',
     buttonLabel: 'Import to Surf',
-    filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    filters: [
+      {
+        name: 'Files',
+        extensions: [
+          'pdf',
+          'png',
+          'jpeg',
+          'jpg'
+
+          // We don't support proeper conversion on import yet
+          //'txt', 'html', 'md'
+        ]
+      }
+    ]
   })
 
   if (files.length === 0) {

@@ -18,7 +18,7 @@
   const items = [
     {
       id: 'add-file',
-      label: 'Import Local File (PDFs)',
+      label: 'Import Local File (PDFs, Images)',
       icon: 'folder.open',
       action: onFileSelect
     },
