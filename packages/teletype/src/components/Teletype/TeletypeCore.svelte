@@ -403,12 +403,13 @@
     }
   }
 
-  onMount(() => {
-    $showActionPanel = false
-    const handler = (e: KeyboardEvent) => handleActionOptionsKeyDown(e)
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  })
+  // NOTE: Actions panel CMD + X breaks page in infinite loop with this when trying to cut text
+  //onMount(() => {
+  //  $showActionPanel = false
+  //  const handler = (e: KeyboardEvent) => handleActionOptionsKeyDown(e)
+  //  document.addEventListener('keydown', handler)
+  //  return () => document.removeEventListener('keydown', handler)
+  //})
 
   const fallbackAction = $derived($actions.find((action) => action.id === '__fallback'))
 
