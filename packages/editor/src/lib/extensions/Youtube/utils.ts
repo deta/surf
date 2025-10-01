@@ -59,9 +59,9 @@ export const getEmbedUrlFromYoutubeUrl = (options: GetEmbedUrlOptions) => {
     rel
   } = options
 
-  if (!isValidYoutubeUrl(url)) {
-    return null
-  }
+  //if (!isValidYoutubeUrl(url)) {
+  //  return null
+  //}
 
   // if is already an embed url, return it
   if (url.includes('/embed/')) {
@@ -69,23 +69,24 @@ export const getEmbedUrlFromYoutubeUrl = (options: GetEmbedUrlOptions) => {
   }
 
   // if is a youtu.be url, get the id after the /
-  if (url.includes('youtu.be')) {
-    const id = url.split('/').pop()
+  //if (url.includes('youtu.be')) {
+  //  const id = url.split('/').pop()
 
-    if (!id) {
-      return null
-    }
-    return `${getYoutubeEmbedUrl(nocookie)}${id}`
-  }
+  //  if (!id) {
+  //    return null
+  //  }
+  //  return `${getYoutubeEmbedUrl(nocookie)}${id}`
+  //}
 
   const videoIdRegex = /(?:(v|list)=|shorts\/)([-\w]+)/gm
   const matches = videoIdRegex.exec(url)
 
-  if (!matches || !matches[2]) {
-    return null
-  }
+  //if (!matches || !matches[2]) {
+  //  return null
+  //}
 
-  let outputUrl = `${getYoutubeEmbedUrl(nocookie, matches[1] === 'list')}${matches[2]}`
+  //let outputUrl = `${getYoutubeEmbedUrl(nocookie, matches[1] === 'list')}${matches[2]}`
+  let outputUrl = url
 
   const params: string[] = []
 
@@ -158,7 +159,8 @@ export const getEmbedUrlFromYoutubeUrl = (options: GetEmbedUrlOptions) => {
   }
 
   if (params.length) {
-    outputUrl += `${matches[1] === 'v' ? '?' : '&'}${params.join('&')}`
+    //outputUrl += `${matches[1] === 'v' ? '?' : '&'}${params.join('&')}`
+    outputUrl += `?${params.join('&')}`
   }
 
   return outputUrl

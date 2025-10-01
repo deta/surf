@@ -179,7 +179,6 @@ declare module '@tiptap/core' {
 
 const isRedirectUrl = (url: string): boolean => {
   const _url = parseURL(url)
-  console.warn('DBG ', _url)
   return (
     _url?.protocol === 'https:' &&
     _url?.hostname === 'deta.surf' &&
@@ -299,151 +298,6 @@ export const Youtube = Node.create<YoutubeOptions>({
     ]
   },
 
-  addNodeView() {
-    return ({ node }) => {
-      const container = document.createElement('div')
-      container.setAttribute('data-youtube-video', '')
-
-      const width = node.attrs.width || this.options.width
-      const height = node.attrs.height || this.options.height
-
-      // Helper function to create error display
-      const showError = (message: string = 'Invalid video URL') => {
-        // Clear container
-        container.innerHTML = ''
-
-        const errorDiv = document.createElement('div')
-        errorDiv.classList.add('error')
-        errorDiv.style.width = `${width}px`
-        errorDiv.style.height = `${height}px`
-        errorDiv.style.display = 'flex'
-        errorDiv.style.alignItems = 'center'
-        errorDiv.style.justifyContent = 'center'
-        errorDiv.style.fontSize = '14px'
-        errorDiv.textContent = message
-        container.appendChild(errorDiv)
-      }
-
-      // Early validation - check if src exists
-      if (!node.attrs.src || typeof node.attrs.src !== 'string' || node.attrs.src.trim() === '') {
-        showError('Invalid video URL')
-        return { dom: container }
-      }
-
-      // Create loading placeholder
-      const loadingDiv = document.createElement('div')
-      loadingDiv.classList.add('loading')
-      loadingDiv.style.width = `${width}px`
-      loadingDiv.style.height = `${height}px`
-      loadingDiv.style.display = 'flex'
-      loadingDiv.style.alignItems = 'center'
-      loadingDiv.style.justifyContent = 'center'
-      loadingDiv.style.backgroundColor = '#000'
-      loadingDiv.style.color = '#fff'
-      loadingDiv.style.fontSize = '14px'
-      loadingDiv.textContent = 'Loading video...'
-      container.appendChild(loadingDiv)
-
-      // Async function to resolve URL and create iframe
-      const resolveAndRender = async () => {
-        try {
-          let finalUrl = node.attrs.src.trim()
-
-          // Check if it's a redirect URL and fetch the actual URL
-          if (isRedirectUrl(finalUrl)) {
-            try {
-              const redirectedUrl = await fetchRedirectUrl(finalUrl)
-              if (
-                redirectedUrl &&
-                typeof redirectedUrl === 'string' &&
-                redirectedUrl.trim() !== ''
-              ) {
-                finalUrl = redirectedUrl.trim()
-              } else {
-                throw new Error('Redirect returned invalid URL')
-              }
-            } catch (redirectError) {
-              console.error('Error fetching redirect URL:', redirectError)
-              showError('Failed to load video')
-              return
-            }
-          }
-
-          // Validate URL
-          if (!finalUrl || !isValidYoutubeUrl(finalUrl)) {
-            showError('Invalid YouTube URL')
-            return
-          }
-
-          // Get embed URL
-          let embedUrl: string
-          try {
-            embedUrl = getEmbedUrlFromYoutubeUrl({
-              url: finalUrl,
-              allowFullscreen: this.options.allowFullscreen,
-              autoplay: this.options.autoplay,
-              ccLanguage: this.options.ccLanguage,
-              ccLoadPolicy: this.options.ccLoadPolicy,
-              controls: this.options.controls,
-              disableKBcontrols: this.options.disableKBcontrols,
-              enableIFrameApi: this.options.enableIFrameApi,
-              endTime: this.options.endTime,
-              interfaceLanguage: this.options.interfaceLanguage,
-              ivLoadPolicy: this.options.ivLoadPolicy,
-              loop: this.options.loop,
-              modestBranding: this.options.modestBranding,
-              nocookie: this.options.nocookie,
-              origin: this.options.origin,
-              playlist: this.options.playlist,
-              progressBarColor: this.options.progressBarColor,
-              startAt: node.attrs.start || 0,
-              rel: this.options.rel
-            })!
-
-            if (!embedUrl || typeof embedUrl !== 'string' || embedUrl.trim() === '') {
-              throw new Error('Failed to generate embed URL')
-            }
-          } catch (embedError) {
-            console.error('Error generating embed URL:', embedError)
-            showError('Failed to generate video embed')
-            return
-          }
-
-          // Remove loading div
-          container.innerHTML = ''
-
-          // Create iframe
-          const iframe = document.createElement('iframe')
-          const attrs = mergeAttributes(this.options.HTMLAttributes, {
-            src: embedUrl,
-            width: width,
-            height: height,
-            allowfullscreen: this.options.allowFullscreen,
-            frameborder: '0'
-          })
-
-          Object.entries(attrs).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-              iframe.setAttribute(key, String(value))
-            }
-          })
-
-          container.appendChild(iframe)
-        } catch (error) {
-          console.error('Unexpected error in YouTube node view:', error)
-          showError('Failed to load video')
-        }
-      }
-
-      // Start async resolution
-      resolveAndRender()
-
-      return {
-        dom: container
-      }
-    }
-  },
-
   renderHTML({ HTMLAttributes }) {
     try {
       if (
@@ -458,7 +312,7 @@ export const Youtube = Node.create<YoutubeOptions>({
             class: 'error',
             style: `width: ${this.options.width}px; height: ${this.options.height}px; display: flex; align-items: center; justify-content: center;`
           },
-          'Invalid video URL'
+          'Missing video URL'
         ]
       }
 
