@@ -10,6 +10,7 @@ import { Notebook, useNotebookManager } from './notebooks'
 import { onboardingNotebook } from './constants/examples'
 import * as OnboardingNoteWelcome from './constants/onboarding/00.welcome.md'
 import * as OnboardingNoteManual from './constants/onboarding/01.manual.md'
+import * as OnboardingNoteWhatsNew from './constants/onboarding/02.whatsnew.md'
 
 const log = useLogScope('DemoItems')
 
@@ -111,6 +112,7 @@ export async function createDemoNote(note: DemoNote, notebook: Notebook) {
       name: note.title
     })
 
+    await notebookManager.addResourcesToNotebook(notebook.id, [resource.id])
     return resource
   }
 
@@ -149,11 +151,20 @@ export async function createDemoNotes(notebook: Notebook) {
     notebook
   )
 
+  const whatsnewNote = await createDemoNote(
+    {
+      id: OnboardingNoteWhatsNew.attributes.id as string,
+      title: OnboardingNoteWhatsNew.attributes.title as string,
+      content: parseNoteContent(OnboardingNoteWhatsNew)
+    },
+    notebook
+  )
+
   await wait(300)
 
   await resourceManager.updateResource(welcomeResource.id, {
     updated_at: new Date().toISOString()
   })
 
-  return [welcomeResource, manualResource]
+  return [welcomeResource, manualResource, whatsnewNote]
 }

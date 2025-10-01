@@ -56,11 +56,10 @@
     "sync": "svelte-kit sync"
   },
   "devDependencies": {
-    "dompurify": "^3.2.4",
-    "@horizon/eslint-config": "*",
     "@deta/icons": "*",
-    "@deta/utils": "*",
     "@deta/types": "*",
+    "@deta/utils": "*",
+    "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
     "@skilitics-public/two-fingers": "^2.1.0",
     "@sveltejs/kit": "^2.31.1",
@@ -90,6 +89,7 @@
     "@tiptap/starter-kit": "^2.1.12",
     "@tiptap/suggestion": "^2.4.0",
     "@tsconfig/svelte": "^5.0.2",
+    "dompurify": "^3.2.4",
     "rehype-highlight": "^7.0.0",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",

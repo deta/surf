@@ -4,7 +4,8 @@
   --color-text-secondary: #4d4b4d;
   --color-menu: #373530;
   --color-menu-muted: #696969;
-  --color-link: rgba(96, 117, 241, 1);;
+  --color-link: rgba(96, 117, 241, 1);
+  ;
   --color-link-muted: rgba(96, 117, 241, 0.19);
   --color-link-hover: rgba(76, 97, 216, 1);
   --color-brand: #b7065c;
@@ -390,7 +391,7 @@ body.custom .editor {
     background: #f1f5f9 !important;
     color: #374151;
     font-weight: 475;
-    
+
     padding: 2.5px 4px 2.75px 4px !important;
     -electron-corner-smoothing: 60%;
     border-radius: 4px;
@@ -801,6 +802,19 @@ body.custom .editor {
     display: inline-block;
   }
 
+  div[data-youtube-video] {
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+
+    iframe {
+      aspect-ratio: 16 / 9;
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: 0px solid transparent;
+    }
+  }
 }
 
 .dark .tiptap {
@@ -955,42 +969,36 @@ body.custom .editor {
 /* Title Node Loading Animation */
 .title-loading[data-empty="true"]::before {
   /* Override the placeholder text with animated version */
-  background: linear-gradient(
-      90deg,
+  background: linear-gradient(90deg,
       transparent 0%,
       transparent 40%,
       #aae5ff 45%,
       transparent 50%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
+      transparent 100%),
+    linear-gradient(90deg,
       transparent 0%,
       transparent 40%,
       white 45%,
       transparent 50%,
-      transparent 100%
-    ),
-    linear-gradient(
-      90deg,
+      transparent 100%),
+    linear-gradient(90deg,
       transparent 0%,
       transparent 40%,
       #aae5ff 45%,
       transparent 50%,
-      transparent 100%
-    ),
+      transparent 100%),
     var(--accent, #399bf1);
-  
+
   background-size:
     200% 100%,
     200% 100%,
     200% 100%,
     100% 100%;
-  
+
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  
+
   animation: titleSlide 3s infinite linear;
 }
 
@@ -1002,7 +1010,7 @@ body.custom .editor {
       320% 0,
       0 0;
   }
-  
+
   100% {
     background-position:
       -300% 0,

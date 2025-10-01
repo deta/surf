@@ -54,6 +54,7 @@ import { detailsInputRule } from './utilities/inputRules/details'
 import AIPrompt from './extensions/AIPrompt'
 import AIGeneration from './extensions/AIGeneration'
 import { TitleNode } from './extensions/TitleNode'
+import Youtube from './extensions/Youtube'
 
 export type ExtensionOptions = {
   placeholder?: string
@@ -287,6 +288,13 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   AIPrompt,
   AIGeneration,
   Image,
+  Youtube.configure({
+    controls: true,
+    nocookie: true,
+    allowFullscreen: true,
+    autoplay: false,
+    modestBranding: true
+  }),
   Extension.create<{ pluginKey?: PluginKey }>({
     name: 'paste-handler',
 
