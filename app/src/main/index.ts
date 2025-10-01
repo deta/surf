@@ -218,7 +218,10 @@ const initializeApp = async () => {
     }
 
     try {
-      const isActivated = await checkIfAppIsActivated(userConfig.api_key)
+      const isActivated = await checkIfAppIsActivated(
+        CONFIG.appVersion || '0.0.0',
+        userConfig.api_key
+      )
       if (!isActivated) {
         log.debug('App not activated, prompting user to enter invite token again')
         createSetupWindow()

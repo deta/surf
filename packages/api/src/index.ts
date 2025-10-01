@@ -158,7 +158,12 @@ export class AuthenticatedAPI extends API {
   }
 
   async getUserData() {
-    return (await this.requestJSONWithRetry(ENDPOINTS.userdata, 5)) as Promise<UserDataResponse>
+    return (await this.requestJSONWithRetry(ENDPOINTS.userdata, 5, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'X-Surf-App-Version': this.currentAppVersion
+      }
+    })) as Promise<UserDataResponse>
   }
 
   async setUserTelemetryId(telemetryId: string) {
