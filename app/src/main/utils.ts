@@ -131,7 +131,7 @@ export const UpdatesWindowEntryPoint = (() => {
   if (import.meta.env.DEV && process.env.ELECTRON_RENDERER_URL) {
     return `${process.env.ELECTRON_RENDERER_URL}/Updates/updates.html`
   } else {
-    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'updates', 'updates.html')}`
+    return `file://${path.join(app.getAppPath(), 'out', 'renderer', 'Updates', 'updates.html')}`
   }
 })()
 
