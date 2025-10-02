@@ -615,7 +615,7 @@
         </div>
 
         <p>
-          You have monthly credits for premium (more intelligent but costlier) and standard (chaper
+          You have monthly credits for premium (more intelligent but costlier) and standard (cheaper
           and faster but less intelligent) tier of AI models. If you reach the limit of the premium
           tier, you will be switched to the standard tier automatically.
         </p>
