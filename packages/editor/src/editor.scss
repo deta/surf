@@ -1,53 +1,47 @@
 .editor {
-  --color-text: var(--on-app-background);
-  --color-text-muted: #a1a1a1;
-  --color-text-secondary: #4d4b4d;
-  --color-menu: #373530;
-  --color-menu-muted: #696969;
-  --color-link: rgba(96, 117, 241, 1);
-  ;
-  --color-link-muted: rgba(96, 117, 241, 0.19);
-  --color-link-hover: rgba(76, 97, 216, 1);
-  --color-brand: #b7065c;
-  --color-brand-muted: #b7065cba;
-  --color-brand-dark: #ff4fa4;
-  --background: #fff;
-  --background-code: #edeef0;
-  --foreground-code: #16181d;
-  --background-menu: #f6f6f6;
-  --background-menu-muted: #dedede;
-  --background-brand: #ff54a724;
-  --background-brand-dark: #ea1e8053;
+  --color-text: oklch(38.7% 0 0);
+  --color-text-muted: oklch(64.3% 0 0);
+  --color-text-secondary: oklch(50.3% 0 0);
+  --color-menu: oklch(24.4% 0 0);
+  --color-menu-muted: oklch(64.3% 0 0);
+  --color-link: oklch(62.3% .214 259.815);
+  --color-link-muted: oklch(62.3% .214 259.815 / 0.19);
+  --color-link-hover: oklch(54.6% .245 262.881);
+  --color-brand: oklch(58.6% .253 17.585);
+  --color-brand-muted: oklch(58.6% .253 17.585 / 0.73);
+  --color-brand-dark: oklch(64.5% .246 16.439);
+  --background: oklch(100% 0 0);
+  --background-code: oklch(95.5% 0 0);
+  --foreground-code: oklch(24.4% 0 0);
+  --background-menu: oklch(98.2% 0 0);
+  --background-menu-muted: oklch(88.5% 0 0);
+  --background-brand: oklch(64.5% .246 16.439 / 0.14);
+  --background-brand-dark: oklch(64.5% .246 16.439 / 0.33);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   position: relative;
   width: 100%;
   height: 100%;
-  font-family: -apple-system, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, system-ui, Avenir, Helvetica, Arial, sans-serif;
   text-rendering: optimizeLegibility;
-  line-height: 1.5;
-  font-weight: 420;
+  line-height: 1.85;
+  font-weight: 400;
 
   color-scheme: light dark;
   color: inherit;
 
   font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-weight: 420;
 
   a {
-    font-weight: 450;
+    font-weight: 500;
     color: var(--color-link);
     text-decoration: underline;
 
-    text-decoration-thickness: 1.25px;
+    text-decoration-thickness: 1px;
     text-decoration-color: var(--color-link-muted);
     text-underline-offset: 2px;
-    text-decoration-style: dashed;
+    text-decoration-style: solid;
 
     &:hover {
       color: var(--color-link-hover);
@@ -75,27 +69,28 @@
 
   ol {
     li::marker {
-      background: red;
-      color: #373530cc;
+      color: oklch(24.4% 0 0 / 0.8);
     }
   }
 }
 
 .dark .editor {
-  --color-text: #e8e6e3;
-  --color-text-muted: #a1a1a1;
-  --color-text-secondary: #4d4b4d;
-  --color-menu: #e8e6e3;
-  --color-menu-muted: #696969;
-  --color-link: rgba(96, 117, 241, 1);
-  --color-link-muted: rgba(96, 117, 241, 0.6);
-  --color-link-hover: rgb(125, 143, 243);
-  --color-brand: #b7065c;
-  --color-brand-muted: #b7065cba;
-  --color-brand-dark: #ff4fa4;
-  --background: #161616;
-  --background-menu: #2e2e2e;
-  --background-menu-muted: #353535;
+  --color-text: oklch(94.9% 0 0);
+  --color-text-muted: oklch(64.3% 0 0);
+  --color-text-secondary: oklch(77.3% 0 0);
+  --color-menu: oklch(94.9% 0 0);
+  --color-menu-muted: oklch(64.3% 0 0);
+  --color-link: oklch(62.3% .214 259.815);
+  --color-link-muted: oklch(62.3% .214 259.815 / 0.6);
+  --color-link-hover: oklch(70.7% .165 254.624);
+  --color-brand: oklch(58.6% .253 17.585);
+  --color-brand-muted: oklch(58.6% .253 17.585 / 0.73);
+  --color-brand-dark: oklch(64.5% .246 16.439);
+  --background: oklch(17.8% 0 0);
+  --background-code: oklch(21.3% 0 0);
+  --foreground-code: oklch(94.9% 0 0);
+  --background-menu: oklch(25.2% 0 0);
+  --background-menu-muted: oklch(28.5% 0 0);
 }
 
 .dark .tiptap .details>button::before {
@@ -115,7 +110,7 @@ body.custom .editor {
 
 .tiptap {
   min-height: 100%;
-  font-size: 16px;
+  font-size: 1rem;
 
   :first-child {
     margin-top: 0;
@@ -220,10 +215,10 @@ body.custom .editor {
       'Segoe UI Emoji',
       'Segoe UI Symbol';
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.2;
     padding: 3px 2px;
-    margin-top: 2rem;
-    margin-bottom: 1px;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
   }
 
   h1,
@@ -231,7 +226,7 @@ body.custom .editor {
   h3,
   h4,
   h5 {
-    color: #373530;
+    color: oklch(24.4% 0 0);
   }
 
   h1.is-empty,
@@ -258,7 +253,7 @@ body.custom .editor {
   h1.title-node.is-title-empty::before,
   h1.title-node.title-empty::before {
     content: attr(data-placeholder);
-    color: var(--color-text-muted, #9ca3af);
+    color: var(--color-text-muted, oklch(64.3% 0 0));
     opacity: 0.75;
     pointer-events: none;
     font-weight: 600;
@@ -275,7 +270,7 @@ body.custom .editor {
   h1.title-node[data-empty="true"]::before,
   h1.title-node.is-title-empty::before,
   h1.title-node.title-empty::before {
-    color: #9ca3af;
+    color: oklch(64.3% 0 0);
   }
 
   h1.title-node:not([data-empty="true"]):not(.is-title-empty):not(.title-empty)::before {
@@ -293,15 +288,33 @@ body.custom .editor {
   }
 
   h1 {
-    letter-spacing: -0.005em;
+    font-size: 2.25rem;
+    line-height: calc(2.5 / 2.25);
+    letter-spacing: 0.0025em;
   }
 
   h2 {
-    letter-spacing: -0.0066em;
+    font-size: 1.875rem;
+    line-height: calc(2.25 / 1.875);
+    letter-spacing: 0.002em;
   }
 
   h3 {
-    letter-spacing: -0.01em;
+    font-size: 1.5rem;
+    line-height: calc(2 / 1.5);
+    letter-spacing: -0.025em;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    line-height: calc(1.75 / 1.25);
+    letter-spacing: -0.025em;
+  }
+
+  h5 {
+    font-size: 1.125rem;
+    line-height: calc(1.75 / 1.125);
+    letter-spacing: -0.025em;
   }
 
   // p.is-empty::after {
@@ -309,19 +322,19 @@ body.custom .editor {
   // }
 
   p {
-    font-size: 1em;
-    line-height: 1.85;
+    font-size: 1rem;
+    line-height: 1.75;
     color: var(--color-text);
     padding: 3px 2px;
     margin: .5rem 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: 0.005em;
+    letter-spacing: 0;
 
     strong {
-      color: #373530;
-      font-weight: 625;
-      letter-spacing: 0.01em;
+      color: oklch(24.4% 0 0);
+      font-weight: 550;
+      letter-spacing: 0.0025em;
     }
   }
 
@@ -340,7 +353,7 @@ body.custom .editor {
     &::after {
       content: '';
       position: absolute;
-      background: rgba(4, 104, 255, 0.1);
+      background: oklch(62.3% .214 259.815 / 0.1);
       border-radius: 8px;
       width: calc(100% + 4px);
       height: calc(100% + 4px);
@@ -379,28 +392,38 @@ body.custom .editor {
 
   ul,
   ol {
-    padding: 0 1.25em;
-    margin: unset;
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+
+    li {
+      margin: 0.25rem 0;
+    }
   }
 
   ul {
     list-style: unset;
   }
 
-  code {
-    background: #f1f5f9 !important;
-    color: #374151;
-    font-weight: 475;
+  ol {
+    list-style-position: outside;
+  }
 
-    padding: 2.5px 4px 2.75px 4px !important;
+  code {
+    background: oklch(100% 0 0) !important;
+    border: 1px solid oklch(93.1% 0 0);
+    color: oklch(38.7% 0 0);
+    font-weight: 400;
+    font-size: 0.875rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    padding: 0.125rem 0.25rem !important;
     -electron-corner-smoothing: 60%;
-    border-radius: 4px;
+    border-radius: 0.375rem;
   }
 
   pre {
     -electron-corner-smoothing: 60%;
     border-radius: 1.25rem;
-    color: #383a42;
     font-family: 'Cartograph CF', monospace;
     font-size: 1em;
     padding-block: 0.5em;
@@ -408,15 +431,16 @@ body.custom .editor {
     overflow-wrap: break-word;
     margin: 2rem 0 !important;
     padding: 1.5rem 1.5rem 1rem 1.5rem !important;
-    background: #fafafa;
-    color: #1a1a1a !important;
-    line-height: 1.65;
+    background: oklch(98.2% 0 0);
+    color: oklch(24.4% 0 0) !important;
+    line-height: 1.625;
 
     code {
-      color: #383a42;
+      color: oklch(24.4% 0 0);
       padding: 0 !important;
       background: none !important;
-      font-size: 0.85em;
+      border: none !important;
+      font-size: 0.875rem;
     }
   }
 
@@ -652,7 +676,7 @@ body.custom .editor {
     }
 
     .selectedCell:after {
-      background: rgba(4, 104, 255, 0.1);
+      background: oklch(62.3% .214 259.815 / 0.1);
       content: "";
       left: 0;
       right: 0;
@@ -842,24 +866,27 @@ body.custom .editor {
 
   .ProseMirror-selectednode {
     &::after {
-      background: rgba(44, 128, 255, 0.17);
+      background: oklch(62.3% .214 259.815 / 0.17);
     }
   }
 
   // Dark theme for inline code
   code {
-    background: #262c36 !important;
-    color: #f0f6fc;
+    background: oklch(17.8% 0 0) !important;
+    border: 1px solid oklch(23.9% 0 0);
+    color: oklch(94.9% 0 0);
+    font-weight: 400;
   }
 
   // Dark theme for code blocks (GitHub Dark)
   pre {
-    background: #0d1117;
-    color: #f0f6fc;
+    background: oklch(17.8% 0 0);
+    color: oklch(94.9% 0 0);
 
     code {
-      color: #f0f6fc;
+      color: oklch(94.9% 0 0);
       background: none !important;
+      border: none !important;
     }
   }
 

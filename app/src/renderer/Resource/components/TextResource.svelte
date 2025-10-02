@@ -2627,7 +2627,7 @@
     overflow: hidden;
     position: relative;
     padding-bottom: 0;
-    background: var(--app-background-light);
+    background: oklch(99.1% 0 0);
     display: flex;
     justify-content: center;
     align-items: center;
