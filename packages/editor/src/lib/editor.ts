@@ -304,11 +304,41 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
 
         props: {
           handleDOMEvents: {
-            paste(_, e) {
+            paste(view, e) {
               const clipboardDataItems = Array.from(e.clipboardData?.items || [])
-              if (clipboardDataItems.map((e) => e.kind).includes('file')) {
-                e.preventDefault()
+              const hasFiles = clipboardDataItems.some((item) => item.kind === 'file')
+
+              // Check for HTML with images
+              const htmlData = e.clipboardData?.getData('text/html')
+              const hasHtmlImages = htmlData && htmlData.includes('<img')
+
+              if (hasFiles || hasHtmlImages) {
+                // Extract files immediately before clipboard data is cleared
+                const files: File[] = []
+                for (const item of clipboardDataItems) {
+                  if (item.kind === 'file') {
+                    const file = item.getAsFile()
+                    if (file) {
+                      files.push(file)
+                    }
+                  }
+                }
+
+                // Dispatch custom event with the files and HTML data
+                if (files.length > 0 || hasHtmlImages) {
+                  const customEvent = new CustomEvent('editor-file-paste', {
+                    detail: { files, htmlData },
+                    bubbles: true,
+                    cancelable: true
+                  })
+                  view.dom.dispatchEvent(customEvent)
+
+                  // Prevent default paste behavior
+                  e.preventDefault()
+                  return true
+                }
               }
+              return false
             }
           }
         }

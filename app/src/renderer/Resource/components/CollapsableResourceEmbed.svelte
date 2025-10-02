@@ -22,6 +22,7 @@
   import { SpaceEntryOrigin, type BookmarkTabState } from '@deta/types'
   import { useToasts } from '@deta/ui'
   import CollapsableBlock from './CollapsableBlock.svelte'
+  import Image from '@deta/ui/src/lib/components/Image/Image.svelte'
 
   export let resource: Resource
   export let tab: any | undefined = undefined
@@ -58,6 +59,7 @@
   let webview: WebviewTag | null = null
   let webviewMediaPlaying = false
   let webviewMuted = true
+  let showImagePreview = false
 
   let showHiddenPreview = false
   let collapsed = initialCollapsed === 'auto' ? true : initialCollapsed
@@ -157,14 +159,27 @@
 
   const renderHTMLPreview = async () => {
     await tick()
-    if (!appContainer || !canonicalUrl) {
-      log.debug('Not HTML or no app container')
+
+    // Check if this is an image resource
+    if (resource?.type?.startsWith('image/')) {
+      log.debug('Rendering image preview', resource.id)
+      showImagePreview = true
+      return
+    }
+
+    if (!appContainer) {
+      log.debug('No app container')
+      return
+    }
+
+    appContainer.innerHTML = ''
+
+    if (!canonicalUrl) {
+      log.debug('Not HTML or no canonical URL')
       return
     }
 
     log.debug('Rendering HTML preview', canonicalUrl)
-
-    appContainer.innerHTML = ''
 
     webview = document.createElement('webview') as WebviewTag
     // @ts-ignore
@@ -234,6 +249,7 @@
   {hideHeader}
   {draggable}
   {isEditable}
+  fitContent={resource?.type?.startsWith('image/')}
   additionalWrapperStyles={resource?.type?.startsWith('image/') ? 'max-height: max-content' : ''}
   {...$$restProps}
   on:change-title={handleChangeTitle}
@@ -313,19 +329,34 @@
     {/if}
   </div>
 
-  <!-- {#if resource?.type?.startsWith('image/')}
-    <OasisResourceLoader
-      resourceOrId={resource}
-      frameless
-      {origin}
-      interactive={false}
-      draggable={false}
-      hideProcessing
-    />
-  {:else} -->
-  <div bind:this={appContainer} class="w-full h-full" />
-  <!-- {/if} -->
+  {#if showImagePreview}
+    <div class="image-preview-container">
+      <Image
+        src={`surf://surf/resource/${resource.id}?raw=true`}
+        alt={resource.metadata?.name || 'Image'}
+        style="height: 100%; width: 100%; max-width: 100%; object-fit: contain; border-radius: 8px;"
+      />
+    </div>
+  {:else}
+    <div bind:this={appContainer} class="webview-container" />
+  {/if}
 </CollapsableBlock>
 
 <style lang="scss">
+  .image-preview-container {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    background-color: white;
+  }
+
+  .webview-container {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 </style>

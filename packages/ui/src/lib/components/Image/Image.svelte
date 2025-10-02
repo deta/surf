@@ -29,5 +29,6 @@
     display: block;
     user-select: none;
     border-radius: 2px;
+    border: 1px solid oklch(93.1% 0 0);
   }
 </style>

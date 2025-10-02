@@ -78,14 +78,14 @@
       {resource}
       {isEditable}
       hideHeader
-      showPreview={expanded}
-      expandable={expanded}
+      showPreview={true}
+      expandable={true}
       collapsable
-      initialCollapsed={expanded ? false : 'auto'}
+      initialCollapsed={false}
       resizable={true}
       minHeight="150px"
       maxHeight="800px"
-      initialHeight="-1"
+      initialHeight="500px"
     />
     <!-- {:else}
     <OasisResourceLoader resourceOrId={resource} /> -->

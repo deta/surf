@@ -1,6 +1,7 @@
 <script lang="ts">
   import { writable, type Readable } from 'svelte/store'
   import { BubbleMenu, type Editor } from 'svelte-tiptap'
+  import { NodeSelection } from '@tiptap/pm/state'
 
   import { Icon } from '@deta/icons'
   import { createEventDispatcher, tick } from 'svelte'
@@ -209,6 +210,27 @@
 
 <BubbleMenu
   editor={$editor}
+  shouldShow={({ editor, state }) => {
+    const { selection } = state
+
+    // Don't show bubble menu when a node is selected (like images/resources)
+    if (selection instanceof NodeSelection) {
+      return false
+    }
+
+    // Don't show if selection is empty
+    if (selection.empty) {
+      return false
+    }
+
+    // Check if we're inside a resource node
+    const { $from } = selection
+    if ($from.parent.type.name === 'resource') {
+      return false
+    }
+
+    return true
+  }}
   tippyOptions={{ onShow: handleOpen, onHide: handleClose, placement: 'bottom' }}
 >
   <div class="bubble-menu-wrapper">

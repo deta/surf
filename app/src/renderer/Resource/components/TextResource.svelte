@@ -622,10 +622,8 @@
     await resourceManager.preventHiddenResourceFromAutodeletion(resource)
 
     const editor = editorElem.getEditor()
-    editor.commands.insertContentAt(
-      position,
-      `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
-    )
+    const html = `<resource id="${resource.id}" data-type="${resource.type}" data-expanded="true" />`
+    editor.commands.insertContentAt(position, html)
   }
 
   const processDropResource = async (
@@ -730,6 +728,175 @@
     )
   }
 
+  const handleEditorFilePaste = async (e: CustomEvent<{ files: File[]; htmlData?: string }>) => {
+    let toast: Toast | null = null
+    try {
+      const { files, htmlData } = e.detail
+
+      if (toasts) {
+        toast = toasts.loading('Importing pasted items…')
+      }
+
+      let parsed: any[] = []
+
+      // If we have direct files, use them
+      if (files.length > 0) {
+        parsed = files.map((file) => ({
+          data: file as Blob,
+          type: 'file' as const,
+          metadata: {
+            name: file.name || 'pasted-image',
+            alt: '',
+            sourceURI: (file as any)?.path
+          }
+        }))
+      }
+      // Otherwise, if we have HTML with images, extract them and preserve text
+      else if (htmlData) {
+        const div = document.createElement('div')
+        div.innerHTML = htmlData
+        const images = Array.from(div.querySelectorAll('img'))
+
+        // If there are images, we need to handle mixed content
+        if (images.length > 0) {
+          const editor = editorElem.getEditor()
+          const startPosition = editor.view.state.selection.from
+
+          // Create a map of image elements to their resource data
+          const imageMap = new Map<HTMLImageElement, string>()
+          images.forEach((img, index) => {
+            const placeholder = `__IMAGE_PLACEHOLDER_${index}__`
+            imageMap.set(img, placeholder)
+          })
+
+          // Replace images with placeholders to preserve structure
+          images.forEach((img) => {
+            const placeholder = imageMap.get(img)!
+            const span = document.createElement('span')
+            span.setAttribute('data-image-placeholder', placeholder)
+            span.textContent = placeholder
+            img.replaceWith(span)
+          })
+
+          // Get the HTML with placeholders
+          let htmlWithPlaceholders = div.innerHTML
+
+          // Check if there's meaningful text content
+          const textOnly = div.textContent?.replace(/__IMAGE_PLACEHOLDER_\d+__/g, '').trim()
+          const hasText = textOnly && textOnly.length > 0
+
+          if (hasText) {
+            // Insert the HTML content with placeholders
+            editor.commands.insertContentAt(startPosition, htmlWithPlaceholders)
+
+            // Now replace each placeholder with the actual image resource
+            for (const [img, placeholder] of imageMap.entries()) {
+              try {
+                // Find the placeholder in the document
+                const { state } = editor.view
+                let placeholderPos = -1
+
+                state.doc.descendants((node, pos) => {
+                  if (node.isText && node.text?.includes(placeholder)) {
+                    placeholderPos = pos + (node.text.indexOf(placeholder) || 0)
+                    return false
+                  }
+                })
+
+                if (placeholderPos === -1) continue
+
+                // Fetch the image
+                const response = await fetch(img.src)
+                const blob = await response.blob()
+                const file = new File([blob], 'pasted-image.png', {
+                  type: blob.type || 'image/png'
+                })
+
+                const imageResources = await createResourcesFromMediaItems(
+                  resourceManager,
+                  [
+                    {
+                      data: file,
+                      type: 'file' as const,
+                      metadata: {
+                        name: file.name,
+                        alt: img.alt || '',
+                        sourceURI: img.src
+                      }
+                    }
+                  ],
+                  '',
+                  [ResourceTag.paste(), ResourceTag.silent()]
+                )
+
+                if (imageResources[0]) {
+                  // Delete the placeholder text
+                  editor.commands.deleteRange({
+                    from: placeholderPos,
+                    to: placeholderPos + placeholder.length
+                  })
+                  // Insert the resource at that position
+                  await processDropResource(placeholderPos, imageResources[0], true, { x: 0, y: 0 })
+                }
+              } catch (err) {
+                log.error('Failed to fetch image:', img.src, err)
+              }
+            }
+
+            if (toast) {
+              toast.success('Items imported!')
+            }
+            return
+          }
+        }
+
+        // If no text or only images, just extract images
+        for (const img of images) {
+          try {
+            const response = await fetch(img.src)
+            const blob = await response.blob()
+            const file = new File([blob], 'pasted-image.png', { type: blob.type || 'image/png' })
+
+            parsed.push({
+              data: file,
+              type: 'file' as const,
+              metadata: {
+                name: file.name,
+                alt: img.alt || '',
+                sourceURI: img.src
+              }
+            })
+          } catch (err) {
+            log.error('Failed to fetch image:', img.src, err)
+          }
+        }
+      }
+
+      if (parsed.length === 0) return
+
+      const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
+        ResourceTag.paste(),
+        ResourceTag.silent()
+      ])
+
+      for (const resource of newResources) {
+        const editor = editorElem.getEditor()
+        const position = editor.view.state.selection.from
+
+        await processDropResource(position, resource, true, { x: 0, y: 0 })
+      }
+
+      if (toast) {
+        toast.success('Items imported!')
+      }
+    } catch (err) {
+      if (toast) {
+        toast.error('Failed to import pasted items!')
+      }
+      log.error(err)
+    }
+  }
+
   const handlePaste = async (e: ClipboardEvent) => {
     let toast: Toast | null = null
     e.preventDefault()
@@ -743,7 +910,8 @@
       toast = toasts.loading('Importing pasted items…')
 
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
-        ResourceTag.paste()
+        ResourceTag.paste(),
+        ResourceTag.silent()
       ])
 
       for (const resource of newResources) {
@@ -2504,6 +2672,7 @@
   class="text-resource-wrapper text-gray-900 dark:text-gray-100"
   bind:clientWidth
   on:paste={handlePaste}
+  on:editor-file-paste={handleEditorFilePaste}
 >
   <div class="content">
     {#if !initialLoad && origin !== 'homescreen' && !readOnlyMode}

@@ -87,7 +87,7 @@ export const Resource = Node.create<ResourceOptions>({
   group: 'block',
   inline: false,
   atom: true,
-  selectable: false,
+  selectable: true,
   draggable: true,
 
   parseHTML() {

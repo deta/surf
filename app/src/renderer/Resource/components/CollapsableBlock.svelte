@@ -13,6 +13,7 @@
     SFFSResourceTag,
     UserViewPrefsTagValue
   } from '@deta/types'
+  import ImageBlock from './ImageBlock.svelte'
 
   // New
   export let as: string = 'collapsable-block'
@@ -35,6 +36,7 @@
   export let loading = false
   export let loadingMessage: string | undefined = undefined
   export let additionalWrapperStyles = ''
+  export let fitContent = false
 
   const log = useLogScope('CodeBlock')
   const resourceManager = useResourceManager()
@@ -49,9 +51,14 @@
   let isResizing = false
   let startY = 0
   let startHeight = 0
+  let startWidth = 0
+  let containerWidth = 'auto'
+  let imageBlockRef: ImageBlock | undefined = undefined
 
-  // Load saved height from resource tag
-  $: updateResourceViewPrefs(containerHeight, collapsed)
+  $: isImage = resource?.type?.startsWith('image/')
+
+  // Load saved height and width from resource tag
+  $: updateResourceViewPrefs(containerHeight, containerWidth, collapsed)
 
   $: if (resource) {
     handleUserViewPreferencesChange(resource?.tags ?? [])
@@ -86,6 +93,10 @@
       containerHeight = prefs.blockHeight
     }
 
+    if (prefs?.blockWidth) {
+      containerWidth = prefs.blockWidth
+    }
+
     if (prefs?.blockCollapsed !== undefined) {
       collapsed = prefs.blockCollapsed
     }
@@ -97,41 +108,49 @@
     dispatch('change-title', name)
   }, 300)
 
-  const updateResourceViewPrefs = useDebounce(async (height: string, collapsed: boolean) => {
-    if (!resource?.id) return
-    try {
-      const prefs = getUserViewPreferences(resource.tags ?? [])
+  const updateResourceViewPrefs = useDebounce(
+    async (height: string, width: string, collapsed: boolean) => {
+      if (!resource?.id) return
+      try {
+        const prefs = getUserViewPreferences(resource.tags ?? [])
 
-      log.debug('Updating resource view preferences', { height, collapsed }, prefs)
+        log.debug('Updating resource view preferences', { height, width, collapsed }, prefs)
 
-      if (prefs) {
-        if (resizable) {
-          prefs.blockHeight = height
+        if (prefs) {
+          if (resizable) {
+            prefs.blockHeight = height
+          }
+
+          if (isImage && width !== 'auto') {
+            prefs.blockWidth = width
+          }
+
+          prefs.blockCollapsed = collapsed
+
+          await resourceManager.updateResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
+            JSON.stringify(prefs)
+          )
+        } else {
+          const newPrefs = {
+            blockHeight: resizable ? height : undefined,
+            blockWidth: isImage && width !== 'auto' ? width : undefined,
+            blockCollapsed: collapsed
+          } as UserViewPrefsTagValue
+
+          await resourceManager.createResourceTag(
+            resource.id,
+            ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
+            JSON.stringify(newPrefs)
+          )
         }
-
-        prefs.blockCollapsed = collapsed
-
-        await resourceManager.updateResourceTag(
-          resource.id,
-          ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
-          JSON.stringify(prefs)
-        )
-      } else {
-        const newPrefs = {
-          blockHeight: resizable ? height : undefined,
-          blockCollapsed: collapsed
-        } as UserViewPrefsTagValue
-
-        await resourceManager.createResourceTag(
-          resource.id,
-          ResourceTagsBuiltInKeys.USER_VIEW_PREFS,
-          JSON.stringify(newPrefs)
-        )
+      } catch (error) {
+        log.error('Failed to update resource view preferences:', error)
       }
-    } catch (error) {
-      log.error('Failed to update resource height:', error)
-    }
-  }, 500)
+    },
+    500
+  )
 
   const handleInputChange = (event: Event) => {
     const target = event.target as HTMLInputElement
@@ -172,6 +191,12 @@
 
     startHeight = container?.offsetHeight ?? imgContainer?.offsetHeight ?? parseInt(containerHeight)
 
+    // For images, get the aspect ratio
+    if (isImage && imageBlockRef) {
+      startWidth = codeBlockELem?.offsetWidth ?? 0
+      imageBlockRef.getImageAspectRatio()
+    }
+
     log.debug('Start resizing', { container, imgContainer }, startHeight)
 
     // Capture events on window to prevent losing track during fast movements
@@ -194,6 +219,11 @@
     )
     const newHeightPx = `${newHeight}px`
     containerHeight = newHeightPx
+
+    // Update width for images (proportional resize)
+    if (isImage && imageBlockRef) {
+      imageBlockRef.updateWidthFromHeight(newHeight)
+    }
 
     window.getComputedStyle(codeBlockELem).height
   }
@@ -268,98 +298,217 @@
   })
 </script>
 
-<svelte:element
-  this={as}
-  bind:this={codeBlockELem}
-  id="collapsable-block-{id}"
-  class:isResizing
-  data-resizable={resizable}
-  class="collapsable-block relative bg-gray-900 flex flex-col overflow-hidden w-full {fullSize
-    ? ''
-    : 'rounded-xl'} {fullSize || resizable || collapsed ? '' : 'h-full max-h-[750px]'} {fullSize
-    ? 'h-full'
-    : ''}"
->
-  {#if !hideHeader}
-    <header
-      class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
-      contenteditable="false"
+{#if isImage && resource}
+  <ImageBlock
+    bind:this={imageBlockRef}
+    {resource}
+    {isEditable}
+    containerElement={codeBlockELem}
+    {collapsed}
+    {isResizing}
+    bind:containerHeight
+    bind:containerWidth
+  >
+    <svelte:element
+      this={as}
+      bind:this={codeBlockELem}
+      id="collapsable-block-{id}"
+      class:isResizing
+      data-resizable={resizable}
+      data-is-image={isImage}
+      class="collapsable-block relative bg-gray-900 flex flex-col overflow-hidden {fitContent
+        ? 'w-fit'
+        : containerWidth !== 'auto'
+          ? ''
+          : 'w-full'} {fullSize ? '' : 'rounded-xl'} {fullSize || resizable || collapsed
+        ? ''
+        : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
+      style={containerWidth !== 'auto' ? `width: ${containerWidth}` : ''}
     >
-      <div class="flex items-center gap-1 w-full">
-        {#if collapsable}
-          <button
-            tabindex="-1"
-            class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
-            on:click|stopPropagation={() => (collapsed = !collapsed)}
-          >
-            {#if loading}
-              <Icon name="spinner" />
-            {:else}
-              <Icon
-                name="chevron.right"
-                className="{!collapsed && expandable
-                  ? 'rotate-90'
-                  : ''} transition-transform duration-75"
-              />
-            {/if}
-          </button>
-        {/if}
-
-        {#if title}
-          <div class="w-full">
-            {#if loading && loadingMessage}
-              <div class=" flex-shrink-0">
-                {loadingMessage}
-              </div>
-            {:else}
-              <input
+      {#if !hideHeader}
+        <header
+          class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
+          contenteditable="false"
+        >
+          <div class="flex items-center gap-1 w-full">
+            {#if collapsable}
+              <button
                 tabindex="-1"
-                bind:this={inputElem}
-                on:input={handleInputChange}
-                on:keydown={handleInputKeydown}
-                on:blur={handleInputBlur}
-                on:click|stopPropagation
-                disabled={!isEditable}
-                value={title}
-                placeholder="Name"
-                class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
-              />
+                class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
+                on:click|stopPropagation={() => (collapsed = !collapsed)}
+              >
+                {#if loading}
+                  <Icon name="spinner" />
+                {:else}
+                  <Icon
+                    name="chevron.right"
+                    className="{!collapsed && expandable
+                      ? 'rotate-90'
+                      : ''} transition-transform duration-75"
+                  />
+                {/if}
+              </button>
+            {/if}
+
+            {#if title}
+              <div class="w-full">
+                {#if loading && loadingMessage}
+                  <div class=" flex-shrink-0">
+                    {loadingMessage}
+                  </div>
+                {:else}
+                  <input
+                    tabindex="-1"
+                    bind:this={inputElem}
+                    on:input={handleInputChange}
+                    on:keydown={handleInputKeydown}
+                    on:blur={handleInputBlur}
+                    on:click|stopPropagation
+                    disabled={!isEditable}
+                    value={title}
+                    placeholder="Name"
+                    class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
+                  />
+                {/if}
+              </div>
             {/if}
           </div>
-        {/if}
+
+          <div class="flex items-center gap-3">
+            <slot name="actions"></slot>
+          </div>
+        </header>
+      {/if}
+
+      {#if !collapsed && expandable}
+        <div
+          class="code-container bg-gray-900 w-full flex-grow overflow-auto {fullSize ||
+          resizable ||
+          collapsed
+            ? ''
+            : 'h-[750px]'}"
+          class:disabled={isResizing}
+          style={resizable && !fullSize && !collapsed
+            ? `height: ${containerHeight === '-1' ? 'auto' : containerHeight}; ${additionalWrapperStyles}`
+            : ''}
+        >
+          <slot height={containerHeight}></slot>
+        </div>
+      {/if}
+
+      {#if resizable && !collapsed}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+          class="resize-handle"
+          on:mousedown={handleResizeStart}
+          on:touchstart|preventDefault={handleResizeStart}
+        />
+      {/if}
+
+      {#if isImage && !collapsed && imageBlockRef}
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+          class="resize-handle-width"
+          on:mousedown={imageBlockRef.handleWidthResizeStart}
+          on:touchstart|preventDefault={imageBlockRef.handleWidthResizeStart}
+        />
+      {/if}
+    </svelte:element>
+  </ImageBlock>
+{:else}
+  <svelte:element
+    this={as}
+    bind:this={codeBlockELem}
+    id="collapsable-block-{id}"
+    class:isResizing
+    data-resizable={resizable}
+    class="collapsable-block relative bg-gray-900 flex flex-col overflow-hidden {fitContent
+      ? 'w-fit'
+      : 'w-full'} {fullSize ? '' : 'rounded-xl'} {fullSize || resizable || collapsed
+      ? ''
+      : 'h-full max-h-[750px]'} {fullSize ? 'h-full' : ''}"
+  >
+    {#if !hideHeader}
+      <header
+        class="flex-shrink-0 flex items-center justify-between gap-3 p-2"
+        contenteditable="false"
+      >
+        <div class="flex items-center gap-1 w-full">
+          {#if collapsable}
+            <button
+              tabindex="-1"
+              class="text-sm flex items-center gap-2 p-1 rounded-md hover:bg-gray-500/30 transition-colors opacity-40"
+              on:click|stopPropagation={() => (collapsed = !collapsed)}
+            >
+              {#if loading}
+                <Icon name="spinner" />
+              {:else}
+                <Icon
+                  name="chevron.right"
+                  className="{!collapsed && expandable
+                    ? 'rotate-90'
+                    : ''} transition-transform duration-75"
+                />
+              {/if}
+            </button>
+          {/if}
+
+          {#if title}
+            <div class="w-full">
+              {#if loading && loadingMessage}
+                <div class=" flex-shrink-0">
+                  {loadingMessage}
+                </div>
+              {:else}
+                <input
+                  tabindex="-1"
+                  bind:this={inputElem}
+                  on:input={handleInputChange}
+                  on:keydown={handleInputKeydown}
+                  on:blur={handleInputBlur}
+                  on:click|stopPropagation
+                  disabled={!isEditable}
+                  value={title}
+                  placeholder="Name"
+                  class="text-base font-medium bg-gray-800 w-full rounded-md p-1 bg-transparent focus:outline-none opacity-60 focus:opacity-100"
+                />
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <div class="flex items-center gap-3">
+          <slot name="actions"></slot>
+        </div>
+      </header>
+    {/if}
+
+    {#if !collapsed && expandable}
+      <div
+        class="code-container bg-gray-900 w-full flex-grow overflow-auto {fullSize ||
+        resizable ||
+        collapsed
+          ? ''
+          : 'h-[750px]'}"
+        class:disabled={isResizing}
+        style={resizable && !fullSize && !collapsed
+          ? `height: ${containerHeight === '-1' ? 'auto' : containerHeight}; ${additionalWrapperStyles}`
+          : ''}
+      >
+        <slot height={containerHeight}></slot>
       </div>
+    {/if}
 
-      <div class="flex items-center gap-3">
-        <slot name="actions"></slot>
-      </div>
-    </header>
-  {/if}
-
-  {#if !collapsed && expandable}
-    <div
-      class="code-container bg-gray-900 w-full flex-grow overflow-auto {fullSize ||
-      resizable ||
-      collapsed
-        ? ''
-        : 'h-[750px]'}"
-      class:disabled={isResizing}
-      style={resizable && !fullSize && !collapsed
-        ? `height: ${containerHeight === '-1' ? 'auto' : containerHeight}; ${additionalWrapperStyles}`
-        : ''}
-    >
-      <slot height={containerHeight}></slot>
-    </div>
-  {/if}
-
-  {#if resizable && !collapsed}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div
-      class="resize-handle"
-      on:mousedown={handleResizeStart}
-      on:touchstart|preventDefault={handleResizeStart}
-    />
-  {/if}
-</svelte:element>
+    {#if resizable && !collapsed}
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <div
+        class="resize-handle"
+        on:mousedown={handleResizeStart}
+        on:touchstart|preventDefault={handleResizeStart}
+      />
+    {/if}
+  </svelte:element>
+{/if}
 
 <style lang="scss">
   @use '@horizon/core/src/lib/styles/utils' as utils;
@@ -390,29 +539,64 @@
   }
 
   collapsable-block {
-    border: 1px solid light-dark(#bbb, #444);
+    border: 1px solid light-dark(oklch(93.1% 0 0), #444);
     position: relative;
 
     &[data-resizable='true'] {
       .resize-handle {
         position: absolute;
         bottom: -1px;
-        left: 0;
-        right: 0;
-        height: 4px;
+        left: 0.5rem;
+        right: 0.5rem;
+        height: 6px;
+        border-radius: 90%;
         cursor: ns-resize;
-        background: light-dark(#bbb, #444);
+        background: light-dark(oklch(93.1% 0 0), oklch(93.1% 0 0));
         opacity: 0;
         transition: opacity 0.1s ease;
+        z-index: 10;
+        pointer-events: all;
 
         &::after {
           content: '';
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          bottom: 1px;
+          bottom: 2px;
           width: 32px;
           height: 2px;
+          background: currentColor;
+          border-radius: 1px;
+        }
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+
+    &[data-is-image='true'] {
+      .resize-handle-width {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: -1px;
+        width: 4px;
+        cursor: ew-resize;
+        background: light-dark(#bbb, #444);
+        opacity: 0;
+        transition: opacity 0.1s ease;
+        z-index: 10;
+        pointer-events: all;
+
+        &::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          right: 1px;
+          width: 2px;
+          height: 32px;
           background: currentColor;
           border-radius: 1px;
         }
@@ -494,7 +678,8 @@
           height: 100% !important;
           :global(img) {
             height: 100% !important;
-            object-fit: cover;
+            width: 100% !important;
+            object-fit: contain;
           }
         }
       }

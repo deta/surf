@@ -1,7 +1,6 @@
 export * from './Buttons'
 export * from './Effects'
 export * from './Examples'
-export * from './Image'
 export * from './Link'
 export * from './Radio'
 export * from './Select'

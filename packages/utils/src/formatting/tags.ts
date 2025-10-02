@@ -133,6 +133,10 @@ export class ResourceTag {
   static onboarding(value: string) {
     return { name: ResourceTagsBuiltInKeys.ONBOARDING, value: `${value}` }
   }
+
+  static caption(value: string) {
+    return { name: ResourceTagsBuiltInKeys.CAPTION, value: value }
+  }
 }
 
 /**

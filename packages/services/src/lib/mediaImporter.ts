@@ -398,73 +398,78 @@ export const processPaste = async (e: ClipboardEvent) => {
     for (const item of clipboardDataItems) {
       if (item.kind === 'file') {
         const file = item.getAsFile()
-        result.push({
-          data: file as Blob,
-          type: 'file',
-          metadata: {
-            name: file?.name,
-            alt: '',
-            sourceURI: (file as any)?.path
-          }
-        })
+        if (file) {
+          result.push({
+            data: file as Blob,
+            type: 'file',
+            metadata: {
+              name: file?.name || 'pasted-file',
+              alt: '',
+              sourceURI: (file as any)?.path
+            }
+          })
+        }
       }
     }
-    return result
+    // Only return early if we actually found files
+    // Otherwise fall through to the navigator.clipboard.read() method
+    if (result.length > 0) {
+      return result
+    }
   }
 
   // Old way we got the items which breaks for files tho
-  const clipboardItems = await navigator.clipboard.read()
-  log.debug('clipboardItems', clipboardItems)
+  try {
+    const clipboardItems = await navigator.clipboard.read()
 
-  let num = 0
+    let num = 0
 
-  const blobs = await parseClipboardItems(clipboardItems)
-  log.debug(
-    'parsed items',
-    blobs.map((blob) => blob.type)
-  )
+    const blobs = await parseClipboardItems(clipboardItems)
 
-  await Promise.all(
-    blobs.map(async (blob) => {
-      const type = blob.type
+    await Promise.all(
+      blobs.map(async (blob) => {
+        const type = blob.type
 
-      if (type.startsWith('image')) {
-        const file = new File([blob], `image${num}.png`, { type: blob.type })
-        result.push({
-          data: file,
-          type: 'file',
-          metadata: {
-            name: file.name,
-            alt: '',
-            sourceURI: (file as any).path
+        if (type.startsWith('image')) {
+          const file = new File([blob], `image${num}.png`, { type: blob.type })
+          result.push({
+            data: file,
+            type: 'file',
+            metadata: {
+              name: file.name,
+              alt: '',
+              sourceURI: (file as any).path
+            }
+          })
+          num++
+        } else if (type.startsWith('text')) {
+          const text = await blob.text()
+          log.debug('text', text)
+
+          const url = parseStringIntoUrl(text)
+          if (url) {
+            result.push({
+              data: url,
+              type: 'url',
+              metadata: {}
+            })
+            num++
+          } else {
+            result.push({
+              data: text,
+              type: 'text',
+              metadata: {}
+            })
+            num++
           }
-        })
-        num++
-      } else if (type.startsWith('text')) {
-        const text = await blob.text()
-        log.debug('text', text)
-
-        const url = parseStringIntoUrl(text)
-        if (url) {
-          result.push({
-            data: url,
-            type: 'url',
-            metadata: {}
-          })
-          num++
         } else {
-          result.push({
-            data: text,
-            type: 'text',
-            metadata: {}
-          })
-          num++
+          log.warn('unhandled blob type', type)
         }
-      } else {
-        log.warn('unhandled blob type', type)
-      }
-    })
-  )
+      })
+    )
+  } catch (error) {
+    log.error('Error reading from navigator.clipboard:', error)
+  }
 
   return result
 }
