@@ -561,7 +561,7 @@
         {@render sourcesList(
           (searchResult ?? resources).slice(
             0,
-            searchResult ? Infinity : showAll ? resourceRenderCnt : 8
+            searchResult ? Infinity : showAll ? Infinity : resourceRenderCnt
           ),
           resources
         )}
