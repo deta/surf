@@ -260,9 +260,8 @@
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
 <div class="main" class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
-  {#if $tabOrientation === TabOrientation.Horizontal}
-    <!-- Horizontal Layout (Original) -->
-    <div class="app-bar">
+  {#if $tabOrientation === TabOrientation.Horizontal || !isMac()}
+    <div class="app-bar" class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
       <div class="tabs">
         {#if !isMac()}
           <div class="windows-menu-button">
@@ -271,89 +270,49 @@
             </Button>
           </div>
         {/if}
-        <TabsListWrapper orientation={$tabOrientation} />
+        {#if $tabOrientation === TabOrientation.Horizontal}
+          <TabsListWrapper orientation={$tabOrientation} />
+        {/if}
 
         {#if !isMac()}
           <AltWindowControls />
         {/if}
       </div>
     </div>
+  {/if}
 
-    <main>
-      <div class="tab-view">
-        {#if activeTabView}
-          <NavigationBar
-            bind:this={activeTabNavigationBar}
-            view={activeTabView}
-            onsearchinput={handleSearchInput}
-            tab={tabsService.activeTab}
-            roundLeftCorner
-            roundRightCorner={!viewManager.sidebarViewOpen}
-          />
-        {/if}
-        <div class="tab-contents">
-          {#each tabsService.tabs as tab, idx (tab.id)}
-            {#if tabsService.activatedTabs.includes(tab.id)}
-              <WebContentsView
-                view={tabsService.tabs[idx].view}
-                active={tabsService.activeTab?.id === tab.id}
-                location={ViewLocation.Tab}
-              />
-            {/if}
-          {/each}
-        </div>
-      </div>
-
-      <AppSidebar />
-    </main>
-  {:else}
-    <!-- Vertical Layout (New) -->
-    {#if !isMac()}
-      <div class="vertical-app-bar">
-        <div class="windows-menu-button">
-          <Button onclick={window.api.showAppMenuPopup} square size="md">
-            <Icon name="menu" size="1.1em" />
-          </Button>
-        </div>
-
-        <AltWindowControls />
-      </div>
-    {/if}
-
-    <div class="vertical-main">
+  <main class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
+    {#if $tabOrientation === TabOrientation.Vertical}
       <div class="vertical-tabs-container">
         <TabsListWrapper orientation={$tabOrientation} />
-      </div>
+      </div>{/if}
 
-      <div class="vertical-content">
-        <div class="tab-view">
-          {#if activeTabView}
-            <NavigationBar
-              bind:this={activeTabNavigationBar}
-              view={activeTabView}
-              onsearchinput={handleSearchInput}
-              tab={tabsService.activeTab}
-              roundLeftCorner={false}
-              roundRightCorner={!viewManager.sidebarViewOpen}
+    <div class="tab-view">
+      {#if activeTabView}
+        <NavigationBar
+          bind:this={activeTabNavigationBar}
+          view={activeTabView}
+          onsearchinput={handleSearchInput}
+          tab={tabsService.activeTab}
+          roundLeftCorner
+          roundRightCorner={!viewManager.sidebarViewOpen}
+        />
+      {/if}
+      <div class="tab-contents">
+        {#each tabsService.tabs as tab, idx (tab.id)}
+          {#if tabsService.activatedTabs.includes(tab.id)}
+            <WebContentsView
+              view={tabsService.tabs[idx].view}
+              active={tabsService.activeTab?.id === tab.id}
+              location={ViewLocation.Tab}
             />
           {/if}
-          <div class="tab-contents">
-            {#each tabsService.tabs as tab, idx (tab.id)}
-              {#if tabsService.activatedTabs.includes(tab.id)}
-                <WebContentsView
-                  view={tabsService.tabs[idx].view}
-                  active={tabsService.activeTab?.id === tab.id}
-                  location={ViewLocation.Tab}
-                />
-              {/if}
-            {/each}
-          </div>
-        </div>
-
-        <AppSidebar />
+        {/each}
       </div>
     </div>
-  {/if}
+
+    <AppSidebar />
+  </main>
 </div>
 
 <style lang="scss">
@@ -399,9 +358,25 @@
     :global(body.os_mac) & {
       padding-left: 5rem;
     }
+
+    &.vertical-layout {
+      //height: 40px;
+      min-height: 32px;
+      background: var(--app-background);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px;
+      app-region: drag;
+
+      :global(body.os_mac) & {
+        padding-left: 5rem;
+      }
+    }
   }
 
   .tabs {
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -414,6 +389,14 @@
     height: 100%;
     display: flex;
     justify-content: end;
+
+    &.vertical-layout {
+      flex: 1;
+      display: flex;
+      height: calc(100% - 32px);
+      justify-content: unset;
+      overflow: hidden;
+    }
   }
 
   .tab-view {
@@ -663,63 +646,8 @@
     app-region: no-drag;
   }
 
-  /* Vertical Layout Styles */
-  .vertical-app-bar {
-    height: 40px;
-    min-height: 32px;
-    background: var(--app-background);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 8px;
-    app-region: drag;
-
-    :global(body.os_mac) & {
-      padding-left: 5rem;
-    }
-
-    .windows-menu-button {
-      app-region: no-drag;
-    }
-
-    .mac-traffic-lights-spacer {
-      width: 5rem;
-      height: 100%;
-    }
-  }
-
-  .vertical-main {
-    flex: 1;
-    display: flex;
-    height: calc(100% - 32px);
-    overflow: hidden;
-  }
-
   .vertical-tabs-container {
     flex-shrink: 0;
     height: 100%;
-  }
-
-  .vertical-content {
-    flex: 1;
-    display: flex;
-    height: 100%;
-    min-width: 0;
-
-    .tab-view {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      min-width: 0;
-      width: 100%;
-      flex-grow: 0;
-      flex-shrink: 1;
-    }
-
-    .tab-contents {
-      height: 100%;
-      width: 100%;
-      position: relative;
-    }
   }
 </style>
