@@ -39,13 +39,13 @@
 <LeftPanel>
   <div class="wrapper">
     <div in:fly={{ x: 35, duration: 500, delay: 150 }}>
-      <span class="eyebrow">SURF ALPHA</span>
+      <span class="eyebrow">SURF BETA</span>
     </div>
     {#if showContent}
       <h1 in:fly={{ x: 35, duration: 500, delay: 250 }}>Help us improve Surf</h1>
 
       <p in:fly={{ x: 35, duration: 500, delay: 300 }}>
-        While Surf is in alpha we collect some anonymized telemetry on how you use Surf, to improve
+        While Surf is in beta we collect some anonymized telemetry on how you use Surf, to improve
         the product.
       </p>
 
