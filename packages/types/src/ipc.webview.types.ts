@@ -51,6 +51,7 @@ export enum WebViewEventSendNames {
   RemoveAnnotation = 'remove_annotation',
   UpdateAnnotation = 'update_annotation',
   AddToChat = 'add_to_chat',
+  FullscreenChange = 'fullscreen_change',
   PIPState = 'picture_in_picture_state'
 }
 
@@ -212,6 +213,7 @@ export type WebViewSendEvents = {
   [WebViewEventSendNames.AddToChat]: string
   [WebViewEventSendNames.Copy]: string
   [WebViewEventSendNames.PIPState]: { pip: boolean }
+  [WebViewEventSendNames.FullscreenChange]: { fullscreen: boolean }
 }
 
 export enum WebviewAnnotationEventNames {

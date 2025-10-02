@@ -351,6 +351,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
   private handleHtmlFullScreenChange(isFullScreen: boolean) {
     this.view.isFullScreen.set(isFullScreen)
     this.emit(WebContentsEmitterNames.FULLSCREEN_CHANGED, isFullScreen)
+    this.syncWrapperBounds()
   }
 
   private handleFocusChange(isFocused: boolean) {
@@ -405,6 +406,10 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       this.handleMouseClick(eventData as WebViewSendEvents[WebViewEventSendNames.MouseClick])
     } else if (eventType === WebViewEventSendNames.DetectedApp) {
       this.handleDetectedApp(eventData as WebViewSendEvents[WebViewEventSendNames.DetectedApp])
+    } else if (eventType === WebViewEventSendNames.FullscreenChange) {
+      this.handleHtmlFullScreenChange(
+        (eventData as WebViewSendEvents[WebViewEventSendNames.FullscreenChange]).fullscreen
+      )
     }
 
     this.emit(WebContentsEmitterNames.PRELOAD_EVENT, eventType, eventData)
@@ -574,13 +579,22 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       return
     }
 
-    const currentBounds = this.wrapperElement.getBoundingClientRect()
-    this.bounds.set({
-      x: currentBounds.x,
-      y: currentBounds.y,
-      width: currentBounds.width,
-      height: currentBounds.height
-    })
+    if (this.view.isFullScreenValue) {
+      this.bounds.set({
+        x: 0,
+        y: 0,
+        width: window.innerWidth,
+        height: window.innerHeight
+      })
+    } else {
+      const currentBounds = this.wrapperElement.getBoundingClientRect()
+      this.bounds.set({
+        x: currentBounds.x,
+        y: currentBounds.y,
+        width: currentBounds.width,
+        height: currentBounds.height
+      })
+    }
   }
 
   async waitForAppDetection(timeout: number) {

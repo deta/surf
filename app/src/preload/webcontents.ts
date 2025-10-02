@@ -701,6 +701,12 @@ window.addEventListener('submit', (e: Event) => {
   }
 })
 
+window.addEventListener('fullscreenchange', (e: Event) => {
+  sendPageEvent(WebViewEventSendNames.FullscreenChange, {
+    fullscreen: document.fullscreenElement != undefined
+  })
+})
+
 if (location.href.startsWith('https://chromewebstore.google.com/')) {
   try {
     setupChromeWebStoreApi()
