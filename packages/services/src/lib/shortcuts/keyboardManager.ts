@@ -8,18 +8,27 @@ interface KeyboardShortcut {
   priority: ShortcutPriority
 }
 
-function splitKeyCombo(str: string): string[] {
-  return (
-    str
-      // Turn "++" into a placeholder (so it's not treated as a delimiter)
-      .replace(/\+\+/g, '\u0000')
-      // Split at remaining "+"
-      .split('+')
-      // Restore placeholders as "+"
-      .map((part) => part.replace(/\u0000/g, '+'))
-      // Remove empties (if any)
-      .filter(Boolean)
-  )
+function splitKeyCombo(combo: string): string[] {
+  const parts = combo.split('+')
+  const modifiers: string[] = []
+  let key = ''
+
+  // Handle the case where the actual key is '+' (e.g., "Cmd++")
+  // This results in an empty string at the end of the split array
+  if (parts[parts.length - 1] === '' && parts.length > 1) {
+    // The key is '+', so remove the last empty string
+    parts.pop()
+    key = '+'
+
+    // All remaining non-empty parts are modifiers
+    modifiers.push(...parts.filter((p) => p !== ''))
+  } else {
+    // Normal case: last part is the key, rest are modifiers
+    key = parts[parts.length - 1]
+    modifiers.push(...parts.slice(0, -1).filter((p) => p !== ''))
+  }
+
+  return [...modifiers, key]
 }
 
 export class KeyboardManager {
