@@ -116,3 +116,9 @@ export interface CreateSubSpaceRequest {
   colors?: [string, string]
   useAsBrowsingContext?: boolean
 }
+
+export type SpaceIconChange = {
+  colors?: [string, string]
+  emoji?: string
+  imageIcon?: string
+}

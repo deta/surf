@@ -5,8 +5,6 @@ import '../assets/fonts/Gambarino-Regular.woff'
 import '../assets/fonts/Gambarino-Regular.woff2'
 import '@deta/ui/src/output.css'
 import '@deta/ui/src/app.css'
-import '@horizon/core/src/output.css'
-import '@horizon/core/src/lib/components/index.scss'
 import Resource from './Resource.svelte'
 import { mount } from 'svelte'
 

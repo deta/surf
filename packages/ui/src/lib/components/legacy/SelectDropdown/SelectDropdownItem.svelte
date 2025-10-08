@@ -1,6 +1,5 @@
 <script lang="ts">
   import { DynamicIcon, Icon } from '@deta/icons'
-  // import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import type { SelectItem } from '.'
 
   export let item: SelectItem

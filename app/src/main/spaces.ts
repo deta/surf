@@ -1,4 +1,4 @@
-import { SpaceBasicData } from '@horizon/core/src/lib/service/ipc/events'
+import { SpaceBasicData } from '@deta/services/ipc'
 
 let cachedSpaces: SpaceBasicData[] = []
 

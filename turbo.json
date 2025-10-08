@@ -83,18 +83,18 @@
       "outputs": ["build/**"],
       "outputLogs": "new-only"
     },
-    "@horizon/core#dev:tailwind": {
+    "@deta/ui#dev:tailwind": {
       "outputs": ["src/output.css"],
       "outputLogs": "new-only",
       "persistent": true
     },
-    "@horizon/core#build:tailwind": {
+    "@deta/ui#build:tailwind": {
       "outputs": ["src/output.css"],
       "outputLogs": "new-only"
     },
     "build:app:frontend": {
       "dependsOn": [
-        "@horizon/core#build:tailwind",
+        "@deta/ui#build:tailwind",
         "@deta/dragcula#build",
         "@deta/utils#build",
         "@deta/services#build",
@@ -121,7 +121,7 @@
       "dependsOn": [
         "@deta/backend#build",
         "@deta/backend-server#dev",
-        "@horizon/core#build:tailwind",
+        "@deta/ui#build:tailwind",
         "@deta/dragcula#build"
       ],
       "with": [
@@ -138,7 +138,7 @@
       "dependsOn": [
         "@deta/backend#build",
         "@deta/backend-server#dev",
-        "@horizon/core#build:tailwind",
+        "@deta/ui#build:tailwind",
         "@deta/dragcula#build"
       ],
       "with": [

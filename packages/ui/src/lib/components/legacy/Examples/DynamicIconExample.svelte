@@ -1,5 +1,4 @@
 <script lang="ts">
-  // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { DynamicIcon } from '@deta/icons'
 
   export let space: any

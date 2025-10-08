@@ -14,10 +14,8 @@
   // import ExplainerChat from './components/ExplainerChat.svelte'
 
   // import { provideConfig, createResourceManager, createTelemetry } from '@deta/services'
-  // import { provideOasis } from '@horizon/core/src/lib/service/oasis'
   // import ContextView from './components/ContextView.svelte'
   // import ImportView from './components/ImportView.svelte'
-  // import { provideSmartNotes } from '@horizon/core/src/lib/service/ai/note'
 
   let telemetryAPIKey = ''
   let telemetryActive = false

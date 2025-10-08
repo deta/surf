@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { useResourceManager, type Resource } from '@deta/services/resources'
-  import { type Notebook } from '@deta/services/notebook'
+  import {
+    useResourceManager,
+    type Resource,
+    type ResourceSearchResult
+  } from '@deta/services/resources'
   import { Button, PageMention, NotebookLoader, Renamable, contextMenu, openDialog } from '@deta/ui'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'
   import { ResourceLoader, NotebookCover } from '@deta/ui'
-  import { type ResourceSearchResult } from '@deta/services/resources'
   import type { ChatPrompt, NotebookEntry, Option, ViewLocation } from '@deta/types'
   import { ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import { SearchResourceTags, truncate, useDebounce, useLogScope, wait } from '@deta/utils'
@@ -13,7 +15,7 @@
   import { type MessagePortClient } from '@deta/services/messagePort'
   import { handleResourceClick, openResource } from '../handlers/notebookOpenHandlers'
   import { Icon } from '@deta/icons'
-  import { useNotebookManager } from '@deta/services/notebooks'
+  import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { type RouteResult } from '@mateothegreat/svelte5-router'
   import { useConfig, useTelemetry, useTeletypeService } from '@deta/services'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'

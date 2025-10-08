@@ -1,9 +1,8 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { useNotebookManager } from '@deta/services/notebooks'
+  import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { Button } from '@deta/ui'
   import { onMount } from 'svelte'
-  import { type Notebook } from '@deta/services/notebook'
   import { MaskedScroll, openDialog, contextMenu, NotebookCover } from '@deta/ui'
   import { conditionalArrayItem, truncate, useDebounce, useLogScope } from '@deta/utils'
   import TeletypeEntry from '../../Core/components/Teletype/TeletypeEntry.svelte'

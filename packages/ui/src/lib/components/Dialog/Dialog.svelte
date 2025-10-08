@@ -81,7 +81,6 @@
 
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte'
-  //import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
   import { DynamicIcon } from '@deta/icons'
 
   export let icon: string | undefined
@@ -164,7 +163,7 @@ again, as always and this doesnt actually happen. -->
 </dialog>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/lib/styles/utils' as utils;
 
   :global(dialog.starting) {
     scale: 0.9 !important;

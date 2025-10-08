@@ -38,6 +38,7 @@ export interface NotebookData {
   index: number
   pinned: boolean
   onboarding?: boolean
+  imported?: boolean
   customization: Partial<NotebookCustomization>
 }
 

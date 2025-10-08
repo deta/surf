@@ -94,23 +94,7 @@ export default defineConfig({
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     },
-    css: cssConfig,
-    resolve: {
-      alias: [
-        {
-          find: '$styles',
-          replacement: resolve(__dirname, '../../packages/core/src/lib/styles')
-        },
-        {
-          find: '$service',
-          replacement: '@horizon/core/src/lib/service'
-        },
-        {
-          find: '$utils',
-          replacement: '@horizon/core/src/lib/utils'
-        }
-      ]
-    }
+    css: cssConfig
   },
   preload: {
     envPrefix: 'P_VITE_',
@@ -183,7 +167,10 @@ export default defineConfig({
           overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html'),
           resource: resolve(__dirname, 'src/renderer/Resource/resource.html')
         },
-        external: ['html-minifier-terser/dist/htmlminifier.esm.bundle.js'],
+        external: [
+          'html-minifier-terser/dist/htmlminifier.esm.bundle.js',
+          '@internationalized/date'
+        ],
         output: {
           format: 'es',
           chunkFileNames: 'assets/[name]-[hash].js',
@@ -197,22 +184,6 @@ export default defineConfig({
     define: {
       'import.meta.env.PLATFORM': JSON.stringify(process.platform)
     },
-    css: cssConfig,
-    resolve: {
-      alias: [
-        {
-          find: '$styles',
-          replacement: resolve(__dirname, '../../packages/core/src/lib/styles')
-        },
-        {
-          find: '$service',
-          replacement: '@horizon/core/src/lib/service'
-        },
-        {
-          find: '$utils',
-          replacement: '@horizon/core/src/lib/utils'
-        }
-      ]
-    }
+    css: cssConfig
   }
 })

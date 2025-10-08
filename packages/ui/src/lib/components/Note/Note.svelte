@@ -82,7 +82,6 @@
   import { Toast, useToasts } from '@deta/ui'
   import { useConfig } from '@deta/services'
   import { createWikipediaAPI } from '@deta/web-parser'
-  // import EmbeddedResource from '@horizon/core/src/lib/components/Chat/Notes/EmbeddedResource.svelte'
   import { isGeneratedResource } from '@deta/services/resources'
   import { updateCaretPopoverVisibility, type CaretPosition } from '@deta/editor/extensions/CaretIndicator'
   import {

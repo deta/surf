@@ -236,8 +236,6 @@
   import ContextMenuItems from './ContextMenuItems.svelte'
   import { useLogScope } from '@deta/utils/io'
   import { clickOutside } from '@deta/utils'
-  // import type { OasisSpace } from '@horizon/core/src/lib/service/oasis'
-  // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
 
   import './style.scss'
   import { type Attachment } from 'svelte/attachments'

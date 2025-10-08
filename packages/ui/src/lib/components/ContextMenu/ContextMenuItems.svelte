@@ -2,7 +2,6 @@
   import { DynamicIcon, Icon } from '@deta/icons'
   import { closeContextMenu, type CtxItem } from './ContextMenu.svelte'
   import { onMount, tick, getContext, setContext } from 'svelte'
-  // import { OasisSpace } from '@horizon/core/src/lib/service/oasis'
   import { writable, get } from 'svelte/store'
 
   export let items: CtxItem[]

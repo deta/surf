@@ -5,12 +5,13 @@
   import RightPanel from './RightPanel.svelte'
   import { Icon } from '@deta/icons'
   import { fade, fly } from 'svelte/transition'
-  // import ImporterV2, {
-  //   type ImporterStep,
-  //   type ImportStatus
-  // } from '@horizon/core/src/lib/components/Core/Importer/ImporterV2.svelte'
-  import ImportStepTitle from '@horizon/core/src/lib/components/Core/Importer/ImportStepTitle.svelte'
-  import ImportStepDescription from '@horizon/core/src/lib/components/Core/Importer/ImportStepDescription.svelte'
+  import {
+    ImporterV2,
+    ImportStepTitle,
+    ImportStepDescription,
+    type ImporterStep,
+    type ImportStatus
+  } from '@deta/ui'
 
   import type { BrowserTypeItem } from '@deta/types'
 

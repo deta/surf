@@ -7,8 +7,6 @@
   import type { SelectItem } from '.'
   import SelectDropdownItem from './SelectDropdownItem.svelte'
   import { Icon } from '@deta/icons'
-  // import { useTabsViewManager } from '@horizon/core/src/lib/service/tabs'
-  // import type { WebContentsViewManager } from '@horizon/core/src/lib/service/viewManager'
 
   export let items: Readable<SelectItem[]>
   export let selected: string | null = null

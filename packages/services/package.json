@@ -125,6 +125,8 @@
     "@deta/backend": "*",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
+    "date-fns": "^3.2.0",
+    "p-queue": "^8.0.1",
     "typescript": "^5.5.0",
     "vite": "^7.1.0",
     "vite-plugin-markdown": "^2.2.0"

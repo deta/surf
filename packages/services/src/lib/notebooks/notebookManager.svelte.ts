@@ -366,6 +366,9 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
       description: '',
       index: this.notebooks.size,
       pinned: false,
+      onboarding: data.onboarding ?? false,
+      imported: data.imported ?? false,
+      customization: {},
       icon: {
         type: IconTypes.ICON,
         data: 'file-text-ai'

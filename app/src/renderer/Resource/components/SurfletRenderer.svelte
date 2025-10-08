@@ -785,7 +785,7 @@
 </code-block>
 
 <style lang="scss">
-  @use '@horizon/core/src/lib/styles/utils' as utils;
+  @use '@deta/ui/src/lib/styles/utils' as utils;
 
   :global(.code-wrapper code.hljs) {
     overflow: unset;

@@ -29,7 +29,8 @@ import {
   WebContentsViewManagerAction,
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs,
-  RendererType
+  RendererType,
+  type ControlWindow
 } from '@deta/types'
 
 import {
@@ -40,7 +41,6 @@ import {
   type ShowOpenDialog,
   SpaceBasicData
 } from '@deta/services/ipc'
-import { ControlWindow } from '@horizon/core/src/lib/types'
 
 import { getUserConfig, getUserStats } from '../main/config'
 import { initBackend } from './helpers/backend'
