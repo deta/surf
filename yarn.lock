@@ -1933,33 +1933,6 @@
     lodash.merge "^4.6.2"
     postcss-selector-parser "6.0.10"
 
-"@tiptap-pro/extension-details-content@^2.18.0-beta.13":
-  version "2.18.0-beta.13"
-  resolved "https://registry.tiptap.dev/@tiptap-pro%2fextension-details-content/-/extension-details-content-2.18.0-beta.13.tgz"
-  integrity sha512-CGDh6b1IkewJmzSI92o5Qm/ojhiHIuOtKMQE4zKePSfaJ6NU4G9vmZnHNv62zdpzd6mPiTti4VRt4k/mvQ1MQA==
-
-"@tiptap-pro/extension-details-summary@^2.18.0-beta.13":
-  version "2.18.0-beta.13"
-  resolved "https://registry.tiptap.dev/@tiptap-pro%2fextension-details-summary/-/extension-details-summary-2.18.0-beta.13.tgz"
-  integrity sha512-297DQKnj2p6YNYIqYNV4EVrVilMyHDbCmcoxd+mLq23m5GcaqN84rPdkVQc9YRNa0CbMxICVi7XseqzCYEtsig==
-
-"@tiptap-pro/extension-details@^2.18.0-beta.13":
-  version "2.18.0-beta.13"
-  resolved "https://registry.tiptap.dev/@tiptap-pro%2fextension-details/-/extension-details-2.18.0-beta.13.tgz"
-  integrity sha512-TwxNZUNwgAIAxS4lpziMQQWefTmDQnJhMxXGBymA26SfhomfwI1rB4vcaL3g6079HI9Ai7egMddXp3jAoFoOuw==
-
-"@tiptap-pro/extension-mathematics@^2.18.0-beta.13":
-  version "2.18.0-beta.13"
-  resolved "https://registry.tiptap.dev/@tiptap-pro%2fextension-mathematics/-/extension-mathematics-2.18.0-beta.13.tgz"
-  integrity sha512-L0xeQbmpQZza2KUaX1K1Ib2RGdrE/5l4991j2BrAqkW0icbK/VZ6VeqT1LeUP8WzV7FqH4jU5MNZ8GszxG9M2A==
-
-"@tiptap-pro/extension-unique-id@^2.18.1":
-  version "2.18.1"
-  resolved "https://registry.tiptap.dev/@tiptap-pro%2fextension-unique-id/-/extension-unique-id-2.18.1.tgz"
-  integrity sha512-fvWd1b62FGGEJhn9TC+fxLtN1KG4lnRJyUACBBPgD13ygw61ODHpjyhKScu+z2N9Sf3OL9Sk5RxopLzNUNHWgA==
-  dependencies:
-    uuid "^10.0.0"
-
 "@tiptap/core@^2.1.11", "@tiptap/core@^2.9.1":
   version "2.9.1"
   resolved "https://registry.npmjs.org/@tiptap/core/-/core-2.9.1.tgz"
@@ -2001,6 +1974,21 @@
   version "2.9.1"
   resolved "https://registry.npmjs.org/@tiptap/extension-code/-/extension-code-2.9.1.tgz"
   integrity sha512-WQqcVGe7i/E+yO3wz5XQteU1ETNZ00euUEl4ylVVmH2NM4Dh0KDjEhbhHlCM0iCfLUo7jhjC7dmS+hMdPUb+Tg==
+
+"@tiptap/extension-details-content@^2.26.3":
+  version "2.26.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-details-content/-/extension-details-content-2.26.3.tgz#5ac89f39f52aab51d698ff3ee12e18f1c88f7569"
+  integrity sha512-ZShGjO2+ObWQHgeQKkH9LlC2bR8BIYiAyrEJpWhvYpBAU94C4vyExCPt5rOMBTyQHaDLkRSt2g1k1H/xHa7wzQ==
+
+"@tiptap/extension-details-summary@^2.26.3":
+  version "2.26.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-details-summary/-/extension-details-summary-2.26.3.tgz#2b91d316e4015584c332a7ffd854a2da340c143f"
+  integrity sha512-rHLUBLAqQARnAhbuILqmk+ktTcjHzSx9dmvtYjm6sMhmThMm2TJ28puZ0TQQtJePuFlKtlIkPEKjCbyRfYZWyg==
+
+"@tiptap/extension-details@^2.26.3":
+  version "2.26.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-details/-/extension-details-2.26.3.tgz#caa4f15171dbb1b68912c4664815b22e7a0c7049"
+  integrity sha512-0ehFKYdPcwOPXzgguaKl2MekR1o+fUGE4V4lQon4k7JLcZusgZFPvop0vTG9uuphdeJdIXcl+kU3xaWzQjGjgQ==
 
 "@tiptap/extension-document@^2.9.1":
   version "2.9.1"
@@ -2071,6 +2059,11 @@
   resolved "https://registry.npmjs.org/@tiptap/extension-list-keymap/-/extension-list-keymap-2.11.1.tgz"
   integrity sha512-7zAocnzzqZiOBGkXXl+LbcuU3MyQs+Zu7dPh719joRqDskidJyKeDPoyxQ4PruKSjnSkBekXa8pWwOYL/LLeMA==
 
+"@tiptap/extension-mathematics@^2.26.3":
+  version "2.26.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-mathematics/-/extension-mathematics-2.26.3.tgz#d5b239a9fabd99f1f5a81332d442f21f6126e3bc"
+  integrity sha512-mqMnWltsfBvrf5E2DdBBsV76VtGwvH2ppWngAJ0YwFBcYfRea7u4yClq3gX8XTLZ7so5GATDlYUCti1ZXkmCeA==
+
 "@tiptap/extension-mention@^2.11.2":
   version "2.11.2"
   resolved "https://registry.npmjs.org/@tiptap/extension-mention/-/extension-mention-2.11.2.tgz"
@@ -2140,6 +2133,13 @@
   version "2.11.7"
   resolved "https://registry.npmjs.org/@tiptap/extension-underline/-/extension-underline-2.11.7.tgz"
   integrity sha512-NtoQw6PGijOAtXC6G+0Aq0/Z5wwEjPhNHs8nsjXogfWIgaj/aI4/zfBnA06eI3WT+emMYQTl0fTc4CUPnLVU8g==
+
+"@tiptap/extension-unique-id@^2.26.3":
+  version "2.26.3"
+  resolved "https://registry.yarnpkg.com/@tiptap/extension-unique-id/-/extension-unique-id-2.26.3.tgz#55f12f00a3541d00beae9a5e02e443e4e5e067f5"
+  integrity sha512-yfin27aBgzRD3TfUlr8pIRxhQ0hUjNIs4ca145J+c8twsZv9J8uxLUrjZtOk8cQHBB6h0+6UtFeCnFd3XAZ/qw==
+  dependencies:
+    uuid "^10.0.0"
 
 "@tiptap/pm@^2.1.11", "@tiptap/pm@^2.9.1":
   version "2.9.1"
