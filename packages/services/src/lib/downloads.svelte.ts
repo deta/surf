@@ -90,7 +90,14 @@ export class DownloadsManager {
 
       this.log.debug('new download request', downloadData, data)
 
-      if (!downloadData.silent) {
+      if (
+        !downloadData.silent &&
+        !(
+          downloadData.mimeType.startsWith('image/') ||
+          downloadData.mimeType === 'video/' ||
+          downloadData.mimeType === 'audio/'
+        )
+      ) {
         this.downloads.set(data.id, downloadData)
 
         return {
@@ -127,7 +134,7 @@ export class DownloadsManager {
 
       return {
         path: downloadData.savePath,
-        copyToDownloads: false // $userConfigSettings.save_to_user_downloads
+        copyToDownloads: !downloadData.silent
       }
     } catch (err) {
       this.log.error('download path error', err)
