@@ -2,6 +2,11 @@ export type DropdownItemSeparator = {
     type: 'separator'
 }
 
+export type DropdownItemTitle = {
+    type: 'title'
+    label: string
+}
+
 export type DropdownItemAction = {
     id: string
     label: string
@@ -9,10 +14,14 @@ export type DropdownItemAction = {
     disabled?: boolean
     disabledLabel?: string
     checked?: boolean
-    type?: 'default' | 'checkbox' | 'separator'
+    type?: 'default' | 'checkbox' | 'separator' | 'title'
     description?: string
     subItems?: DropdownItem[]
+    bottomSeparator?: boolean
+    topSeparator?: boolean
+    rightLabel?: string
+    rightIcon?: string
     action?: () => void
 }
 
-export type DropdownItem = DropdownItemAction | DropdownItemSeparator
+export type DropdownItem = DropdownItemAction | DropdownItemSeparator | DropdownItemTitle

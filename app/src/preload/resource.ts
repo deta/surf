@@ -14,7 +14,8 @@ import {
   type WebViewSendEvents,
   WebViewEventSendNames,
   WebContentsViewEvent,
-  RendererType
+  RendererType,
+  type SettingsWindowTab
 } from '@deta/types'
 import {
   IPC_EVENTS_RENDERER,
@@ -109,6 +110,10 @@ const api = {
 
   openURL: (url: string, active: boolean, scopeId?: string) => {
     IPC_EVENTS_RENDERER.openURL.send({ url, active, scopeId })
+  },
+
+  openSettings: (tab?: SettingsWindowTab) => {
+    IPC_EVENTS_RENDERER.openSettings.send(tab)
   },
 
   showOpenDialog: async (options: ShowOpenDialog['payload']) => {

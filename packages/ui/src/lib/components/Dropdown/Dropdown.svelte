@@ -33,56 +33,87 @@
 </script>
 
 {#snippet DropdownItem(item: DropdownItemAction)}
-	{#if item.subItems && item.subItems.length > 0}
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger class="tools-item-wrapper">
-                <div class="tools-item">
-                    <div class="tool-info">
-                        {#if item.icon}
-                            <DynamicIcon name={item.icon} size="16px" />
-                        {/if}
-                        <span>{item.label}</span>
-                    </div>
+  {#if item.type === 'separator'}
+    <DropdownMenu.Separator class="tool-separator" />
+  {:else if item.type === 'title'}
+    {#if item.topSeparator}
+      <DropdownMenu.Separator class="tool-separator" />
+    {/if}
+    <div class="tools-item-wrapper" data-disabled style="padding: 0.25rem 0.3rem; cursor: default;">
+        <div class="tools-item" style="justify-content: left;">
+            <span style="font-weight: 400; font-size: 0.85rem;">{item.label}</span>
+        </div>
+    </div>
+    {#if item.bottomSeparator}
+      <DropdownMenu.Separator class="tool-separator" />
+    {/if}
+	{:else if item.subItems && item.subItems.length > 0}
+    <DropdownMenu.Sub>
+      <DropdownMenu.SubTrigger class="tools-item-wrapper">
+          <div class="tools-item">
+              <div class="tool-info">
+                  {#if item.icon}
+                      <DynamicIcon name={item.icon} size="16px" />
+                  {/if}
+                  <span>{item.label}</span>
+              </div>
 
-                    <DynamicIcon name="chevron.right" size="12px" />
-                </div>
-            </DropdownMenu.SubTrigger>
-            <DropdownMenu.SubContent class="tools-dropdown" side={side} align={align} sideOffset={5}>
-              {#each item.subItems as subItem (subItem.id)}
-                {@render DropdownItem(subItem)}
-              {/each}
-            </DropdownMenu.SubContent>
-          </DropdownMenu.Sub>     
-        {:else}
-          <DropdownMenu.Item class="tools-item-wrapper" onclick={() => handleItemClick(item)} closeOnSelect={item.type !== 'checkbox'} disabled={item.disabled}>
-            <div class="tools-item">
-                <div class="tool-info">
-                    {#if item.icon}
-                        <DynamicIcon name={item.icon} size="16px" />
-                    {/if}
-                    <span>{item.label}</span>
-                </div>
+              <DynamicIcon name="chevron.right" size="12px" />
+          </div>
+      </DropdownMenu.SubTrigger>
+      <DropdownMenu.SubContent class="tools-dropdown" side="right" align="start" sideOffset={5}>
+        {#each item.subItems as subItem (subItem.id)}
+          {@render DropdownItem(subItem)}
+        {/each}
+      </DropdownMenu.SubContent>
+    </DropdownMenu.Sub>     
+  {:else}
+    {#if item.topSeparator}
+      <DropdownMenu.Separator class="tool-separator" />
+    {/if}
 
-                {#if item.disabled && item.disabledLabel}
-                    <span class="tool-disabled">{item.disabledLabel}</span>
-                {:else if item.type === 'checkbox'}
-                    <!-- svelte-ignore a11y_consider_explicit_label -->
-                    <button
-                        class="tool-toggle {item.checked ? 'active' : ''}"
-                        disabled={item.disabled}
-                    >
-                        <div class="toggle-track">
-                        <div class="toggle-thumb"></div>
-                        </div>
-                    </button>
-                {/if}
-            </div>
+    <DropdownMenu.Item class="tools-item-wrapper" onclick={() => handleItemClick(item)} closeOnSelect={item.type !== 'checkbox'} disabled={item.disabled}>
+      <div class="tools-item">
+          <div class="tool-info">
+              {#if item.icon}
+                  <DynamicIcon name={item.icon} size="16px" />
+              {/if}
+              <span>{item.label}</span>
+          </div>
 
-            {#if item.description}
-                <p class="tools-description">{item.description}</p>
-            {/if}
-          </DropdownMenu.Item>
-        {/if}
+          {#if item.disabled && item.disabledLabel}
+              <span class="tool-disabled">{item.disabledLabel}</span>
+          {:else if item.type === 'checkbox'}
+              <!-- svelte-ignore a11y_consider_explicit_label -->
+              <button
+                  class="tool-toggle {item.checked ? 'active' : ''}"
+                  disabled={item.disabled}
+              >
+                  <div class="toggle-track">
+                  <div class="toggle-thumb"></div>
+                  </div>
+              </button>
+          {:else if item.rightLabel || item.rightIcon}
+              <div class="tool-info">
+                  {#if item.rightLabel}
+                      <span class="tool-info-small">{item.rightLabel}</span>
+                  {/if}
+                  {#if item.rightIcon}
+                      <DynamicIcon name={item.rightIcon} size="16px" />
+                  {/if}
+              </div>
+          {/if}
+      </div>
+
+      {#if item.description}
+          <p class="tools-description">{item.description}</p>
+      {/if}
+    </DropdownMenu.Item>
+
+    {#if item.bottomSeparator}
+      <DropdownMenu.Separator class="tool-separator" />
+    {/if}
+  {/if}
 {/snippet}
 
   <DropdownMenu.Root>
@@ -100,11 +131,7 @@
     </DropdownMenu.Trigger>
     <DropdownMenu.Content class="tools-dropdown" side={side} align={align} sideOffset={5}>
       {#each items as item, idx (item?.id || `${item.type}-${idx}`)}
-        {#if item.type === 'separator'}
-          <DropdownMenu.Separator class="tool-separator" />
-        {:else}
-          {@render DropdownItem(item)}
-        {/if}
+        {@render DropdownItem(item)}
       {/each}
     </DropdownMenu.Content>
   </DropdownMenu.Root>
@@ -215,12 +242,25 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 14px;
+    overflow: hidden;
+
+    span {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+  }
+
+  .tool-info-small {
+    font-size: 0.75rem;
+    font-weight: 400;
   }
 
   .tools-description {
     font-size: 13px;
     color: #6b7280;
-    margin-top: 0.15rem;
+    margin-top: 0.05rem;
+    margin-bottom: 0.2rem;
     line-height: 1.2;
   }
 

@@ -6,7 +6,7 @@
   import { useLogScope } from '@deta/utils/io'
   import { onMount } from 'svelte'
   import ToolsList from './ToolsList.svelte'
-  import { AddToContextMenu } from '@deta/ui'
+  import { AddToContextMenu, ModelPicker } from '@deta/ui'
 
   const log = useLogScope('TeletypeEntry')
 
@@ -122,6 +122,7 @@
         <div class="controls-list">
           <AddToContextMenu {onFileSelect} {onMentionSelect} />
           <ToolsList teletype={teletypeService} />
+          <ModelPicker />
         </div>
       </svelte:fragment>
     </Teletype>

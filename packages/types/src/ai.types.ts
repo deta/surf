@@ -195,6 +195,13 @@ export const ProviderLabels = {
   [Provider.Custom]: 'Custom'
 }
 
+export const ProviderIcons = {
+  [Provider.OpenAI]: 'open-ai',
+  [Provider.Anthropic]: 'claude',
+  [Provider.Google]: 'gemini',
+  [Provider.Custom]: 'sparkles'
+}
+
 export type Model = {
   id: string
   label: string
@@ -218,7 +225,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT5],
     provider: Provider.OpenAI,
     tier: ModelTiers.Premium,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     supports_json_format: true,
     vision: true
   },
@@ -227,7 +234,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT5_Mini],
     provider: Provider.OpenAI,
     tier: ModelTiers.Standard,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     supports_json_format: true,
     vision: true
   },
@@ -236,7 +243,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4_1],
     provider: Provider.OpenAI,
     tier: ModelTiers.Premium,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     vision: true,
     supports_json_format: true
   },
@@ -245,7 +252,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4_1_Mini],
     provider: Provider.OpenAI,
     tier: ModelTiers.Standard,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     vision: true,
     supports_json_format: true
   },
@@ -254,7 +261,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4o],
     provider: Provider.OpenAI,
     tier: ModelTiers.Premium,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     vision: true,
     supports_json_format: true
   },
@@ -263,7 +270,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.GPT4oMini],
     provider: Provider.OpenAI,
     tier: ModelTiers.Standard,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     vision: true,
     supports_json_format: true
   },
@@ -272,7 +279,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.O3Mini],
     provider: Provider.OpenAI,
     tier: ModelTiers.Premium,
-    icon: 'open-ai',
+    icon: ProviderIcons[Provider.OpenAI],
     vision: false,
     supports_json_format: true
   },
@@ -281,7 +288,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet45],
     provider: Provider.Anthropic,
     tier: ModelTiers.Premium,
-    icon: 'claude',
+    icon: ProviderIcons[Provider.Anthropic],
     supports_json_format: true,
     vision: true
   },
@@ -290,7 +297,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet4],
     provider: Provider.Anthropic,
     tier: ModelTiers.Premium,
-    icon: 'claude',
+    icon: ProviderIcons[Provider.Anthropic],
     supports_json_format: true,
     vision: true
   },
@@ -299,7 +306,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet37],
     provider: Provider.Anthropic,
     tier: ModelTiers.Premium,
-    icon: 'claude',
+    icon: ProviderIcons[Provider.Anthropic],
     vision: true,
     supports_json_format: true,
     max_tokens: 128_000
@@ -309,7 +316,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeSonnet],
     provider: Provider.Anthropic,
     tier: ModelTiers.Premium,
-    icon: 'claude',
+    icon: ProviderIcons[Provider.Anthropic],
     vision: true,
     supports_json_format: true,
     max_tokens: 128_000
@@ -319,7 +326,7 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.ClaudeHaiku],
     provider: Provider.Anthropic,
     tier: ModelTiers.Standard,
-    icon: 'claude',
+    icon: ProviderIcons[Provider.Anthropic],
     supports_json_format: true,
     vision: false
   },
@@ -328,10 +335,25 @@ export const BUILT_IN_MODELS = [
     label: BuiltInModelLabels[BuiltInModelIDs.Gemini2Flash],
     provider: Provider.Google,
     tier: ModelTiers.Standard,
-    icon: 'gemini',
+    icon: ProviderIcons[Provider.Google],
     supports_json_format: true,
     vision: true
   }
 ] as Model[]
 
 export const DEFAULT_AI_MODEL = BuiltInModelIDs.GPT4_1
+
+export const RECOMMENDED_AI_MODELS = [
+  {
+    id: BuiltInModelIDs.GPT5,
+    description: 'Most capable model for general use cases'
+  },
+  {
+    id: BuiltInModelIDs.ClaudeSonnet45,
+    description: 'Excellent analysis and creative skills'
+  },
+  {
+    id: BuiltInModelIDs.Gemini2Flash,
+    description: 'Quick responses with solid reliability'
+  }
+]

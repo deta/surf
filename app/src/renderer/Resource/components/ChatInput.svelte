@@ -16,7 +16,7 @@
   import { useConfig } from '@deta/services'
   import { startingClass } from '@deta/utils/dom'
   import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
-  import { AddToContextMenu, Dropdown } from '@deta/ui'
+  import { AddToContextMenu, Dropdown, ModelPicker } from '@deta/ui'
   import type { AIChatStatusMessage, AITool } from '@deta/types'
 
   const log = useLogScope('ChatInput')
@@ -292,6 +292,7 @@
           align="end"
           disabled={$isLoading}
         />
+        <ModelPicker align="end" />
         <div>
           <button
             class="submit-btn -mr-1.5"
@@ -365,7 +366,8 @@
       font-family: var(--default);
       font-weight: var(--medium);
       font-size: 0.9rem;
-      background: linear-gradient(
+      background:
+        linear-gradient(
           90deg,
           transparent 0%,
           transparent 40%,
