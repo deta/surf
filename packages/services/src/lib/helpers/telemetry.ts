@@ -5,7 +5,8 @@ export const setupTelemetry = (apiKey?: string) => {
   let telemetryActive = false
   let telemetryProxyUrl: string | undefined = undefined
   if (
-    (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) &&
+    import.meta.env.PROD &&
+    import.meta.env.R_VITE_TELEMETRY_ENABLED &&
     import.meta.env.R_VITE_TELEMETRY_PROXY_URL
   ) {
     telemetryActive = true
