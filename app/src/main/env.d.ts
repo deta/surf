@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly M_VITE_APP_UPDATES_PROXY_URL?: string
   readonly M_VITE_APP_UPDATES_CHANNEL?: string
   readonly M_VITE_ANNOUCEMENTS_URL?: string
+  readonly M_VITE_CHECK_ACTIVATION?: string
+  readonly M_VITE_API_BASE?: string
 }
 
 interface ImportMeta {

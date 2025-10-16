@@ -8,50 +8,8 @@
   import PersonaView from './components/PersonaView.svelte'
   import DoneView from './components/DoneView.svelte'
   import AnalyticsView from './components/AnalyticsView.svelte'
-  // import LanguageView from './components/LanguageView.svelte'
-  // import PrefsView from './components/PrefsView.svelte'
-  // import ExplainerStuff from './components/ExplainerStuff.svelte'
-  // import ExplainerChat from './components/ExplainerChat.svelte'
 
-  // import { provideConfig, createResourceManager, createTelemetry } from '@deta/services'
-  // import ContextView from './components/ContextView.svelte'
-  // import ImportView from './components/ImportView.svelte'
-
-  let telemetryAPIKey = ''
-  let telemetryActive = false
-  let telemetryProxyUrl: string | undefined = undefined
-  if (import.meta.env.PROD || import.meta.env.R_VITE_TELEMETRY_ENABLED) {
-    telemetryActive = true
-    telemetryProxyUrl = import.meta.env.R_VITE_TELEMETRY_PROXY_URL
-    if (!telemetryProxyUrl) {
-      telemetryAPIKey = import.meta.env.R_VITE_TELEMETRY_API_KEY
-    }
-  }
-
-  // const telemetry = createTelemetry({
-  //   apiKey: telemetryAPIKey,
-  //   active: telemetryActive,
-  //   proxyUrl: telemetryProxyUrl
-  // })
-
-  // const config = provideConfig()
-  // const resourceManager = createResourceManager(telemetry, config)
-  // const smartNotes = provideSmartNotes(resourceManager)
-  // provideOasis(resourceManager, config, undefined)
-
-  type ViewType =
-    | 'email'
-    | 'invite'
-    | 'persona'
-    // | 'import'
-    // | 'explainer.stuff'
-    // | 'contexts'
-    // | 'explainer.chat'
-    // | 'language'
-    // | 'prefs'
-    //  | 'app_preferences'
-    | 'disclaimer'
-    | 'done'
+  type ViewType = 'email' | 'invite' | 'persona' | 'disclaimer' | 'done'
 
   //@ts-ignore
   let presetInviteCode: string = window.presetInviteCode || ''
@@ -62,7 +20,6 @@
   let view: ViewType = initialView
 
   let viewHistory: ViewType[] = [initialView]
-  let embeddingModel: UserSettings['embedding_model'] = 'english_small'
   let tabsOrientation: 'horizontal' | 'vertical' = 'horizontal'
   let selectedPersonas: string[] = []
 
@@ -128,21 +85,12 @@
     }
   }
 
-  // const handleModelChange = (event: CustomEvent<UserSettings['embedding_model']>) => {
-  //   embeddingModel = event.detail
-  // }
-
-  // const handleOrientationChange = (event: CustomEvent<'horizontal' | 'vertical'>) => {
-  //   tabsOrientation = event.detail
-  // }
-
   const handlePersonasChange = (event: CustomEvent<string[]>) => {
     selectedPersonas = event.detail
   }
 
   const handleStart = async () => {
     await window.api.updateUserConfigSettings({
-      // embedding_model: embeddingModel,
       tabs_orientation: tabsOrientation,
       personas: selectedPersonas
     })

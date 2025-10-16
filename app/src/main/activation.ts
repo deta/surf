@@ -4,6 +4,14 @@ import { fetch } from 'cross-fetch'
 import { v4 as uuidv4 } from 'uuid'
 
 export const checkIfAppIsActivated = async (appVersion: string, apiKey?: string) => {
+  if (!import.meta.env.M_VITE_CHECK_ACTIVATION) {
+    return true
+  }
+
+  if (!import.meta.env.M_VITE_API_BASE) {
+    throw new Error('M_VITE_API_BASE is not set')
+  }
+
   const existingUserConfig = getUserConfig()
   const existingApiKey = apiKey || existingUserConfig.api_key
   if (!existingApiKey) return null
