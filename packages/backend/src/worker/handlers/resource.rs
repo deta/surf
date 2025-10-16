@@ -10,12 +10,12 @@ use crate::{
             current_time, random_uuid, CompositeResource, EmbeddingResource, EmbeddingType,
             InternalResourceTagNames, PostProcessingJob, Resource, ResourceMetadata,
             ResourceOrSpace, ResourceProcessingState, ResourceTag, ResourceTagFilter,
-            ResourceTextContentMetadata, ResourceTextContentType, SearchEngine, SearchResult,
-            SearchResultItem, SearchResultSimple, SearchResultSpaceItem, SpaceEntryExtended,
-            SpaceEntryType,
+            ResourceTextContentMetadata, ResourceTextContentType, SearchEngine,
+            SearchResourcesParams, SearchResult, SearchResultItem, SearchResultSimple,
+            SearchResultSpaceItem, SpaceEntryExtended, SpaceEntryType,
         },
     },
-    worker::worker::{send_worker_response, Worker},
+    worker::{send_worker_response, Worker},
     BackendError, BackendResult,
 };
 use std::{path::Path, str::FromStr};
@@ -93,20 +93,14 @@ impl Worker {
                 match tag_name {
                     Ok(InternalResourceTagNames::Deleted) => {
                         return Err(BackendError::GenericError(
-                            format!(
-                                "Tag name {} is reserved",
-                                InternalResourceTagNames::Deleted.to_string(),
-                            )
-                            .to_owned(),
+                            format!("Tag name {} is reserved", InternalResourceTagNames::Deleted)
+                                .to_owned(),
                         ));
                     }
                     Ok(InternalResourceTagNames::Type) => {
                         return Err(BackendError::GenericError(
-                            format!(
-                                "Tag name {} is reserved",
-                                InternalResourceTagNames::Type.to_string(),
-                            )
-                            .to_owned(),
+                            format!("Tag name {} is reserved", InternalResourceTagNames::Type)
+                                .to_owned(),
                         ));
                     }
                     _ => {}
@@ -280,16 +274,9 @@ impl Worker {
     #[instrument(level = "trace", skip(self))]
     pub fn search_resources(
         &mut self,
-        query: String,
-        resource_tag_filters: Option<Vec<ResourceTagFilter>>,
-        semantic_search_enabled: Option<bool>,
-        embeddings_distance_threshold: Option<f32>,
-        embeddings_limit: Option<i64>,
-        include_annotations: Option<bool>,
-        space_id: Option<String>,
-        keyword_limit: Option<i64>,
+        params: SearchResourcesParams,
     ) -> BackendResult<SearchResult> {
-        if let Some(resource_tag_filters) = &resource_tag_filters {
+        if let Some(resource_tag_filters) = &params.resource_tag_filters {
             // we use an `INTERSECT` for each resouce tag filter
             // so limiting the number of filters
             if resource_tag_filters.len() > 20 {
@@ -299,22 +286,22 @@ impl Worker {
                 )));
             }
         }
-        let keyword_limit = keyword_limit.unwrap_or(100);
-        let include_annotations = include_annotations.unwrap_or(false);
+        let keyword_limit = params.keyword_limit.unwrap_or(100);
+        let include_annotations = params.include_annotations.unwrap_or(false);
 
-        let semantic_search_enabled = semantic_search_enabled.unwrap_or_default();
+        let semantic_search_enabled = params.semantic_search_enabled.unwrap_or_default();
 
-        let embeddings_distance_threshold = embeddings_distance_threshold.unwrap_or(0.4);
-        let embeddings_limit = embeddings_limit.unwrap_or(100);
+        let embeddings_distance_threshold = params.embeddings_distance_threshold.unwrap_or(0.4);
+        let embeddings_limit = params.embeddings_limit.unwrap_or(100);
 
         let mut seen_keys: HashSet<String> = HashSet::new();
         let mut results: Vec<SearchResultItem> = vec![];
 
         let filtered_resource_ids =
-            self.get_filtered_ids_for_search(resource_tag_filters, space_id.clone())?;
+            self.get_filtered_ids_for_search(params.resource_tag_filters, params.space_id.clone())?;
 
         let db_results = self.db.search_resources(
-            &query,
+            &params.query,
             &filtered_resource_ids,
             include_annotations,
             Some(keyword_limit),
@@ -334,7 +321,7 @@ impl Worker {
         if semantic_search_enabled {
             let vector_search_results = self.ai.vector_search(
                 &self.db,
-                query.clone(),
+                params.query.clone(),
                 embeddings_limit as usize,
                 filtered_resource_ids,
                 true,
@@ -356,9 +343,9 @@ impl Worker {
         }
         let spaces: Vec<SearchResultSpaceItem>;
         let mut space_entries: Option<Vec<SpaceEntryExtended>> = None;
-        match space_id {
+        match params.space_id {
             Some(space_id) => {
-                spaces = self.db.search_sub_space_entries(&space_id, &query)?;
+                spaces = self.db.search_sub_space_entries(&space_id, &params.query)?;
                 let resource_ids = results
                     .iter()
                     .map(|r| r.resource.resource.id.clone())
@@ -400,7 +387,7 @@ impl Worker {
                 space_entries = Some(entries);
             }
             None => {
-                spaces = self.db.search_spaces(&query)?;
+                spaces = self.db.search_spaces(&params.query)?;
             }
         }
         Ok(SearchResult {
@@ -447,7 +434,7 @@ impl Worker {
         self.tqueue_tx
             .send(ProcessorMessage::ProcessResource(
                 job.clone(),
-                resource.clone(),
+                Box::new(resource.clone()),
             ))
             .map_err(|err| {
                 let mut errors = vec![BackendError::GenericError(err.to_string())];
@@ -543,7 +530,7 @@ impl Worker {
         for (c, m) in content.iter().zip(metadata.iter()) {
             let embedding_chunks = self.ai.chunker.chunk(c);
             // same metadata for each chunk
-            metadatas.extend(std::iter::repeat(m.clone()).take(embedding_chunks.len()));
+            metadatas.extend(std::iter::repeat_n(m.clone(), embedding_chunks.len()));
             chunks.extend(embedding_chunks);
         }
         let old_keys = self
@@ -774,26 +761,8 @@ pub fn handle_resource_message(
             let result = worker.list_resources_by_tags_no_space(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::SearchResources {
-            query,
-            resource_tag_filters,
-            semantic_search_enabled,
-            embeddings_distance_threshold,
-            embeddings_limit,
-            include_annotations,
-            space_id,
-            keyword_limit,
-        } => {
-            let result = worker.search_resources(
-                query,
-                resource_tag_filters,
-                semantic_search_enabled,
-                embeddings_distance_threshold,
-                embeddings_limit,
-                include_annotations,
-                space_id,
-                keyword_limit,
-            );
+        ResourceMessage::SearchResources(search_params) => {
+            let result = worker.search_resources(search_params);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::UpdateResource(resource) => {

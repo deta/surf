@@ -1,10 +1,8 @@
 pub mod embeddings;
-pub mod handlers;
-pub mod llm;
 pub mod server;
 
 use crate::embeddings::model::EmbeddingModelMode;
-use crate::server::server::LocalAIServer;
+use crate::server::LocalAIServer;
 use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
@@ -88,7 +86,7 @@ fn main() {
         local_llm_mode,
         embedding_model_mode,
     )
-    .unwrap();
+    .expect("failed to create new server");
 
     info!("healthy");
     server.listen();

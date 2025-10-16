@@ -1,11 +1,11 @@
-use super::models::TokenModel;
+use super::TokenModel;
 use crate::ai::llm::models::{Message, MessageContent};
 use std::collections::HashSet;
 
 // reference: https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
 fn estimate_text_tokens(text: &str) -> usize {
     // ~4 characters per token
-    (text.len() + 3) / 4
+    text.len().div_ceil(4)
 }
 
 // TODO: properly implement this function

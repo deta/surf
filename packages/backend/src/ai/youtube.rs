@@ -1,5 +1,5 @@
 use crate::BackendError;
-use quick_xml::{Reader, events::Event};
+use quick_xml::{events::Event, Reader};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,7 +38,10 @@ pub fn extract_youtube_video_id(url: &str) -> Option<String> {
     None
 }
 
-pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result<YoutubeTranscript, BackendError> {
+pub fn fetch_transcript(
+    video_url: &str,
+    preferred_lang: Option<&str>,
+) -> Result<YoutubeTranscript, BackendError> {
     let rt = tokio::runtime::Runtime::new()
         .map_err(|e| BackendError::GenericError(format!("Failed to create runtime: {}", e)))?;
 
@@ -76,30 +79,53 @@ pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result
         .get("captions")
         .and_then(|c| c.get("playerCaptionsTracklistRenderer"))
         .and_then(|p| p.get("captionTracks"))
-        .ok_or_else(|| BackendError::GenericError("No captions found for this video".to_string()))?;
-    
+        .ok_or_else(|| {
+            BackendError::GenericError("No captions found for this video".to_string())
+        })?;
+
     // Find the best caption track
     let tracks = captions.as_array().unwrap();
     if tracks.is_empty() {
-        return Err(BackendError::GenericError("No caption tracks found".to_string()));
+        return Err(BackendError::GenericError(
+            "No caption tracks found".to_string(),
+        ));
     }
 
     let preferred_lang = preferred_lang.unwrap_or("en");
-    
+
     // First try: find track in preferred language (prioritize manual over auto-generated)
-    let mut selected_track = tracks.iter().find(|track| {
-        let lang_code = track.get("languageCode").and_then(|l| l.as_str()).unwrap_or("");
-        let is_auto = track.get("kind").and_then(|k| k.as_str()).map(|k| k == "asr").unwrap_or(false);
-        lang_code == preferred_lang && !is_auto
-    }).or_else(|| tracks.iter().find(|track| {
-        let lang_code = track.get("languageCode").and_then(|l| l.as_str()).unwrap_or("");
-        lang_code == preferred_lang
-    }));
+    let mut selected_track = tracks
+        .iter()
+        .find(|track| {
+            let lang_code = track
+                .get("languageCode")
+                .and_then(|l| l.as_str())
+                .unwrap_or("");
+            let is_auto = track
+                .get("kind")
+                .and_then(|k| k.as_str())
+                .map(|k| k == "asr")
+                .unwrap_or(false);
+            lang_code == preferred_lang && !is_auto
+        })
+        .or_else(|| {
+            tracks.iter().find(|track| {
+                let lang_code = track
+                    .get("languageCode")
+                    .and_then(|l| l.as_str())
+                    .unwrap_or("");
+                lang_code == preferred_lang
+            })
+        });
 
     // Second try: find any non-auto-generated track
     if selected_track.is_none() {
         selected_track = tracks.iter().find(|track| {
-            let is_auto = track.get("kind").and_then(|k| k.as_str()).map(|k| k == "asr").unwrap_or(false);
+            let is_auto = track
+                .get("kind")
+                .and_then(|k| k.as_str())
+                .map(|k| k == "asr")
+                .unwrap_or(false);
             !is_auto
         });
     }
@@ -112,7 +138,7 @@ pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result
         .get("baseUrl")
         .and_then(|u| u.as_str())
         .ok_or_else(|| BackendError::GenericError("Failed to get caption URL".to_string()))?;
-    
+
     // Fetch transcript XML
     let xml_text = rt.block_on(async {
         reqwest::Client::new()
@@ -143,21 +169,19 @@ pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result
                 if e.name().as_ref() == b"text" {
                     in_text = true;
                     // Parse start and duration attributes
-                    for attr in e.attributes() {
-                        if let Ok(attr) = attr {
-                            match attr.key.as_ref() {
-                                b"start" => {
-                                    if let Ok(start) = String::from_utf8_lossy(&attr.value).parse() {
-                                        current_start = start;
-                                    }
+                    for attr in e.attributes().flatten() {
+                        match attr.key.as_ref() {
+                            b"start" => {
+                                if let Ok(start) = String::from_utf8_lossy(&attr.value).parse() {
+                                    current_start = start;
                                 }
-                                b"dur" => {
-                                    if let Ok(duration) = String::from_utf8_lossy(&attr.value).parse() {
-                                        current_duration = duration;
-                                    }
-                                }
-                                _ => {}
                             }
+                            b"dur" => {
+                                if let Ok(duration) = String::from_utf8_lossy(&attr.value).parse() {
+                                    current_duration = duration;
+                                }
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -177,7 +201,12 @@ pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result
                 });
             }
             Ok(Event::Eof) => break,
-            Err(e) => return Err(BackendError::GenericError(format!("Error parsing XML: {}", e))),
+            Err(e) => {
+                return Err(BackendError::GenericError(format!(
+                    "Error parsing XML: {}",
+                    e
+                )))
+            }
             _ => (),
         }
         buf.clear();
@@ -185,8 +214,6 @@ pub fn fetch_transcript(video_url: &str, preferred_lang: Option<&str>) -> Result
 
     Ok(YoutubeTranscript {
         transcript: full_text.trim().to_string(),
-        metadata: YoutubeTranscriptMetadata {
-            transcript_pieces,
-        },
+        metadata: YoutubeTranscriptMetadata { transcript_pieces },
     })
 }

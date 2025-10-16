@@ -1,3 +1,4 @@
+use crate::store::models::SearchResourcesParams;
 use crate::{api::message::*, store::models, worker::tunnel::WorkerTunnel};
 use neon::prelude::*;
 use neon::types::JsDate;
@@ -590,7 +591,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::SearchResources {
+        WorkerMessage::ResourceMessage(ResourceMessage::SearchResources(SearchResourcesParams {
             query,
             resource_tag_filters,
             semantic_search_enabled,
@@ -599,7 +600,7 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             include_annotations,
             space_id,
             keyword_limit,
-        }),
+        })),
         deferred,
     );
 

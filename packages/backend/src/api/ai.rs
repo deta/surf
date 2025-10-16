@@ -1,5 +1,5 @@
 use crate::{
-    ai::llm::{client::client::Model, models::Message},
+    ai::llm::{client::Model, models::Message},
     api::message::*,
     worker::tunnel::WorkerTunnel,
 };
@@ -184,6 +184,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
     fn default_limit() -> i32 {
         20
     }
+    // TODO: why separate struct from ChatInput?
     #[derive(Serialize, Deserialize, Debug)]
     struct NoteMessageOptions {
         pub query: String,
@@ -220,7 +221,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             note_resource_id: opts.note_resource_id,
             model: opts.model,
             custom_key: opts.custom_key,
-            resource_ids: opts.resource_ids,
+            resource_ids: opts.resource_ids.unwrap_or_default(),
             inline_images: opts.inline_images,
             number_documents: opts.limit,
             general: opts.general,
@@ -237,6 +238,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
     fn default_limit() -> i32 {
         20
     }
+    // TODO: why separate struct from ChatInput?
     #[derive(Serialize, Deserialize, Debug)]
     struct ChatMessageOptions {
         pub query: String,
@@ -273,10 +275,10 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             session_id: opts.chat_id,
             model: opts.model,
             custom_key: opts.custom_key,
-            resource_ids: opts.resource_ids,
+            resource_ids: opts.resource_ids.unwrap_or_default(),
             inline_images: opts.inline_images,
             number_documents: opts.limit,
-            rag_only: opts.rag_only,
+            search_only: opts.rag_only,
             general: opts.general,
             app_creation: opts.app_creation,
         }),

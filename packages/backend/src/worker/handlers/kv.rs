@@ -1,6 +1,6 @@
 use crate::{
     api::message::{KVStoreMessage, TunnelOneshot},
-    worker::worker::{send_serialized_worker_response, send_worker_response, Worker},
+    worker::{send_serialized_worker_response, send_worker_response, Worker},
 };
 
 #[tracing::instrument(level = "trace", skip(worker, oneshot))]

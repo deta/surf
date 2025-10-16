@@ -99,7 +99,7 @@ impl Database {
         let query = "SELECT tag_value FROM resource_tags WHERE resource_id = ?1 AND tag_name = ?2";
         self.conn
             .query_row(query, rusqlite::params![reesource_id, tag_name], |row| {
-                Ok(row.get(0)?)
+                row.get(0)
             })
             .optional()
             .map_err(|e| e.into())

@@ -7,7 +7,7 @@ use crate::{
             SpaceEntryExtended, SpaceEntryType, SpaceExtended, SubSpaceEntry,
         },
     },
-    worker::worker::{send_worker_response, Worker},
+    worker::{send_worker_response, Worker},
     BackendResult,
 };
 

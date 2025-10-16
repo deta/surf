@@ -159,9 +159,9 @@ impl Database {
     // search for resources that match the given tags and only return the resource ids
     pub fn list_resources_by_tags(
         &self,
-        mut tags: Vec<ResourceTagFilter>,
+        tags: Vec<ResourceTagFilter>,
     ) -> BackendResult<SearchResultSimple> {
-        let filtered_resource_ids = self.list_resource_ids_by_tags(&mut tags)?;
+        let filtered_resource_ids = self.list_resource_ids_by_tags(&tags)?;
 
         if filtered_resource_ids.is_empty() {
             return Ok(SearchResultSimple {

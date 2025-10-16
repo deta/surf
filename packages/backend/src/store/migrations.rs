@@ -10,7 +10,7 @@ use rust_embed::RustEmbed;
 struct Migrations;
 
 fn get_current_db_version(conn: &Connection) -> BackendResult<u64> {
-    let version: u64 = conn.query_row("PRAGMA user_version", [], |row| Ok(row.get(0)?))?;
+    let version: u64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
     Ok(version)
 }
 
@@ -105,7 +105,6 @@ mod tests {
     use rusqlite::Connection;
     use tempfile::tempdir;
 
-    // Helper to create a test database
     fn setup_test_db() -> (Connection, tempfile::TempDir) {
         let temp_dir = tempdir().unwrap();
         let db_path = temp_dir.path().join("test.db");
@@ -117,11 +116,9 @@ mod tests {
     fn test_get_current_db_version() {
         let (conn, _temp_dir) = setup_test_db();
 
-        // Default version should be 0
         let version = get_current_db_version(&conn).unwrap();
         assert_eq!(version, 0);
 
-        // Update version and check
         conn.execute("PRAGMA user_version = 5", []).unwrap();
         let version = get_current_db_version(&conn).unwrap();
         assert_eq!(version, 5);
@@ -131,27 +128,22 @@ mod tests {
     fn test_update_db_version() {
         let (conn, _temp_dir) = setup_test_db();
 
-        // Update to version 10
         update_db_version(&conn, 10).unwrap();
 
-        // Verify version is updated
         let version: u64 = conn
-            .query_row("PRAGMA user_version", [], |row| Ok(row.get(0)?))
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
             .unwrap();
         assert_eq!(version, 10);
     }
 
-    // This test requires creating mock embedded files
     #[test]
     fn test_parse_migration_filenames() {
-        // This test will depend on the actual migrations folder content
-        // For proper unit testing, you might need to mock the RustEmbed trait
+        // this will depend on the actual migrations folder content
+        // for proper unit testing, we need to mock the RustEmbed trait
         // or use a test-specific folder with controlled content
 
-        // For now, we'll just verify the function doesn't error and sorts correctly
+        // for now, we'll just verify the function doesn't error and sorts correctly
         let filenames = parse_migration_filenames().unwrap();
-
-        // Verify filenames are sorted by version
         if filenames.len() > 1 {
             for i in 0..filenames.len() - 1 {
                 let version1 = filenames[i]
@@ -175,20 +167,16 @@ mod tests {
     fn test_backup_db() {
         let (mut conn, temp_dir) = setup_test_db();
 
-        // Create a table and insert data
         conn.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)", [])
             .unwrap();
         conn.execute("INSERT INTO test (name) VALUES (?1)", ["test_value"])
             .unwrap();
 
-        // Backup the database
         let backup_path = temp_dir.path().join("backup.db");
         backup_db(&mut conn, backup_path.to_str().unwrap()).unwrap();
 
-        // Verify backup exists
         assert!(backup_path.exists());
 
-        // Verify backup contains the same data
         let backup_conn = Connection::open(backup_path).unwrap();
         let name: String = backup_conn
             .query_row("SELECT name FROM test WHERE id = 1", [], |row| row.get(0))

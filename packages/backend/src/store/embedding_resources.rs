@@ -1,7 +1,7 @@
 use super::models::*;
 use crate::{store::db::Database, BackendResult};
 
-fn get_order_by_clause_for_embedding_row_ids(column_name: &str, row_ids: &Vec<i64>) -> String {
+fn get_order_by_clause_for_embedding_row_ids(column_name: &str, row_ids: &[i64]) -> String {
     let mut order_by_clause = format!("CASE {} ", column_name);
     for (i, row_id) in row_ids.iter().enumerate() {
         order_by_clause.push_str(&format!("WHEN {} THEN {} ", row_id, i));

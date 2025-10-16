@@ -1,4 +1,7 @@
-use super::{processor::processor_thread_entry_point, worker::worker_thread_entry_point};
+use super::{
+    processor::processor_thread_entry_point, worker_thread_entry_point, AIConfig, ChannelConfig,
+    PathConfig, WorkerConfig,
+};
 use crate::{
     api::message::{
         AIMessage, ProcessorMessage, ResourceMessage, TunnelMessage, TunnelOneshot, WorkerMessage,
@@ -145,7 +148,6 @@ impl WorkerTunnel {
 
         let num_worker_threads = config.num_worker_threads.unwrap_or(NUM_WORKER_THREADS);
         for n in 0..num_worker_threads {
-            let config = config.clone();
             let worker_rx = worker_rx.clone();
             let tqueue_tx = tqueue_tx.clone();
             let aiqueue_tx = aiqueue_tx.clone();
@@ -157,32 +159,53 @@ impl WorkerTunnel {
             let _run_migrations = run_migrations > 0;
             run_migrations = run_migrations.saturating_sub(1);
 
-            std::thread::Builder::new()
-                .name(thread_name.clone())
-                .spawn(move || loop {
-                    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-                        worker_thread_entry_point(
-                            worker_rx.clone(),
-                            tqueue_tx.clone(),
-                            aiqueue_tx.clone(),
-                            libuv_ch.clone(),
-                            callback.clone(),
-                            config.app_path.clone(),
-                            config.backend_root_path.clone(),
-                            config.api_base.clone(),
-                            config.api_key.clone(),
-                            config.local_ai_mode,
-                            config.language_setting.clone(),
-                            _run_migrations,
-                            surf_backend_health.clone()
-                        )
-                    }));
+            // Clone config values needed for WorkerConfig
+            let app_path = config.app_path.clone();
+            let backend_root_path = config.backend_root_path.clone();
+            let api_base = config.api_base.clone();
+            let api_key = config.api_key.clone();
+            let local_ai_mode = config.local_ai_mode;
+            let language_setting = config.language_setting.clone();
 
-                    if let Err(e) = result {
-                        tracing::error!(thread=%thread_name, "worker thread panicked: {:?}, restarting", e);
-                    }
-                })
-                .expect("failed to spawn worker thread");
+            std::thread::Builder::new()
+            .name(thread_name.clone())
+            .spawn(move || loop {
+                let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+                    let path_config = PathConfig::new(
+                        app_path.clone(),
+                        backend_root_path.clone(),
+                    );
+
+                    let ai_config = AIConfig::new(
+                        api_base.clone(),
+                        api_key.clone(),
+                        local_ai_mode,
+                    );
+
+                    let channel_config = ChannelConfig {
+                        tqueue_tx: tqueue_tx.clone(),
+                        aiqueue_tx: aiqueue_tx.clone(),
+                        channel: libuv_ch.clone(),
+                        event_bus_rx: callback.clone(),
+                    };
+
+                    let worker_config = WorkerConfig {
+                        path_config,
+                        ai_config,
+                        channel_config,
+                        language_setting: language_setting.clone(),
+                        run_migrations: _run_migrations,
+                        surf_backend_health: surf_backend_health.clone(),
+                    };
+
+                    worker_thread_entry_point(worker_rx.clone(), worker_config)
+                }));
+
+                if let Err(e) = result {
+                    tracing::error!(thread=%thread_name, "worker thread panicked: {:?}, restarting", e);
+                }
+            })
+            .expect("failed to spawn worker thread");
         }
     }
 
@@ -198,13 +221,11 @@ impl WorkerTunnel {
             let language = language.clone();
             let thread_name = format!("P{n}");
             let vision_tagging_flag = Arc::new(AtomicBool::new(false));
-            let surf_backend_health = tunnel.surf_backend_health.clone();
 
             std::thread::Builder::new()
                 .name(thread_name.clone())
                 .spawn(move || loop {
                     let vision_tagging_flag = vision_tagging_flag.clone();
-                    let surf_backend_health = surf_backend_health.clone();
                     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
                         processor_thread_entry_point(
                             tunnel.clone(),
@@ -213,7 +234,6 @@ impl WorkerTunnel {
                             config.api_key.clone(),
                             config.api_base.clone(),
                             vision_tagging_flag,
-                            surf_backend_health,
                         )
                     }));
 

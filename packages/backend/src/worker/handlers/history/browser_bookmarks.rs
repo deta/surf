@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::time::{UNIX_EPOCH, Duration};
-use std::env;
 use chrono::{DateTime, Utc};
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::time::{Duration, UNIX_EPOCH};
 
 use crate::BackendError;
 use crate::BackendResult;
@@ -89,17 +89,22 @@ fn chrome_time_to_datetime(chrome_time: &str) -> DateTime<Utc> {
     DateTime::from(time)
 }
 
-fn process_chrome_bookmark(bookmark: &ChromeBookmark, folders: &mut Vec<BookmarkFolder>) -> Option<BookmarkFolder> {
+fn process_chrome_bookmark(
+    bookmark: &ChromeBookmark,
+    folders: &mut Vec<BookmarkFolder>,
+) -> Option<BookmarkFolder> {
     if bookmark.bookmark_type != "folder" {
         return None;
     }
 
     let created_at = chrome_time_to_datetime(&bookmark.date_added);
-    let updated_at = bookmark.date_modified
+    let updated_at = bookmark
+        .date_modified
         .as_ref()
         .map(|t| chrome_time_to_datetime(t))
         .unwrap_or(created_at);
-    let last_used_at = bookmark.date_last_used
+    let last_used_at = bookmark
+        .date_last_used
         .as_ref()
         .map(|t| chrome_time_to_datetime(t))
         .unwrap_or(updated_at);
@@ -108,11 +113,13 @@ fn process_chrome_bookmark(bookmark: &ChromeBookmark, folders: &mut Vec<Bookmark
     for child in &bookmark.children {
         if child.bookmark_type == "url" {
             let child_created_at = chrome_time_to_datetime(&child.date_added);
-            let child_updated_at = child.date_modified
+            let child_updated_at = child
+                .date_modified
                 .as_ref()
                 .map(|t| chrome_time_to_datetime(t))
                 .unwrap_or(child_created_at);
-            let child_last_used_at = child.date_last_used
+            let child_last_used_at = child
+                .date_last_used
                 .as_ref()
                 .map(|t| chrome_time_to_datetime(t))
                 .unwrap_or(child_updated_at);
@@ -148,7 +155,7 @@ fn process_firefox_bookmarks(conn: &Connection) -> BackendResult<Vec<BookmarkFol
         "SELECT b.id, b.title, p.url, b.guid, b.parent, b.dateAdded, b.lastModified
          FROM moz_bookmarks b
          LEFT JOIN moz_places p ON b.fk = p.id
-         WHERE b.type IN (1,2)"
+         WHERE b.type IN (1,2)",
     )?;
 
     let bookmark_iter = stmt.query_map([], |row| {
@@ -167,26 +174,24 @@ fn process_firefox_bookmarks(conn: &Connection) -> BackendResult<Vec<BookmarkFol
     let mut folders_map: HashMap<i64, Vec<BookmarkItem>> = HashMap::new();
     let mut folder_info: HashMap<i64, (String, String, i64, i64)> = HashMap::new(); // (title, guid, dateAdded, lastModified)
 
-    for bookmark in bookmark_iter {
-        if let Ok(b) = bookmark {
-            if let Some(url) = b.url {
-                let created_at = UNIX_EPOCH + Duration::from_micros(b.date_added.max(0) as u64);
-                let updated_at = UNIX_EPOCH + Duration::from_micros(b.last_modified.max(0) as u64);
-                
-                let item = BookmarkItem {
-                    guid: b.guid,
-                    title: b.title,
-                    url,
-                    created_at: DateTime::from(created_at),
-                    updated_at: DateTime::from(updated_at),
-                    last_used_at: DateTime::from(updated_at),
-                };
+    for b in bookmark_iter.flatten() {
+        if let Some(url) = b.url {
+            let created_at = UNIX_EPOCH + Duration::from_micros(b.date_added.max(0) as u64);
+            let updated_at = UNIX_EPOCH + Duration::from_micros(b.last_modified.max(0) as u64);
 
-                folders_map.entry(b.parent).or_default().push(item);
-            } else {
-                // This is a folder
-                folder_info.insert(b.id, (b.title, b.guid, b.date_added, b.last_modified));
-            }
+            let item = BookmarkItem {
+                guid: b.guid,
+                title: b.title,
+                url,
+                created_at: DateTime::from(created_at),
+                updated_at: DateTime::from(updated_at),
+                last_used_at: DateTime::from(updated_at),
+            };
+
+            folders_map.entry(b.parent).or_default().push(item);
+        } else {
+            // This is a folder
+            folder_info.insert(b.id, (b.title, b.guid, b.date_added, b.last_modified));
         }
     }
 
@@ -214,7 +219,7 @@ fn process_safari_bookmarks(conn: &Connection) -> BackendResult<Vec<BookmarkFold
     let mut stmt = conn.prepare(
         "SELECT b.id, b.title, b.url, b.parent_id, b.created_at, b.updated_at 
          FROM bookmarks b 
-         ORDER BY b.parent_id"
+         ORDER BY b.parent_id",
     )?;
 
     let bookmark_iter = stmt.query_map([], |row| {
@@ -232,26 +237,24 @@ fn process_safari_bookmarks(conn: &Connection) -> BackendResult<Vec<BookmarkFold
     let mut folders_map: HashMap<i64, Vec<BookmarkItem>> = HashMap::new();
     let mut folder_info: HashMap<i64, (String, i64, i64)> = HashMap::new(); // (title, created_at, updated_at)
 
-    for bookmark in bookmark_iter {
-        if let Ok(b) = bookmark {
-            if let Some(url) = b.url {
-                let created_at = UNIX_EPOCH + Duration::from_secs(b.created_at.max(0) as u64);
-                let updated_at = UNIX_EPOCH + Duration::from_secs(b.updated_at.max(0) as u64);
-                
-                let item = BookmarkItem {
-                    guid: b.id.to_string(),
-                    title: b.title,
-                    url,
-                    created_at: DateTime::from(created_at),
-                    updated_at: DateTime::from(updated_at),
-                    last_used_at: DateTime::from(updated_at),
-                };
+    for b in bookmark_iter.flatten() {
+        if let Some(url) = b.url {
+            let created_at = UNIX_EPOCH + Duration::from_secs(b.created_at.max(0) as u64);
+            let updated_at = UNIX_EPOCH + Duration::from_secs(b.updated_at.max(0) as u64);
 
-                folders_map.entry(b.parent_id).or_default().push(item);
-            } else {
-                // This is a folder
-                folder_info.insert(b.id, (b.title, b.created_at, b.updated_at));
-            }
+            let item = BookmarkItem {
+                guid: b.id.to_string(),
+                title: b.title,
+                url,
+                created_at: DateTime::from(created_at),
+                updated_at: DateTime::from(updated_at),
+                last_used_at: DateTime::from(updated_at),
+            };
+
+            folders_map.entry(b.parent_id).or_default().push(item);
+        } else {
+            // This is a folder
+            folder_info.insert(b.id, (b.title, b.created_at, b.updated_at));
         }
     }
 
@@ -275,14 +278,18 @@ fn process_safari_bookmarks(conn: &Connection) -> BackendResult<Vec<BookmarkFold
     Ok(bookmarks)
 }
 
-pub fn parse_chrome_bookmarks(bookmarks_path: &std::path::Path) -> BackendResult<Vec<BookmarkFolder>> {
+pub fn parse_chrome_bookmarks(
+    bookmarks_path: &std::path::Path,
+) -> BackendResult<Vec<BookmarkFolder>> {
     let content = fs::read_to_string(bookmarks_path)?;
     let chrome_bookmarks: ChromeBookmarks = serde_json::from_str(&content)?;
-    
+
     let mut folders = Vec::new();
 
     // Process main bookmark folders
-    if let Some(folder) = process_chrome_bookmark(&chrome_bookmarks.roots.bookmark_bar, &mut folders) {
+    if let Some(folder) =
+        process_chrome_bookmark(&chrome_bookmarks.roots.bookmark_bar, &mut folders)
+    {
         folders.push(folder);
     }
     if let Some(folder) = process_chrome_bookmark(&chrome_bookmarks.roots.other, &mut folders) {
@@ -295,14 +302,18 @@ pub fn parse_chrome_bookmarks(bookmarks_path: &std::path::Path) -> BackendResult
     Ok(folders)
 }
 
-pub fn parse_firefox_bookmarks(bookmarks_path: &std::path::Path, browser_type: &str) -> BackendResult<Vec<BookmarkFolder>> {
+pub fn parse_firefox_bookmarks(
+    bookmarks_path: &std::path::Path,
+    browser_type: &str,
+) -> BackendResult<Vec<BookmarkFolder>> {
     let temp_dir = env::temp_dir();
     let temp_bookmarks_path = temp_dir.join(format!("{}_bookmarks_temp", browser_type));
-    
-    if let Err(e) = fs::copy(&bookmarks_path, &temp_bookmarks_path) {
-        return Err(BackendError::GenericError(
-            format!("Error copying {} bookmarks file. Browser may be running: {}", browser_type, e)
-        ));
+
+    if let Err(e) = fs::copy(bookmarks_path, &temp_bookmarks_path) {
+        return Err(BackendError::GenericError(format!(
+            "Error copying {} bookmarks file. Browser may be running: {}",
+            browser_type, e
+        )));
     }
     let conn = Connection::open_with_flags(
         temp_bookmarks_path.clone(),
@@ -315,15 +326,15 @@ pub fn parse_firefox_bookmarks(bookmarks_path: &std::path::Path, browser_type: &
     if let Err(e) = fs::remove_file(&temp_bookmarks_path) {
         eprintln!("Failed to remove temporary bookmarks file: {}", e);
     }
-    
+
     Ok(result)
 }
 
-pub fn parse_safari_bookmarks(bookmarks_path: &std::path::Path) -> BackendResult<Vec<BookmarkFolder>> {
-    let conn = Connection::open_with_flags(
-        bookmarks_path,
-        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )?;
+pub fn parse_safari_bookmarks(
+    bookmarks_path: &std::path::Path,
+) -> BackendResult<Vec<BookmarkFolder>> {
+    let conn =
+        Connection::open_with_flags(bookmarks_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
 
     process_safari_bookmarks(&conn)
 }

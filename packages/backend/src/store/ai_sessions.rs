@@ -224,10 +224,7 @@ impl Database {
         let messages = stmt.query_map(rusqlite::params![session_id], |row| {
             let sources_raw: String = row.get(6)?;
             let parsed_sources: Option<Vec<AIChatSessionMessageSource>> =
-                match serde_json::from_str(&sources_raw) {
-                    Ok(sources) => Some(sources),
-                    Err(_) => None,
-                };
+                serde_json::from_str(&sources_raw).ok();
 
             Ok(AIChatSessionMessage {
                 ai_session_id: row.get(0)?,

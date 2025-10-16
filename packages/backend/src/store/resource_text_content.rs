@@ -149,8 +149,8 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         resource_id: &str,
         content_type: &ResourceTextContentType,
-        contents: &Vec<String>,
-        metadatas: &Vec<ResourceTextContentMetadata>,
+        contents: &[String],
+        metadatas: &[ResourceTextContentMetadata],
     ) -> BackendResult<Vec<i64>> {
         tx.execute(
             "DELETE FROM resource_text_content WHERE resource_id = ?1 AND content_type = ?2",

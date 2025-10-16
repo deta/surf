@@ -1,6 +1,6 @@
 use crate::{BackendError, BackendResult};
 use serde::{Deserialize, Serialize};
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{error, instrument, warn};
 use usearch::{Index, IndexOptions, MetricKind, ScalarKind};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -9,9 +9,7 @@ pub struct DocsSimilarity {
     pub similarity: f32,
 }
 
-#[instrument(level = "trace", skip(embeddings_dim))]
 fn new_index(embeddings_dim: &usize) -> BackendResult<Index> {
-    debug!("Creating new index with dimensions: {}", embeddings_dim);
     let options = IndexOptions {
         dimensions: *embeddings_dim,
         metric: MetricKind::Cos,
@@ -19,16 +17,7 @@ fn new_index(embeddings_dim: &usize) -> BackendResult<Index> {
         ..Default::default()
     };
 
-    match Index::new(&options) {
-        Ok(index) => {
-            info!("Successfully created new index");
-            Ok(index)
-        }
-        Err(e) => {
-            error!("Failed to create index: {}", e);
-            Err(e.into())
-        }
-    }
+    Index::new(&options).map_err(|e| e.into())
 }
 
 pub struct EmbeddingsStore {
@@ -38,20 +27,12 @@ pub struct EmbeddingsStore {
 }
 
 impl EmbeddingsStore {
-    #[instrument(level = "trace", skip(embeddings_dim))]
     pub fn new(index_path: &str, embeddings_dim: &usize) -> BackendResult<Self> {
-        info!("Initializing EmbeddingsStore with path: {}", index_path);
         let index = new_index(embeddings_dim)?;
 
-        match index.load(index_path) {
-            Ok(_) => {
-                info!("Successfully loaded existing index from: {}", index_path);
-            }
-            Err(e) => {
-                warn!("Failed to load index, creating new one: {}", e);
-                index.save(index_path)?;
-                info!("Created and saved new index to: {}", index_path);
-            }
+        if let Err(e) = index.load(index_path) {
+            warn!("Index not found, creating new one: {}", e);
+            index.save(index_path)?;
         }
 
         Ok(Self {
@@ -61,69 +42,29 @@ impl EmbeddingsStore {
         })
     }
 
-    #[instrument(level = "trace", skip(self))]
     fn reload(&self) -> BackendResult<()> {
-        match self.index.load(&self.index_path) {
-            Ok(_) => {
-                debug!("Reloaded index from: {}", self.index_path);
-            }
-            Err(e) => {
-                error!("Failed to reload index: {}", e);
-                return Err(e.into());
-            }
-        }
-        Ok(())
+        self.index.load(&self.index_path).map_err(|e| e.into())
     }
 
-    #[instrument(level = "trace", skip(self, embedding))]
     pub fn add(&self, id: u64, embedding: &[f32]) -> BackendResult<()> {
-        debug!("Adding embedding for id: {}", id);
-
-        match self.index.reserve(self.index.size() + 1) {
-            Ok(_) => debug!("Successfully reserved space for new embedding"),
-            Err(e) => {
-                error!("Failed to reserve space: {}", e);
-                return Err(e.into());
-            }
-        }
-
-        if let Err(e) = self.index.add(id, embedding) {
-            error!("Failed to add embedding: {}", e);
-            return Err(e.into());
-        }
-
-        if let Err(e) = self.index.save(&self.index_path) {
-            error!("Failed to save index: {}", e);
-            return Err(e.into());
-        }
-
-        debug!("Successfully added and saved embedding for id: {}", id);
+        self.index.reserve(self.index.size() + 1)?;
+        self.index.add(id, embedding)?;
+        self.index.save(&self.index_path)?;
         Ok(())
     }
 
-    #[instrument(level = "trace", skip(self, embeddings))]
-    pub fn batch_add(&self, ids: Vec<u64>, embeddings: &Vec<Vec<f32>>) -> BackendResult<()> {
-        debug!("Starting batch add for {} embeddings", ids.len());
+    #[instrument(level = "debug", skip(self, embeddings), fields(count = ids.len()))]
+    pub fn batch_add(&self, ids: Vec<u64>, embeddings: &[Vec<f32>]) -> BackendResult<()> {
         self.validate_inputs(&ids, embeddings)?;
 
         match self.execute_batch_add(&ids, embeddings) {
             Ok(_) => {
-                self.index.save(&self.index_path).map_err(|e| {
-                    error!("Failed to save changes to disk: {}", e);
-                    e
-                })?;
-                debug!(
-                    "Successfully completed batch add of {} embeddings",
-                    ids.len()
-                );
+                self.index.save(&self.index_path)?;
                 Ok(())
             }
             Err(e) => {
-                error!("Batch add failed, rolling back to last saved state: {}", e);
-                self.reload().map_err(|load_err| {
-                    error!("Failed to rollback to last saved state: {}", load_err);
-                    load_err
-                })?;
+                error!("Batch add failed, rolling back: {}", e);
+                self.reload()?;
                 Err(e)
             }
         }
@@ -157,183 +98,96 @@ impl EmbeddingsStore {
         }
 
         let new_size = self.index.size() + ids.len();
-        self.index.reserve(new_size).map_err(|e| {
-            error!("Failed to reserve space: {}", e);
-            e
-        })?;
+        self.index.reserve(new_size)?;
 
         for (id, embedding) in ids.iter().zip(embeddings.iter()) {
-            self.index.add(*id, embedding).map_err(|e| {
-                error!("Failed to add embedding for id {}: {}", id, e);
-                e
-            })?;
+            self.index.add(*id, embedding)?;
         }
 
         Ok(())
     }
 
-    #[instrument(level = "trace", skip(self))]
     pub fn remove(&self, id: u64) -> BackendResult<()> {
-        debug!("Removing embedding for id: {}", id);
-
-        if let Err(e) = self.index.remove(id) {
-            error!("Failed to remove embedding for id {}: {}", id, e);
-            return Err(e.into());
-        }
-
-        if let Err(e) = self.index.save(&self.index_path) {
-            error!("Failed to save index after removal: {}", e);
-            return Err(e.into());
-        }
-
-        info!("Successfully removed embedding for id: {}", id);
+        self.index.remove(id)?;
+        self.index.save(&self.index_path)?;
         Ok(())
     }
 
-    #[instrument(level = "trace", skip(self))]
+    #[instrument(level = "debug", skip(self), fields(count = ids.len()))]
     pub fn batch_remove(&self, ids: Vec<u64>) -> BackendResult<()> {
-        debug!("Starting batch remove for {} ids", ids.len());
-
         for id in ids.iter() {
-            debug!("Removing embedding for id {}", id);
-            if let Err(e) = self.index.remove(*id) {
-                error!("Failed to remove embedding for id {}: {}", id, e);
-                return Err(e.into());
-            }
+            self.index.remove(*id)?;
         }
-
-        if let Err(e) = self.index.save(&self.index_path) {
-            error!("Failed to save index after batch removal: {}", e);
-            return Err(e.into());
-        }
-
-        debug!(
-            "Successfully completed batch remove of {} embeddings",
-            ids.len()
-        );
+        self.index.save(&self.index_path)?;
         Ok(())
     }
 
-    #[instrument(level = "trace", skip(self, embedding, filter_keys))]
+    #[instrument(level = "debug", skip(self, embedding, filter_keys), fields(num_docs, filter_count = filter_keys.len()))]
     pub fn filtered_search(
         &self,
         embedding: &[f32],
         num_docs: usize,
-        filter_keys: &Vec<u64>,
+        filter_keys: &[u64],
         threshold: &Option<f32>,
     ) -> BackendResult<Vec<u64>> {
-        debug!(
-            "Performing filtered search for {} docs with {} filter keys",
-            num_docs,
-            filter_keys.len()
-        );
+        let prefiltered_results = self
+            .index
+            .filtered_search(embedding, num_docs, |key| filter_keys.contains(&key))?;
 
         let mut results = vec![];
-        let prefiltered_results = match self
-            .index
-            .filtered_search(embedding, num_docs, |key| filter_keys.contains(&key))
-        {
-            Ok(r) => r,
-            Err(e) => {
-                error!("Failed to perform filtered search: {}", e);
-                return Err(e.into());
-            }
-        };
-
         for (key, distance) in prefiltered_results
             .keys
             .iter()
             .zip(prefiltered_results.distances.iter())
         {
-            if let Some(threshold) = threshold {
-                if distance <= threshold {
-                    debug!("Found match: key={}, distance={}", key, distance);
-                    results.push((*key, *distance));
-                }
-            } else {
+            if threshold.is_none_or(|t| distance <= &t) {
                 results.push((*key, *distance));
             }
         }
 
         results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-        let final_results: Vec<u64> = results.iter().map(|(key, _)| *key).collect();
-
-        debug!("Found {} matching documents", final_results.len());
-        Ok(final_results)
+        Ok(results.iter().map(|(key, _)| *key).collect())
     }
 
-    #[instrument(level = "trace", skip(self, embedding))]
     pub fn search(&self, embedding: &[f32], num_docs: usize) -> BackendResult<Vec<u64>> {
-        debug!("Performing search for {} docs", num_docs);
-
-        match self.index.search(embedding, num_docs) {
-            Ok(results) => {
-                info!("Found {} matching documents", results.keys.len());
-                Ok(results.keys)
-            }
-            Err(e) => {
-                error!("Failed to perform search: {}", e);
-                Err(e.into())
-            }
-        }
+        self.index
+            .search(embedding, num_docs)
+            .map(|results| results.keys)
+            .map_err(|e| e.into())
     }
 
-    #[instrument(level = "trace", skip(self, query, embeddings))]
     pub fn get_docs_similarity(
         &self,
         query: &[f32],
-        embeddings: &Vec<Vec<f32>>,
+        embeddings: &[Vec<f32>],
         threshold: &f32,
         num_docs: &usize,
     ) -> BackendResult<Vec<DocsSimilarity>> {
-        debug!(
-            "Getting document similarity for {} embeddings with threshold {}",
-            embeddings.len(),
-            threshold
-        );
-
         let index = new_index(&self.embedding_dim)?;
         let index_size = embeddings.len();
 
-        if let Err(e) = index.reserve(index_size) {
-            error!("Failed to reserve space for temporary index: {}", e);
-            return Err(e.into());
-        }
+        index.reserve(index_size)?;
 
         for (i, e) in embeddings.iter().enumerate() {
-            if let Err(e) = index.add(i as u64, e) {
-                error!("Failed to add embedding to temporary index: {}", e);
-                return Err(e.into());
-            }
+            index.add(i as u64, e)?;
         }
 
-        let results = match index.search(query, *num_docs) {
-            Ok(r) => r,
-            Err(e) => {
-                error!("Failed to search temporary index: {}", e);
-                return Err(e.into());
-            }
-        };
+        let results = index.search(query, *num_docs)?;
 
         if let Err(e) = index.reset() {
             warn!("Failed to reset temporary index: {}", e);
         }
 
-        let mut docs_similarity = vec![];
-        for (key, similarity) in results.keys.iter().zip(results.distances.iter()) {
-            if *similarity <= *threshold {
-                docs_similarity.push(DocsSimilarity {
-                    index: *key,
-                    similarity: *similarity,
-                });
-            }
-        }
-
-        debug!(
-            "Found {} similar documents within threshold",
-            docs_similarity.len()
-        );
-        Ok(docs_similarity)
+        Ok(results
+            .keys
+            .iter()
+            .zip(results.distances.iter())
+            .filter(|(_, similarity)| *similarity <= threshold)
+            .map(|(key, similarity)| DocsSimilarity {
+                index: *key,
+                similarity: *similarity,
+            })
+            .collect())
     }
 }
 

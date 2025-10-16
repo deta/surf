@@ -1,5 +1,5 @@
 use crate::{
-    ai::{ai::DocsSimilarity, llm::models::Message},
+    ai::{llm::models::Message, DocsSimilarity},
     BackendError, BackendResult,
 };
 use futures::Stream;

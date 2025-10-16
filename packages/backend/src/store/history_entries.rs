@@ -245,7 +245,7 @@ impl Database {
                 FROM history_entries
                 WHERE (url LIKE ?1 OR title LIKE ?1)".to_string();
 
-            if let Some(_) = since {
+            if since.is_some() {
                 base_query.push_str(" AND created_at >= datetime(?2, 'unixepoch')");
             }
 
@@ -335,7 +335,7 @@ impl Database {
 
         let timestamp_param_index = search_terms.len() + 2;
 
-        if let Some(_) = since {
+        if since.is_some() {
             base_query.push_str(&format!(
                 " AND created_at >= datetime(?{}, 'unixepoch')",
                 timestamp_param_index
@@ -378,7 +378,7 @@ impl Database {
         let rows = stmt.query(param_refs.as_slice())?;
         let mut results = Vec::new();
 
-        let mut mapped_rows = rows.mapped(|row| {
+        let mapped_rows = rows.mapped(|row| {
             Ok(HistoryEntry {
                 id: row.get(0)?,
                 entry_type: HistoryEntryType::from_str(row.get::<_, String>(1)?.as_str()).unwrap(),
@@ -390,7 +390,7 @@ impl Database {
             })
         });
 
-        while let Some(row_result) = mapped_rows.next() {
+        for row_result in mapped_rows {
             results.push(row_result?);
         }
 

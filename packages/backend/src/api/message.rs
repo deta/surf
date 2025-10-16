@@ -1,5 +1,5 @@
 use crate::{
-    ai::llm::{client::client::Model, models::Message},
+    ai::llm::{client::Model, models::Message},
     store::models::*,
     BackendResult,
 };
@@ -18,7 +18,8 @@ pub struct TunnelMessage(
 #[derive(Debug)]
 pub enum ProcessorMessage {
     SetVisionTaggingFlag(bool),
-    ProcessResource(PostProcessingJob, CompositeResource),
+    // Box to avoid large enum size due to CompositeResource
+    ProcessResource(PostProcessingJob, Box<CompositeResource>),
 }
 
 #[derive(Debug)]
@@ -117,16 +118,7 @@ pub enum ResourceMessage {
     ListResourcesByTags(Vec<ResourceTagFilter>),
     ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>),
     ListAllResourcesAndSpaces(Vec<ResourceTagFilter>),
-    SearchResources {
-        query: String,
-        resource_tag_filters: Option<Vec<ResourceTagFilter>>,
-        semantic_search_enabled: Option<bool>,
-        embeddings_distance_threshold: Option<f32>,
-        embeddings_limit: Option<i64>,
-        include_annotations: Option<bool>,
-        space_id: Option<String>,
-        keyword_limit: Option<i64>,
-    },
+    SearchResources(SearchResourcesParams),
     UpdateResource(Resource),
     UpdateResourceMetadata(ResourceMetadata),
     BatchUpsertResourceTextContent {
@@ -161,6 +153,7 @@ pub enum ResourceTagMessage {
     UpdateResourceTag(ResourceTag),
 }
 
+// TODO: ChatQuery & NoteQuery consolidation
 #[derive(Debug)]
 pub enum MiscMessage {
     CreateChatCompletion {
@@ -176,8 +169,8 @@ pub enum MiscMessage {
         model: Model,
         custom_key: Option<String>,
         session_id: String,
-        rag_only: bool,
-        resource_ids: Option<Vec<String>>,
+        search_only: bool,
+        resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         app_creation: bool,
@@ -189,7 +182,7 @@ pub enum MiscMessage {
         model: Model,
         custom_key: Option<String>,
         note_resource_id: String,
-        resource_ids: Option<Vec<String>>,
+        resource_ids: Vec<String>,
         inline_images: Option<Vec<String>>,
         general: bool,
         websearch: bool,

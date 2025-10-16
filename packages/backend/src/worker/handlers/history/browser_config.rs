@@ -1,7 +1,7 @@
-use std::path::{Path, PathBuf};
 use crate::BackendResult;
-use std::env;
 use once_cell::sync::Lazy;
+use std::env;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum BrowserFamily {
@@ -27,8 +27,12 @@ fn get_home_dir() -> Option<String> {
 // Chromium-based browser paths
 fn chrome_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Google/Chrome/Default/History"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Google/Chrome/User Data/Default/History"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Google/Chrome/Default/History")
+        }
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Google/Chrome/User Data/Default/History")
+        }
         "linux" => Path::new(home_dir).join(".config/google-chrome/Default/History"),
         _ => Path::new(home_dir).join(""),
     }
@@ -36,8 +40,12 @@ fn chrome_history_path(home_dir: &str) -> PathBuf {
 
 fn chrome_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Google/Chrome/Default/Bookmarks"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Google/Chrome/User Data/Default/Bookmarks"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Google/Chrome/Default/Bookmarks")
+        }
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Google/Chrome/User Data/Default/Bookmarks")
+        }
         "linux" => Path::new(home_dir).join(".config/google-chrome/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
     }
@@ -45,8 +53,10 @@ fn chrome_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn brave_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/BraveSoftware/Brave-Browser/Default/History"),
-        "windows" => Path::new(home_dir).join("AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/History"),
+        "macos" => Path::new(home_dir)
+            .join("Library/Application Support/BraveSoftware/Brave-Browser/Default/History"),
+        "windows" => Path::new(home_dir)
+            .join("AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/History"),
         "linux" => Path::new(home_dir).join(".config/BraveSoftware/Brave-Browser/Default/History"),
         _ => Path::new(home_dir).join(""),
     }
@@ -54,16 +64,23 @@ fn brave_history_path(home_dir: &str) -> PathBuf {
 
 fn edge_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Microsoft Edge/Default/History"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Microsoft/Edge/User Data/Default/History"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Microsoft Edge/Default/History")
+        }
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Microsoft/Edge/User Data/Default/History")
+        }
         "linux" => Path::new(home_dir).join(".config/microsoft-edge/Default/History"),
         _ => Path::new(home_dir).join(""),
     }
 }
 fn opera_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/Default/History"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/History"),
+        "macos" => Path::new(home_dir)
+            .join("Library/Application Support/com.operasoftware.Opera/Default/History"),
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/History")
+        }
         "linux" => Path::new(home_dir).join(".config/opera/Default/History"),
         _ => Path::new(home_dir).join(""),
     }
@@ -80,7 +97,9 @@ fn vivaldi_history_path(home_dir: &str) -> PathBuf {
 
 fn arc_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Arc/User Data/Default/History"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Arc/User Data/Default/History")
+        }
         "windows" => Path::new(home_dir).join("AppData/Local/Arc/User Data/Default/History"),
         "linux" => Path::new(home_dir).join(".config/arc/Default/History"),
         _ => Path::new(home_dir).join(""),
@@ -89,7 +108,9 @@ fn arc_history_path(home_dir: &str) -> PathBuf {
 
 fn dia_history_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Dia/User Data/Default/History"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Dia/User Data/Default/History")
+        }
         "windows" => Path::new(home_dir).join("AppData/Local/Dia/User Data/Default/History"),
         "linux" => Path::new(home_dir).join(".config/dia/Default/History"),
         _ => Path::new(home_dir).join(""),
@@ -186,17 +207,25 @@ fn safari_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn brave_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/BraveSoftware/Brave-Browser/Default/Bookmarks"),
-        "windows" => Path::new(home_dir).join("AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Bookmarks"),
-        "linux" => Path::new(home_dir).join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks"),
+        "macos" => Path::new(home_dir)
+            .join("Library/Application Support/BraveSoftware/Brave-Browser/Default/Bookmarks"),
+        "windows" => Path::new(home_dir)
+            .join("AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Bookmarks"),
+        "linux" => {
+            Path::new(home_dir).join(".config/BraveSoftware/Brave-Browser/Default/Bookmarks")
+        }
         _ => Path::new(home_dir).join(""),
     }
 }
 
 fn edge_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Microsoft Edge/Default/Bookmarks"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Microsoft/Edge/User Data/Default/Bookmarks"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Microsoft Edge/Default/Bookmarks")
+        }
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Microsoft/Edge/User Data/Default/Bookmarks")
+        }
         "linux" => Path::new(home_dir).join(".config/microsoft-edge/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
     }
@@ -204,8 +233,11 @@ fn edge_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn opera_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/com.operasoftware.Opera/Default/Bookmarks"),
-        "windows" => Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/Bookmarks"),
+        "macos" => Path::new(home_dir)
+            .join("Library/Application Support/com.operasoftware.Opera/Default/Bookmarks"),
+        "windows" => {
+            Path::new(home_dir).join("AppData/Local/Opera Software/Opera Stable/Default/Bookmarks")
+        }
         "linux" => Path::new(home_dir).join(".config/opera/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
     }
@@ -213,7 +245,9 @@ fn opera_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn vivaldi_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Vivaldi/Default/Bookmarks"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Vivaldi/Default/Bookmarks")
+        }
         "windows" => Path::new(home_dir).join("AppData/Local/Vivaldi/User Data/Default/Bookmarks"),
         "linux" => Path::new(home_dir).join(".config/vivaldi/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
@@ -222,7 +256,9 @@ fn vivaldi_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn arc_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Arc/User Data/Default/Bookmarks"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Arc/User Data/Default/Bookmarks")
+        }
         "windows" => Path::new(home_dir).join("AppData/Local/Arc/User Data/Default/Bookmarks"),
         "linux" => Path::new(home_dir).join(".config/arc/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
@@ -231,114 +267,121 @@ fn arc_bookmarks_path(home_dir: &str) -> PathBuf {
 
 fn dia_bookmarks_path(home_dir: &str) -> PathBuf {
     match env::consts::OS {
-        "macos" => Path::new(home_dir).join("Library/Application Support/Dia/User Data/Default/Bookmarks"),
+        "macos" => {
+            Path::new(home_dir).join("Library/Application Support/Dia/User Data/Default/Bookmarks")
+        }
         "windows" => Path::new(home_dir).join("AppData/Local/Dia/User Data/Default/Bookmarks"),
         "linux" => Path::new(home_dir).join(".config/dia/Default/Bookmarks"),
         _ => Path::new(home_dir).join(""),
     }
 }
 
-static SUPPORTED_BROWSERS: Lazy<Vec<BrowserConfig>> = Lazy::new(|| vec![
-    // Safari browser
-    BrowserConfig {
-        name: "safari",
-        family: BrowserFamily::Safari,
-        get_history_path: safari_history_path,
-        get_bookmarks_path: safari_bookmarks_path,
-    },
-    // Chromium-based browsers
-    BrowserConfig {
-        name: "chrome",
-        family: BrowserFamily::Chromium,
-        get_history_path: chrome_history_path,
-        get_bookmarks_path: chrome_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "brave",
-        family: BrowserFamily::Chromium,
-        get_history_path: brave_history_path,
-        get_bookmarks_path: brave_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "edge",
-        family: BrowserFamily::Chromium,
-        get_history_path: edge_history_path,
-        get_bookmarks_path: edge_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "opera",
-        family: BrowserFamily::Chromium,
-        get_history_path: opera_history_path,
-        get_bookmarks_path: opera_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "vivaldi",
-        family: BrowserFamily::Chromium,
-        get_history_path: vivaldi_history_path,
-        get_bookmarks_path: vivaldi_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "arc",
-        family: BrowserFamily::Chromium,
-        get_history_path: arc_history_path,
-        get_bookmarks_path: arc_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "dia",
-        family: BrowserFamily::Chromium,
-        get_history_path: dia_history_path,
-        get_bookmarks_path: dia_bookmarks_path,
-    },
-    // Firefox-based browsers
-    BrowserConfig {
-        name: "firefox",
-        family: BrowserFamily::Firefox,
-        get_history_path: firefox_history_path,
-        get_bookmarks_path: firefox_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "tor",
-        family: BrowserFamily::Firefox,
-        get_history_path: tor_history_path,
-        get_bookmarks_path: tor_bookmarks_path,
-    },
-    BrowserConfig {
-        name: "waterfox",
-        family: BrowserFamily::Firefox,
-        get_history_path: waterfox_history_path,
-        get_bookmarks_path: waterfox_bookmarks_path,
-    },
-    // Add Zen browser
-    BrowserConfig {
-        name: "zen",
-        family: BrowserFamily::Firefox,
-        get_history_path: zen_history_path,
-        get_bookmarks_path: zen_bookmarks_path,
-    },
-]);
+static SUPPORTED_BROWSERS: Lazy<Vec<BrowserConfig>> = Lazy::new(|| {
+    vec![
+        // Safari browser
+        BrowserConfig {
+            name: "safari",
+            family: BrowserFamily::Safari,
+            get_history_path: safari_history_path,
+            get_bookmarks_path: safari_bookmarks_path,
+        },
+        // Chromium-based browsers
+        BrowserConfig {
+            name: "chrome",
+            family: BrowserFamily::Chromium,
+            get_history_path: chrome_history_path,
+            get_bookmarks_path: chrome_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "brave",
+            family: BrowserFamily::Chromium,
+            get_history_path: brave_history_path,
+            get_bookmarks_path: brave_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "edge",
+            family: BrowserFamily::Chromium,
+            get_history_path: edge_history_path,
+            get_bookmarks_path: edge_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "opera",
+            family: BrowserFamily::Chromium,
+            get_history_path: opera_history_path,
+            get_bookmarks_path: opera_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "vivaldi",
+            family: BrowserFamily::Chromium,
+            get_history_path: vivaldi_history_path,
+            get_bookmarks_path: vivaldi_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "arc",
+            family: BrowserFamily::Chromium,
+            get_history_path: arc_history_path,
+            get_bookmarks_path: arc_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "dia",
+            family: BrowserFamily::Chromium,
+            get_history_path: dia_history_path,
+            get_bookmarks_path: dia_bookmarks_path,
+        },
+        // Firefox-based browsers
+        BrowserConfig {
+            name: "firefox",
+            family: BrowserFamily::Firefox,
+            get_history_path: firefox_history_path,
+            get_bookmarks_path: firefox_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "tor",
+            family: BrowserFamily::Firefox,
+            get_history_path: tor_history_path,
+            get_bookmarks_path: tor_bookmarks_path,
+        },
+        BrowserConfig {
+            name: "waterfox",
+            family: BrowserFamily::Firefox,
+            get_history_path: waterfox_history_path,
+            get_bookmarks_path: waterfox_bookmarks_path,
+        },
+        // Add Zen browser
+        BrowserConfig {
+            name: "zen",
+            family: BrowserFamily::Firefox,
+            get_history_path: zen_history_path,
+            get_bookmarks_path: zen_bookmarks_path,
+        },
+    ]
+});
 
 pub fn get_browser_config(browser_type: &str) -> Option<&'static BrowserConfig> {
     SUPPORTED_BROWSERS.iter().find(|b| b.name == browser_type)
 }
 
 pub fn get_history_file_path(browser_type: &str) -> BackendResult<PathBuf> {
-    let home_dir = get_home_dir()
-        .ok_or_else(|| crate::BackendError::GenericError("Could not determine home directory".to_string()))?;
+    let home_dir = get_home_dir().ok_or_else(|| {
+        crate::BackendError::GenericError("Could not determine home directory".to_string())
+    })?;
 
-    let browser_config = get_browser_config(browser_type)
-        .ok_or_else(|| crate::BackendError::GenericError(format!("Unsupported browser type: {}", browser_type)))?;
+    let browser_config = get_browser_config(browser_type).ok_or_else(|| {
+        crate::BackendError::GenericError(format!("Unsupported browser type: {}", browser_type))
+    })?;
 
     let base_path = (browser_config.get_history_path)(&home_dir);
 
     match browser_config.family {
         BrowserFamily::Chromium => {
             if !base_path.exists() {
-                return Err(crate::BackendError::GenericError(
-                    format!("Browser history file not found at: {:?}", base_path)
-                ));
+                return Err(crate::BackendError::GenericError(format!(
+                    "Browser history file not found at: {:?}",
+                    base_path
+                )));
             }
             Ok(base_path)
-        },
+        }
         BrowserFamily::Firefox => {
             if base_path.exists() {
                 // For Firefox-based browsers, we need to find the default profile
@@ -348,10 +391,11 @@ pub fn get_history_file_path(browser_type: &str) -> BackendResult<PathBuf> {
                         if path.is_dir() {
                             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                                 // Handle various profile naming patterns
-                                if name.ends_with(".default-release") || 
-                                   name.ends_with(".default") ||
-                                   name.contains("Default") ||
-                                   (name.contains('.') && name.contains("release")) {
+                                if name.ends_with(".default-release")
+                                    || name.ends_with(".default")
+                                    || name.contains("Default")
+                                    || (name.contains('.') && name.contains("release"))
+                                {
                                     let history_file = path.join("places.sqlite");
                                     if history_file.exists() {
                                         return Ok(history_file);
@@ -362,15 +406,17 @@ pub fn get_history_file_path(browser_type: &str) -> BackendResult<PathBuf> {
                     }
                 }
             }
-            Err(crate::BackendError::GenericError(
-                format!("Could not find history file in profiles directory: {:?}", base_path)
-            ))
-        },
+            Err(crate::BackendError::GenericError(format!(
+                "Could not find history file in profiles directory: {:?}",
+                base_path
+            )))
+        }
         BrowserFamily::Safari => {
             if !base_path.exists() {
-                return Err(crate::BackendError::GenericError(
-                    format!("Browser history file not found at: {:?}", base_path)
-                ));
+                return Err(crate::BackendError::GenericError(format!(
+                    "Browser history file not found at: {:?}",
+                    base_path
+                )));
             }
             Ok(base_path)
         }
@@ -378,23 +424,26 @@ pub fn get_history_file_path(browser_type: &str) -> BackendResult<PathBuf> {
 }
 
 pub fn get_bookmarks_file_path(browser_type: &str) -> BackendResult<PathBuf> {
-    let home_dir = get_home_dir()
-        .ok_or_else(|| crate::BackendError::GenericError("Could not determine home directory".to_string()))?;
+    let home_dir = get_home_dir().ok_or_else(|| {
+        crate::BackendError::GenericError("Could not determine home directory".to_string())
+    })?;
 
-    let browser_config = get_browser_config(browser_type)
-        .ok_or_else(|| crate::BackendError::GenericError(format!("Unsupported browser type: {}", browser_type)))?;
+    let browser_config = get_browser_config(browser_type).ok_or_else(|| {
+        crate::BackendError::GenericError(format!("Unsupported browser type: {}", browser_type))
+    })?;
 
     let base_path = (browser_config.get_bookmarks_path)(&home_dir);
 
     match browser_config.family {
         BrowserFamily::Chromium => {
             if !base_path.exists() {
-                return Err(crate::BackendError::GenericError(
-                    format!("Browser history file not found at: {:?}", base_path)
-                ));
+                return Err(crate::BackendError::GenericError(format!(
+                    "Browser history file not found at: {:?}",
+                    base_path
+                )));
             }
             Ok(base_path)
-        },
+        }
         BrowserFamily::Firefox => {
             if base_path.exists() {
                 // For Firefox-based browsers, we need to find the default profile
@@ -404,10 +453,11 @@ pub fn get_bookmarks_file_path(browser_type: &str) -> BackendResult<PathBuf> {
                         if path.is_dir() {
                             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                                 // Handle various profile naming patterns
-                                if name.ends_with(".default-release") || 
-                                   name.ends_with(".default") ||
-                                   name.contains("Default") ||
-                                   (name.contains('.') && name.contains("release")) {
+                                if name.ends_with(".default-release")
+                                    || name.ends_with(".default")
+                                    || name.contains("Default")
+                                    || (name.contains('.') && name.contains("release"))
+                                {
                                     let history_file = path.join("places.sqlite");
                                     if history_file.exists() {
                                         return Ok(history_file);
@@ -418,15 +468,17 @@ pub fn get_bookmarks_file_path(browser_type: &str) -> BackendResult<PathBuf> {
                     }
                 }
             }
-            Err(crate::BackendError::GenericError(
-                format!("Could not find history file in profiles directory: {:?}", base_path)
-            ))
-        },
+            Err(crate::BackendError::GenericError(format!(
+                "Could not find history file in profiles directory: {:?}",
+                base_path
+            )))
+        }
         BrowserFamily::Safari => {
             if !base_path.exists() {
-                return Err(crate::BackendError::GenericError(
-                    format!("Browser history file not found at: {:?}", base_path)
-                ));
+                return Err(crate::BackendError::GenericError(format!(
+                    "Browser history file not found at: {:?}",
+                    base_path
+                )));
             }
             Ok(base_path)
         }

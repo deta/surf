@@ -8,7 +8,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::{
     api::message::{HistoryMessage, TunnelOneshot},
     store::models::{HistoryEntry, HistoryEntryType},
-    worker::worker::{send_worker_response, Worker},
+    worker::{send_worker_response, Worker},
     BackendError, BackendResult,
 };
 
@@ -238,7 +238,7 @@ impl Worker {
             Err(e) => {
                 let error_msg = e.to_string();
                 if error_msg.contains("unable to open database file") {
-                    return Err(BackendError::GenericError(format!(
+                    return Err(BackendError::GenericError(
                         "Could not access Safari history database. To fix this:\n\
                         1. Quit Safari completely (Safari > Quit Safari)\n\
                         2. Open System Settings\n\
@@ -249,7 +249,8 @@ impl Worker {
                         7. Try importing again\n\
                         \n\
                         Note: Safari must be completely closed during the import."
-                    )));
+                            .to_string(),
+                    ));
                 } else {
                     return Err(BackendError::GenericError(format!(
                         "Could not access Safari history database: {}",
@@ -337,7 +338,7 @@ impl Worker {
             // Chrome stores time as microseconds since Jan 1, 1601 UTC
             // Convert to milliseconds since epoch (Jan 1, 1970)
             let chrome_epoch = 11644473600000; // Difference in milliseconds between 1601 and 1970
-            let visit_time_ms = (visit_time / 1000) as i64 - chrome_epoch;
+            let visit_time_ms = (visit_time / 1000) - chrome_epoch;
 
             Ok((url, title, visit_time_ms))
         })?;

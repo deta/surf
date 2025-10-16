@@ -67,7 +67,6 @@ impl Database {
             let backup_db_path = format!("{}.backup", db_path);
             migrate(&mut conn, &backup_db_path)?
         }
-        // TODO: do we need this?
         rusqlite::vtab::array::load_module(&conn)?;
         rusqlite::vtab::array::load_module(&read_only_conn)?;
 
@@ -77,7 +76,7 @@ impl Database {
         })
     }
 
-    pub fn begin(&mut self) -> BackendResult<rusqlite::Transaction> {
+    pub fn begin(&mut self) -> BackendResult<rusqlite::Transaction<'_>> {
         Ok(self.conn.transaction()?)
     }
 }

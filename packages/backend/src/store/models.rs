@@ -3,6 +3,7 @@ use rusqlite::ToSql;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use std::fmt::Display;
 use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::EnumString;
@@ -46,17 +47,17 @@ pub enum EmbeddingType {
     TextContent,
 }
 
-impl ToString for EmbeddingType {
-    fn to_string(&self) -> String {
+impl Display for EmbeddingType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            EmbeddingType::Metadata => "metadata".to_string(),
-            EmbeddingType::TextContent => "text_content".to_string(),
+            EmbeddingType::Metadata => write!(f, "metadata"),
+            EmbeddingType::TextContent => write!(f, "text_content"),
         }
     }
 }
 
 impl ToSql for EmbeddingType {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
         Ok(rusqlite::types::ToSqlOutput::from(self.to_string()))
     }
 }
@@ -161,7 +162,7 @@ impl ResourceTextContentType {
 }
 
 impl ToSql for ResourceTextContentType {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
         Ok(rusqlite::types::ToSqlOutput::from(self.to_string()))
     }
 }
@@ -210,17 +211,16 @@ impl FromStr for InternalResourceTagNames {
     }
 }
 
-impl ToString for InternalResourceTagNames {
-    fn to_string(&self) -> String {
-        match self {
-            InternalResourceTagNames::Type => "type".to_string(),
-            InternalResourceTagNames::Deleted => "deleted".to_string(),
-            InternalResourceTagNames::Hostname => "hostname".to_string(),
-            InternalResourceTagNames::HorizonId => "horizonId".to_string(),
-            InternalResourceTagNames::GenerateLazyEmbeddings => {
-                "generateLazyEmbeddings".to_string()
-            }
-        }
+impl Display for InternalResourceTagNames {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            InternalResourceTagNames::Type => "type",
+            InternalResourceTagNames::Deleted => "deleted",
+            InternalResourceTagNames::Hostname => "hostname",
+            InternalResourceTagNames::HorizonId => "horizonId",
+            InternalResourceTagNames::GenerateLazyEmbeddings => "generateLazyEmbeddings",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -372,7 +372,7 @@ impl ResourceTag {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr)]
+#[derive(Debug, Serialize, Deserialize, strum::EnumString, strum::AsRefStr, Clone)]
 #[strum(ascii_case_insensitive)]
 #[serde(rename_all = "lowercase")]
 #[derive(Default)]
@@ -387,7 +387,7 @@ pub enum ResourceTagFilterOp {
     NeSuffix,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResourceTagFilter {
     pub tag_name: String,
     pub tag_value: String,
@@ -503,7 +503,7 @@ pub struct ResourceTextContentMetadata {
 }
 
 impl ToSql for ResourceTextContentMetadata {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
         let json = serde_json::to_string(self).unwrap();
         Ok(rusqlite::types::ToSqlOutput::from(json))
     }
@@ -541,7 +541,7 @@ pub enum ResourceProcessingState {
 }
 
 impl ToSql for ResourceProcessingState {
-    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput> {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
         let json = serde_json::to_string(self)
             .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
         Ok(rusqlite::types::ToSqlOutput::from(json))
@@ -673,7 +673,7 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    fn format_embedding(embedding: &Vec<f32>) -> String {
+    fn format_embedding(embedding: &[f32]) -> String {
         let embedding_str = embedding
             .iter()
             .map(|x| format!("{}", x))
@@ -682,14 +682,14 @@ impl Embedding {
         format!("[{}]", embedding_str)
     }
 
-    pub fn new(embedding: &Vec<f32>) -> Embedding {
+    pub fn new(embedding: &[f32]) -> Embedding {
         Embedding {
             rowid: None,
             embedding: Self::format_embedding(embedding),
         }
     }
 
-    pub fn new_with_rowid(rowid: i64, embedding: &Vec<f32>) -> Embedding {
+    pub fn new_with_rowid(rowid: i64, embedding: &[f32]) -> Embedding {
         Embedding {
             rowid: Some(rowid),
             embedding: Self::format_embedding(embedding),
@@ -762,19 +762,16 @@ impl AIChatSessionMessageSource {
         let mut timestamp = String::new();
         let mut url = String::new();
         let mut page = String::new();
-        match &self.metadata {
-            Some(metadata) => {
-                if let Some(ts) = metadata.timestamp {
-                    timestamp = ts.to_string();
-                }
-                if let Some(u) = &metadata.url {
-                    url = u.to_string();
-                }
-                if let Some(p) = &metadata.page {
-                    page = p.to_string();
-                }
+        if let Some(metadata) = &self.metadata {
+            if let Some(ts) = metadata.timestamp {
+                timestamp = ts.to_string();
             }
-            None => {}
+            if let Some(u) = &metadata.url {
+                url = u.to_string();
+            }
+            if let Some(p) = &metadata.page {
+                page = p.to_string();
+            }
         }
         format!(
             "
@@ -945,6 +942,18 @@ pub enum SearchEngine {
     KeywordMetadata,
     Proximity,
     Embeddings,
+}
+
+#[derive(Debug, Clone)]
+pub struct SearchResourcesParams {
+    pub query: String,
+    pub resource_tag_filters: Option<Vec<ResourceTagFilter>>,
+    pub semantic_search_enabled: Option<bool>,
+    pub embeddings_distance_threshold: Option<f32>,
+    pub embeddings_limit: Option<i64>,
+    pub include_annotations: Option<bool>,
+    pub space_id: Option<String>,
+    pub keyword_limit: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

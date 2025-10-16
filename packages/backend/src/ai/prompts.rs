@@ -1,22 +1,3 @@
-#![allow(dead_code)]
-
-pub fn transcript_chunking_prompt(transcript: &str) -> String {
-    format!(
-        "You are a helpful assistant that is being used in a question answering pipeline.
-Chunk the following transcript into semantically meaningful parts in the smallest possible chunks.
-Do not modify the content of the transcript, just chunk it into smaller parts.
-
-Output a list of the chunks in the order they appear in the transcript separated by newline(`\n`).
-
-Transcript:
-----------------------
-{}
-----------------------",
-        transcript
-    )
-    .to_string()
-}
-
 pub fn should_narrow_search_prompt(current_time: &str) -> String {
     format!("You are a helpful assistant that is being used in a question answering pipeline during the search step.
 A user has some metadata about the context and a query, and you need to determine whether the query should lead to an embeddings search over the content of the context to narrow down the search space or not.
@@ -136,18 +117,6 @@ You are an AI that creates self-contained web applications called \"Surflets\" u
 - Avoid unnecessary wrapper divs that create card-like appearances
 - Content should flow naturally and fill available space
 - Current date/time: {}", current_time).to_string()
-}
-
-pub fn command_prompt() -> String {
-    "
-You are a developer that writes javascript code without any comments to perform various tasks on a webpage. You return the javascript code that a user runs in the browser console to perform the task.
-
-1. DO NOT ADD COMMENTS IN THE CODE, THE COMMENTS BREAK THE CODE WHEN RUN IN THE BROWSER CONSOLE.
-2. You are provided with the context webpage that the user is currently in.
-3. The code your write is complete, the users can not write any code themselves and you must create a fully functional script.
-4. Hardcode any data needed from the context directly into the script. Add as much data as needed to make the script functional.
-5. Do not include anything else like any commentary, further instructions, explanations or comments, only return the code.
-".to_string()
 }
 
 pub fn general_chat_prompt(current_time: &str) -> String {

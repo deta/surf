@@ -1,20 +1,20 @@
-pub mod embeddings;
-pub mod requests;
+mod embeddings;
+mod requests;
 
 use crate::embeddings::model::EmbeddingModel;
-use crate::handlers::embeddings::{
+use crate::server::message::Message;
+use crate::BackendResult;
+use embeddings::{
     handle_encode_sentences, handle_filtered_search, handle_get_docs_similarity,
     handle_upsert_embeddings,
 };
-use crate::handlers::requests::Requests;
-use crate::server::message::Message;
-use crate::BackendResult;
+use requests::Requests;
 use std::io::{Read, Write};
 #[cfg(not(target_os = "windows"))]
 use std::os::unix::net::UnixStream;
 use std::str::FromStr;
 use std::sync::mpsc::Sender;
-use tracing::{debug, error, instrument, warn};
+use tracing::{error, instrument, warn};
 #[cfg(target_os = "windows")]
 use uds_windows::UnixStream;
 
@@ -24,25 +24,21 @@ pub fn read_msg(mut stream: &UnixStream) -> BackendResult<(usize, String)> {
     let bytes_read = stream.read(&mut buffer[..])?;
 
     if bytes_read == 0 {
-        debug!("received empty message");
         return Ok((0, String::new()));
     }
 
     let message = String::from_utf8_lossy(&buffer[..bytes_read]);
     let message = message.trim();
-    debug!(bytes_read = ?bytes_read, "received message");
     Ok((bytes_read, message.to_string()))
 }
 
 #[instrument(level = "trace", skip(stream))]
 pub fn send_ack(stream: &UnixStream) {
-    debug!("sending acknowledgment");
     try_stream_write_all(stream, "[ack]\n");
 }
 
 #[instrument(level = "trace", skip(stream))]
 pub fn send_done(stream: &UnixStream) {
-    debug!("sending done signal");
     try_stream_write_all(stream, "[done]\n");
 }
 
@@ -51,7 +47,6 @@ pub fn is_done(message: &str) -> (bool, String) {
     let done = message.ends_with("[done]");
     if done {
         let stripped = message.strip_suffix("[done]").unwrap();
-        debug!("message contains done signal");
         return (done, stripped.to_string());
     }
     (done, message.to_string())
@@ -81,17 +76,13 @@ pub fn try_stream_write_all_bytes(mut stream: &UnixStream, bytes: &[u8]) {
 pub fn handle_client(
     main_thread_tx: Sender<Message>,
     embedding_model: &EmbeddingModel,
-    mut stream: UnixStream,
+    stream: UnixStream,
 ) -> BackendResult<()> {
-    debug!("handling new client connection");
     let mut client_message_buffer = String::new();
 
     let (bytes_read, api_request) = read_msg(&stream)?;
     let api_request = match Requests::from_str(&api_request) {
-        Ok(request) => {
-            debug!(?request, "parsed API request");
-            request
-        }
+        Ok(request) => request,
         Err(e) => {
             error!(?e, "failed to parse API request");
             try_stream_write_all(
@@ -106,87 +97,67 @@ pub fn handle_client(
     send_ack(&stream);
 
     if bytes_read == 0 {
-        debug!("no message content received");
         return Ok(());
     }
 
-    debug!("entering message receive loop");
     loop {
         let (bytes_read, message) = read_msg(&stream)?;
         if bytes_read == 0 {
-            debug!("connection closed by client");
             return Ok(());
         }
         let (is_done, message) = is_done(&message);
         client_message_buffer.push_str(&message);
         if is_done {
-            debug!(message_len = ?message.len(), "received complete message");
             break;
         }
     }
 
-    debug!(?api_request, "processing API request");
     match api_request {
         Requests::LLMChatCompletion => {
             warn!("local LLM request rejected - feature not enabled");
-            try_stream_write_all(&mut stream, "error: local llm not enabled, api unsupported");
+            try_stream_write_all(&stream, "error: local llm not enabled, api unsupported");
         }
         Requests::GetDocsSimilarity => {
-            debug!("handling get docs similarity request");
-            match handle_get_docs_similarity(
+            if let Err(e) = handle_get_docs_similarity(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => debug!("get docs similarity request completed successfully"),
-                Err(e) => {
-                    error!(?e, "get docs similarity request failed");
-                    try_stream_write_all(&stream, &format!("error: {:#?}", e));
-                }
+                error!(?e, "get docs similarity request failed");
+                try_stream_write_all(&stream, &format!("error: {:#?}", e));
             }
         }
         Requests::EncodeSentences => {
-            debug!("handling encode sentences request");
-            match handle_encode_sentences(&stream, embedding_model, &client_message_buffer) {
-                Ok(_) => debug!("encode sentences request completed successfully"),
-                Err(e) => {
-                    error!(?e, "encode sentences request failed");
-                    try_stream_write_all(&stream, &format!("error: {:#?}", e));
-                }
+            if let Err(e) =
+                handle_encode_sentences(&stream, embedding_model, &client_message_buffer)
+            {
+                error!(?e, "encode sentences request failed");
+                try_stream_write_all(&stream, &format!("error: {:#?}", e));
             }
         }
         Requests::FilteredSearch => {
-            debug!("handling filtered search request");
-            match handle_filtered_search(
+            if let Err(e) = handle_filtered_search(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => debug!("filtered search request completed successfully"),
-                Err(e) => {
-                    error!(?e, "filtered search request failed");
-                    try_stream_write_all(&mut stream, &format!("error: {:#?}", e));
-                }
+                error!(?e, "filtered search request failed");
+                try_stream_write_all(&stream, &format!("error: {:#?}", e));
             }
         }
         Requests::UpsertEmbeddings => {
-            debug!("handling upsert embeddings request");
-            match handle_upsert_embeddings(
+            if let Err(e) = handle_upsert_embeddings(
                 main_thread_tx,
                 &stream,
                 embedding_model,
                 &client_message_buffer,
             ) {
-                Ok(_) => debug!("upsert embeddings request completed successfully"),
-                Err(e) => {
-                    error!(?e, "upsert embeddings request failed");
-                    try_stream_write_all(&mut stream, &format!("error: {:#?}", e));
-                }
+                error!(?e, "upsert embeddings request failed");
+                try_stream_write_all(&stream, &format!("error: {:#?}", e));
             }
         }
     }
-    debug!("client handler completed successfully");
     Ok(())
 }

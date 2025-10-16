@@ -39,8 +39,8 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare("SELECT id, name, created_at, updated_at FROM spaces WHERE id = ?1")?;
-        let space: Space;
-        match stmt.query_row(rusqlite::params![space_id], |row| {
+
+        let space: Space = match stmt.query_row(rusqlite::params![space_id], |row| {
             Ok(Space {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -48,10 +48,10 @@ impl Database {
                 updated_at: row.get(3)?,
             })
         }) {
-            Ok(s) => space = s,
+            Ok(s) => s,
             Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
             Err(e) => return Err(e.into()),
-        }
+        };
         let (parent_space_ids, child_space_ids) = self.get_parent_child_spaces(space_id)?;
         Ok(Some(SpaceExtended {
             id: space.id,
@@ -168,10 +168,7 @@ impl Database {
             std::collections::HashMap::new();
         for row in parent_rows {
             let (child_id, parent_id) = row?;
-            parent_map
-                .entry(child_id)
-                .or_insert_with(Vec::new)
-                .push(parent_id);
+            parent_map.entry(child_id).or_default().push(parent_id);
         }
 
         let mut child_stmt = self.conn.prepare(
@@ -185,10 +182,7 @@ impl Database {
             std::collections::HashMap::new();
         for row in child_rows {
             let (parent_id, child_id) = row?;
-            child_map
-                .entry(parent_id)
-                .or_insert_with(Vec::new)
-                .push(child_id);
+            child_map.entry(parent_id).or_default().push(child_id);
         }
 
         let mut result = Vec::new();
@@ -535,25 +529,25 @@ mod tests {
             Space {
                 id: "space1".to_string(),
                 name: r#"{"folderName":"Work Projects"}"#.to_string(),
-                created_at: now.clone(),
-                updated_at: now.clone(),
+                created_at: now,
+                updated_at: now,
             },
             Space {
                 id: "space2".to_string(),
                 name: r#"{"folderName":"Personal Notes"}"#.to_string(),
-                created_at: now.clone(),
-                updated_at: now.clone(),
+                created_at: now,
+                updated_at: now,
             },
             Space {
                 id: "space3".to_string(),
                 name: r#"{"folderName":"Research Papers"}"#.to_string(),
-                created_at: now.clone(),
-                updated_at: now.clone(),
+                created_at: now,
+                updated_at: now,
             },
             Space {
                 id: "space4".to_string(),
                 name: r#"{"folderName":"Project Ideas"}"#.to_string(),
-                created_at: now.clone(),
+                created_at: now,
                 updated_at: now,
             },
         ];
@@ -699,8 +693,8 @@ mod tests {
         let space = Space {
             id: "space_with_resources".to_string(),
             name: r#"{"folderName":"Space With Resources"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         db.create_space(&space).unwrap();
 
@@ -709,16 +703,16 @@ mod tests {
             resource_path: "resource1".to_string(),
             deleted: 0,
             resource_type: "note".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         let resource2 = Resource {
             id: "resource2".to_string(),
             resource_path: "resource2".to_string(),
             deleted: 0,
             resource_type: "document".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
 
         db.create_resource(&resource1).unwrap();
@@ -729,16 +723,16 @@ mod tests {
             id: "entry1".to_string(),
             space_id: "space_with_resources".to_string(),
             resource_id: "resource1".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
         let entry2 = SpaceEntry {
             id: "entry2".to_string(),
             space_id: "space_with_resources".to_string(),
             resource_id: "resource2".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
 
@@ -776,14 +770,14 @@ mod tests {
         let parent_space = Space {
             id: "parent_space".to_string(),
             name: r#"{"folderName":"Parent Space"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         let child_space = Space {
             id: "child_space".to_string(),
             name: r#"{"folderName":"Child Space"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
 
         db.create_space(&parent_space).unwrap();
@@ -793,8 +787,8 @@ mod tests {
             id: "subspace1".to_string(),
             parent_space_id: "parent_space".to_string(),
             child_space_id: "child_space".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
 
@@ -826,14 +820,14 @@ mod tests {
         let parent_space = Space {
             id: "mixed_parent".to_string(),
             name: r#"{"folderName":"Mixed Parent"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         let child_space = Space {
             id: "mixed_child".to_string(),
             name: r#"{"folderName":"Mixed Child"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
 
         db.create_space(&parent_space).unwrap();
@@ -844,8 +838,8 @@ mod tests {
             resource_path: "mixed_resource".to_string(),
             deleted: 0,
             resource_type: "note".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
 
         db.create_resource(&resource).unwrap();
@@ -854,8 +848,8 @@ mod tests {
             id: "mixed_subspace".to_string(),
             parent_space_id: "mixed_parent".to_string(),
             child_space_id: "mixed_child".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
 
@@ -863,8 +857,8 @@ mod tests {
             id: "mixed_entry".to_string(),
             space_id: "mixed_parent".to_string(),
             resource_id: "mixed_resource".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
 
@@ -904,8 +898,8 @@ mod tests {
         let space = Space {
             id: "sort_space".to_string(),
             name: r#"{"folderName":"Sort Space"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         db.create_space(&space).unwrap();
 
@@ -914,16 +908,16 @@ mod tests {
             resource_path: "sort_resource1".to_string(),
             deleted: 0,
             resource_type: "note".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(), // earlier update
+            created_at: now,
+            updated_at: now, // earlier update
         };
         let resource2 = Resource {
             id: "sort_resource2".to_string(),
             resource_path: "sort_resource2".to_string(),
             deleted: 0,
             resource_type: "document".to_string(),
-            created_at: now.clone(),
-            updated_at: later.clone(), // later update
+            created_at: now,
+            updated_at: later, // later update
         };
 
         db.create_resource(&resource1).unwrap();
@@ -933,16 +927,16 @@ mod tests {
             id: "sort_entry1".to_string(),
             space_id: "sort_space".to_string(),
             resource_id: "sort_resource1".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
         let entry2 = SpaceEntry {
             id: "sort_entry2".to_string(),
             space_id: "sort_space".to_string(),
             resource_id: "sort_resource2".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
             manually_added: 1,
         };
 
@@ -977,8 +971,8 @@ mod tests {
         let space = Space {
             id: "add_space".to_string(),
             name: r#"{"folderName":"Add Space"}"#.to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         db.create_space(&space).unwrap();
 
@@ -987,16 +981,16 @@ mod tests {
             resource_path: "add_resource1".to_string(),
             deleted: 0,
             resource_type: "note".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
         let resource2 = Resource {
             id: "add_resource2".to_string(),
             resource_path: "add_resource2".to_string(),
             deleted: 0,
             resource_type: "document".to_string(),
-            created_at: now.clone(),
-            updated_at: now.clone(),
+            created_at: now,
+            updated_at: now,
         };
 
         db.create_resource(&resource1).unwrap();
@@ -1006,16 +1000,16 @@ mod tests {
             id: "add_entry1".to_string(),
             space_id: "add_space".to_string(),
             resource_id: "add_resource1".to_string(),
-            created_at: now.clone(), // Added earlier
-            updated_at: now.clone(),
+            created_at: now, // Added earlier
+            updated_at: now,
             manually_added: 1,
         };
         let entry2 = SpaceEntry {
             id: "add_entry2".to_string(),
             space_id: "add_space".to_string(),
             resource_id: "add_resource2".to_string(),
-            created_at: later.clone(), // Added later
-            updated_at: later.clone(),
+            created_at: later, // Added later
+            updated_at: later,
             manually_added: 1,
         };
 

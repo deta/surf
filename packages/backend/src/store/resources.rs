@@ -92,8 +92,7 @@ impl Database {
         tx: &mut rusqlite::Transaction,
         ids: &[String],
     ) -> BackendResult<()> {
-        let placeholders = std::iter::repeat("?")
-            .take(ids.len())
+        let placeholders = std::iter::repeat_n("?", ids.len())
             .collect::<Vec<_>>()
             .join(",");
 

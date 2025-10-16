@@ -1,11 +1,11 @@
 use crate::{
     ai::{
-        ai::{ChatResult, DocsSimilarity},
         llm::{
-            client::client::Model,
+            client::Model,
             models::{Message, MessageContent, Quota},
         },
         youtube::YoutubeTranscript,
+        {ChatInput, ChatResult, DocsSimilarity},
     },
     api::message::{MiscMessage, ProcessorMessage, TunnelOneshot},
     store::{
@@ -16,7 +16,7 @@ use crate::{
             ResourceTextContent,
         },
     },
-    worker::worker::{send_worker_response, Worker},
+    worker::{send_worker_response, Worker},
     BackendError, BackendResult,
 };
 use neon::prelude::*;
@@ -103,7 +103,7 @@ impl Worker {
         done_callback: Root<JsFunction>,
         query: String,
         model: &Model,
-        custom_key: Option<&str>,
+        custom_key: Option<String>,
         inline_images: Option<Vec<String>>,
     ) -> BackendResult<()> {
         // frontend sends a query with a trailing <p></p> for some reason
@@ -132,7 +132,7 @@ impl Worker {
         &mut self,
         messages: Vec<Message>,
         model: Model,
-        custom_key: Option<&str>,
+        custom_key: Option<String>,
         _response_format: Option<&str>,
     ) -> BackendResult<String> {
         self.ai
@@ -142,51 +142,30 @@ impl Worker {
 
     pub fn send_chat_query(
         &mut self,
-        query: String,
-        model: Model,
-        custom_key: Option<&str>,
         session_id: Option<String>,
-        note_resource_id: Option<String>,
-        number_documents: i32,
-        rag_only: bool,
         callback: Root<JsFunction>,
-        resource_ids: Option<Vec<String>>,
-        inline_images: Option<Vec<String>>,
-        general: bool,
-        websearch: bool,
-        surflet: bool,
-        app_creation: bool,
+        search_only: bool,
+        chat_input: ChatInput,
     ) -> BackendResult<()> {
-        // frontend sends a query with a trailing <p></p> for some reason
-        let query = match query.strip_suffix("<p></p>") {
+        // frontend sends a query with a trailing <p></p> sometimes for some reason
+        let query = match chat_input.query.strip_suffix("<p></p>") {
             Some(q) => q.to_string(),
-            None => query,
+            None => chat_input.query.clone(),
         };
-        if rag_only {
-            return self.handle_rag_only_query(query, number_documents, resource_ids, callback);
+
+        if search_only {
+            return self.handle_search_only_query(
+                query,
+                chat_input.number_documents,
+                Some(chat_input.resource_ids),
+                callback,
+            );
         }
-
-        // app creation is a special case of a general chat query
-        let general = general || app_creation;
-
-        self.handle_full_chat_query(
-            query,
-            &model,
-            custom_key,
-            session_id,
-            note_resource_id,
-            number_documents,
-            resource_ids.unwrap_or_default(),
-            inline_images,
-            general,
-            websearch,
-            surflet,
-            callback,
-        )
+        self.handle_full_chat_query(session_id, callback, chat_input)
     }
 
     // TODO: store history
-    fn handle_rag_only_query(
+    fn handle_search_only_query(
         &mut self,
         query: String,
         number_documents: i32,
@@ -261,18 +240,9 @@ impl Worker {
 
     fn handle_full_chat_query(
         &mut self,
-        query: String,
-        model: &Model,
-        custom_key: Option<&str>,
         session_id: Option<String>,
-        note_resource_id: Option<String>,
-        number_documents: i32,
-        mut resource_ids: Vec<String>,
-        inline_images: Option<Vec<String>>,
-        general: bool,
-        websearch: bool,
-        surflet: bool,
         callback: Root<JsFunction>,
+        mut chat_input: ChatInput,
     ) -> BackendResult<()> {
         let mut history: Vec<Message> = vec![];
 
@@ -283,14 +253,17 @@ impl Worker {
         }
 
         let mut should_cluster = false;
-        let send_cluster_query = !general && self.should_send_cluster_query(&resource_ids)?;
+        let send_cluster_query =
+            !chat_input.general && self.should_send_cluster_query(&chat_input.resource_ids)?;
 
         if send_cluster_query {
-            let composite_resources = self.db.list_resources_metadata_by_ids(&resource_ids)?;
+            let composite_resources = self
+                .db
+                .list_resources_metadata_by_ids(&chat_input.resource_ids)?;
             let should_cluster_result = self.ai.should_cluster(
-                &query,
-                model,
-                custom_key,
+                &chat_input.query,
+                &chat_input.model,
+                chat_input.custom_key.clone(),
                 self.ai
                     .llm_metadata_messages_from_sources(&composite_resources),
             )?;
@@ -311,28 +284,15 @@ impl Worker {
                             Err(_) => continue,
                         };
                     }
-                    resource_ids = pruned_resources_ids;
+                    chat_input.resource_ids = pruned_resources_ids;
                 }
             }
         }
 
-        self.handle_lazy_embeddings(&resource_ids)?;
+        self.handle_lazy_embeddings(&chat_input.resource_ids)?;
 
-        let (assistant_message, chat_result) = self.process_chat_stream(
-            callback,
-            query,
-            model,
-            custom_key,
-            note_resource_id,
-            number_documents,
-            resource_ids,
-            inline_images,
-            general,
-            websearch,
-            surflet,
-            should_cluster,
-            history,
-        )?;
+        let (assistant_message, chat_result) =
+            self.process_chat_stream(callback, chat_input, history, should_cluster)?;
 
         if let Some(session_id) = session_id {
             self.save_messages(session_id, assistant_message, chat_result)?;
@@ -386,15 +346,12 @@ impl Worker {
                         );
                     }
                 },
-                Ok(None) => {
-                    return;
-                }
+                Ok(None) => {}
                 Err(err) => {
                     eprintln!(
                         "Error checking lazy embeddings tag for resource {}: {}",
                         id, err
                     );
-                    return;
                 }
             }
         });
@@ -404,34 +361,13 @@ impl Worker {
     fn process_chat_stream(
         &self,
         mut callback: Root<JsFunction>,
-        query: String,
-        model: &Model,
-        custom_key: Option<&str>,
-        note_resource_id: Option<String>,
-        number_documents: i32,
-        resource_ids: Vec<String>,
-        inline_images: Option<Vec<String>>,
-        general: bool,
-        websearch: bool,
-        surflet: bool,
-        should_cluster: bool,
+        chat_input: ChatInput,
         history: Vec<Message>,
+        should_cluster: bool,
     ) -> BackendResult<(String, ChatResult)> {
-        let mut chat_result = self.ai.chat(
-            &self.db,
-            query,
-            model,
-            custom_key,
-            note_resource_id,
-            number_documents,
-            resource_ids,
-            inline_images,
-            general,
-            websearch,
-            surflet,
-            should_cluster,
-            history,
-        )?;
+        let mut chat_result = self
+            .ai
+            .chat(&self.db, chat_input, history, should_cluster)?;
 
         callback = self.send_callback(callback, chat_result.sources_xml.clone())?;
 
@@ -537,7 +473,7 @@ impl Worker {
         &self,
         prompt: String,
         model: &Model,
-        custom_key: Option<&str>,
+        custom_key: Option<String>,
         sql_query: Option<String>,
         embedding_query: Option<String>,
         embedding_distance_threshold: Option<f32>,
@@ -586,8 +522,7 @@ impl Worker {
                 "SELECT resource_id FROM resource_tags
                  WHERE resource_id IN ({})
                  AND tag_name = 'silent' AND tag_value = 'true'",
-                std::iter::repeat("?")
-                    .take(resource_ids_first.len())
+                std::iter::repeat_n("?", resource_ids_first.len())
                     .collect::<Vec<_>>()
                     .join(",")
             ))?
@@ -643,7 +578,7 @@ impl Worker {
         &mut self,
         query: String,
         model: Model,
-        custom_key: Option<&str>,
+        custom_key: Option<String>,
         number_documents: i32,
         resource_ids: Option<Vec<String>>,
     ) -> BackendResult<Vec<CompositeResource>> {
@@ -794,40 +729,39 @@ pub fn handle_misc_message(
             let result = worker.create_chat_completion(
                 messages,
                 model,
-                custom_key.as_deref(),
+                custom_key,
                 response_format.as_deref(),
             );
             send_worker_response(&mut worker.channel, oneshot, result)
         }
+        // TODO: use chat input
         MiscMessage::ChatQuery {
             query,
             model,
             custom_key,
+            search_only,
             session_id,
             number_documents,
             callback,
-            rag_only,
             resource_ids,
             inline_images,
             general,
             app_creation,
         } => {
-            let result = worker.send_chat_query(
+            let input = ChatInput {
                 query,
                 model,
-                custom_key.as_deref(),
-                Some(session_id),
-                None,
+                custom_key,
                 number_documents,
-                rag_only,
-                callback,
                 resource_ids,
                 inline_images,
-                general,
-                false,
-                false,
-                app_creation,
-            );
+                general: general || app_creation, // general is true for app creation
+                note_resource_id: None,
+                websearch: false,
+                surflet: false,
+            };
+            let result = worker.send_chat_query(Some(session_id), callback, search_only, input);
+
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::NoteQuery {
@@ -843,22 +777,20 @@ pub fn handle_misc_message(
             surflet,
             websearch,
         } => {
-            let result = worker.send_chat_query(
+            let input = ChatInput {
                 query,
                 model,
-                custom_key.as_deref(),
-                None,
-                Some(note_resource_id),
+                custom_key,
                 number_documents,
-                false,
-                callback,
                 resource_ids,
                 inline_images,
                 general,
+                note_resource_id: Some(note_resource_id),
                 websearch,
                 surflet,
-                false,
-            );
+            };
+
+            let result = worker.send_chat_query(None, callback, false, input);
             send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::CreateAppQuery {
@@ -874,7 +806,7 @@ pub fn handle_misc_message(
                 done_callback,
                 query,
                 &model,
-                custom_key.as_deref(),
+                custom_key,
                 inline_images,
             );
             send_worker_response(&mut worker.channel, oneshot, result)
@@ -890,7 +822,7 @@ pub fn handle_misc_message(
             let result = worker.query_sffs_resources(
                 prompt,
                 &model,
-                custom_key.as_deref(),
+                custom_key,
                 sql_query,
                 embedding_query,
                 embedding_distance_threshold,
@@ -947,7 +879,7 @@ pub fn handle_misc_message(
             let result = worker.search_chat_resources(
                 query,
                 model,
-                custom_key.as_deref(),
+                custom_key,
                 number_documents,
                 resource_ids,
             );
