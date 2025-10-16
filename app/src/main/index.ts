@@ -207,6 +207,7 @@ const initializeApp = async () => {
   const userConfig = getUserConfig()
 
   setupIpc(backendRootPath)
+  createSetupWindow()
 
   if (!is.dev) {
     log.log('Checking if app is setup')

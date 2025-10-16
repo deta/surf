@@ -9,6 +9,7 @@
   let error = ''
   let email = ''
   let acceptedTerms = false
+  let showSkipConfirmation = false
 
   const dispatch = createEventDispatcher()
 
@@ -28,6 +29,18 @@
       error = `Sorry, we countered an error: ${e}`
     }
   }
+
+  const handleSkip = () => {
+    showSkipConfirmation = true
+  }
+
+  const confirmSkip = () => {
+    dispatch('viewChange', 'persona')
+  }
+
+  const cancelSkip = () => {
+    showSkipConfirmation = false
+  }
 </script>
 
 <div class="container">
@@ -39,27 +52,44 @@
       <p class="error">{error}</p>
     {/if}
 
+    {#if showSkipConfirmation}
+      <div class="confirmation-modal">
+        <div class="modal-content">
+          <h2 class="modal-title">Skip Email Verification?</h2>
+          <p class="modal-message">
+            If you skip verification, you'll need to set up your own AI provider to use AI features
+            in Surf.
+          </p>
+          <div class="modal-links">
+            <a on:click={cancelSkip}>Go Back</a>
+            <a on:click={confirmSkip}>Continue Without Email</a>
+          </div>
+        </div>
+      </div>
+    {/if}
+
+    <div class="info-section">
+      <p class="info">
+        Verify your email to get the best experience, or continue and set up your own API key for AI
+        features.
+      </p>
+    </div>
+
     <form on:submit|preventDefault={handleSubmitEmail}>
       <input
         bind:value={email}
         class="invite-input"
         type="email"
-        placeholder="Your Email"
-        required
+        placeholder="Your Email (Optional)"
       />
 
-      <div class="details">
-        <p class="info text-md">
-          We need to verify your email address to provide you the best experience with Surf.
-        </p>
-      </div>
-
-      <div class="skip-link">
-        <p class="info">
-          <a href="#" on:click|preventDefault={() => dispatch('viewChange', 'invite')}>
-            Already verified your email?
-          </a>
-        </p>
+      <div class="button-group">
+        <div class="verify-button" class:centered={email}>
+          <Button type="submit" disabled={!email || !acceptedTerms}>Verify Email</Button>
+        </div>
+        <div class="skip-button" class:fade-out={email}>
+          <Button type="button" on:click={handleSkip}>Skip</Button>
+        </div>
       </div>
 
       <div class="bottom">
@@ -70,10 +100,6 @@
             <a href={PRIVACY_URL} target="_blank">Privacy Policy</a>.
           </span>
         </label>
-
-        <div class="button-warpper">
-          <Button type="submit">Request Verification</Button>
-        </div>
       </div>
     </form>
   </div>
@@ -111,13 +137,26 @@
     margin-bottom: 2rem;
   }
 
+  .info-section {
+    margin-bottom: 2rem;
+  }
+
+  .info {
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    color: rgba(0, 0, 0, 0.6);
+    padding: 0 2rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+
   .invite-input {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-size: 16px;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     text-align: center;
     font-family: monospace;
     letter-spacing: 0.05em;
@@ -134,23 +173,46 @@
     }
   }
 
-  .button-wrapper {
+  .button-group {
     display: flex;
-    justify-content: center;
+    gap: 1rem;
+    width: 100%;
+    margin-bottom: 2rem;
+    position: relative;
   }
 
-  .info {
-    font-size: 1rem;
-    font-family: 'Inter', sans-serif;
-    color: rgba(0, 0, 0, 0.5);
-    margin-bottom: 1rem;
-    padding: 0 4rem;
-    text-align: center;
+  .verify-button {
+    flex: 1;
+    transition:
+      transform 0.3s ease,
+      flex 0.3s ease;
+
+    &.centered {
+      flex: 0 0 calc(50% - 0.5rem);
+      transform: translateX(calc(50% + 0.5rem));
+    }
+
+    :global(button) {
+      width: 100%;
+    }
   }
 
-  .apply-link {
-    color: inherit;
-    text-decoration: underline;
+  .skip-button {
+    flex: 1;
+    opacity: 1;
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+
+    :global(button) {
+      width: 100%;
+    }
+
+    &.fade-out {
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+    }
   }
 
   .bottom {
@@ -170,7 +232,6 @@
   .terms-checkbox {
     display: flex;
     align-items: center;
-    margin-bottom: 1rem;
 
     input {
       margin-right: 0.5rem;
@@ -191,26 +252,52 @@
     text-align: center;
   }
 
-  .submit-button {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
+  .confirmation-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
 
-    &:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 28rem;
+    width: 90%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-title {
+    font-family: 'Gambarino-Display', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .modal-message {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    color: rgba(0, 0, 0, 0.7);
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .modal-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+
+    :global(button) {
+      flex: 1;
     }
-  }
-
-  .skip-link {
-    color: #1995f5;
-  }
-
-  .skip-link:hover {
-    text-decoration: underline;
   }
 </style>
