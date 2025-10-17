@@ -261,7 +261,12 @@
       2}px; --finalXOffset: {finalXOffset}px; --finalYOffset: {finalYOffset}px; animation: smokeVelocity {duration}ms cubic-bezier(0.19, 1, 0.22, 1);"
   viewBox="0 0 100 100"
 >
-  <path d={combinedPath} fill="white" stroke="black" stroke-width="5" />
+  <path
+    d={combinedPath}
+    fill="light-dark(white, rgba(255, 255, 255, 0.85))"
+    stroke="light-dark(black, rgba(15, 23, 42, 0.6))"
+    stroke-width="5"
+  />
 </svg>
 
 <style>

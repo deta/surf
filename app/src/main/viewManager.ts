@@ -6,7 +6,7 @@ import {
   WebContentsViewManagerActionType,
   type WebContentsViewCreateOptions
 } from '@deta/types'
-import { app, BrowserWindow, WebContentsView, session } from 'electron'
+import { app, BrowserWindow, WebContentsView, session, nativeTheme } from 'electron'
 import { validateIPCSender } from './ipcHandlers'
 import { IPCListenerUnsubscribe } from '@deta/services/ipc'
 import { EventEmitterBase, useLogScope } from '@deta/utils'
@@ -15,6 +15,7 @@ import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 import { MessageChannelMain } from 'electron/main'
 import { ExtensionsManager } from './extensions'
+import { getUserConfig } from './config'
 
 const log = useLogScope('ViewManager')
 
@@ -44,6 +45,12 @@ export class WCView {
 
     const parition = opts.partition || 'persist:horizon'
     const wcvSession = session.fromPartition(parition)
+
+    // Get user theme to set initial background color and prevent white flash
+    const userConfig = getUserConfig()
+    const isDarkMode = userConfig.settings?.app_style === 'dark'
+    const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff'
+
     const view = new WebContentsView({
       ...extraOpts,
       webPreferences: {
@@ -59,7 +66,8 @@ export class WCView {
         preload: opts.preload || path.resolve(__dirname, '../preload/webcontents.js'),
         additionalArguments: opts.additionalArguments || [],
         transparent: opts.transparent,
-        webviewTag: true
+        webviewTag: true,
+        backgroundColor
       }
     })
 
@@ -129,6 +137,12 @@ export class WCView {
     log.log('[main] webcontentsview-recreate: re-creating WebContentsView with new preferences')
 
     const wcvSession = session.fromPartition('persist:horizon')
+
+    // Get user theme to set initial background color and prevent white flash
+    const userConfig = getUserConfig()
+    const isDarkMode = userConfig.settings?.app_style === 'dark'
+    const backgroundColor = isDarkMode ? '#1a1a1a' : '#ffffff'
+
     this.wcv = new WebContentsView({
       webPreferences: {
         session: wcvSession,
@@ -142,6 +156,7 @@ export class WCView {
         preload: this.opts.preload || path.resolve(__dirname, '../preload/webcontents.js'),
         additionalArguments: this.opts.additionalArguments || [],
         transparent: this.opts.transparent,
+        backgroundColor,
         ...webPreferences
       }
     })
@@ -408,6 +423,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     this.window = window
     this.views = new Map<string, WCView>()
 
+    const config = getUserConfig()
+    const initialColorScheme = config.settings?.app_style || 'light'
+    nativeTheme.themeSource = initialColorScheme
+
     this.window.on('close', () => {
       log.log('[main] webcontentsview-destroy: main window closed, cleaning up')
       this.cleanup()
@@ -426,6 +445,62 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     })
 
     this.attachIPCEvents()
+  }
+
+  applyColorSchemeToView(view: WCView, colorScheme: 'light' | 'dark') {
+    if (view.wcv && !view.wcv.webContents.isDestroyed()) {
+      // Wait for dom-ready before injecting color scheme
+      const injectColorScheme = () => {
+        view.wcv.webContents
+          .executeJavaScript(
+            `
+          if (document.documentElement) {
+            document.documentElement.dataset.colorScheme = '${colorScheme}';
+            document.documentElement.style.colorScheme = '${colorScheme}';
+          }
+        `
+          )
+          .catch((err) => {
+            log.warn('[main] Failed to inject color scheme into view:', view.id, err)
+          })
+      }
+
+      // Try to inject immediately if already loaded
+      if (!view.wcv.webContents.isLoading()) {
+        injectColorScheme()
+      }
+
+      // Also inject on dom-ready to ensure it's applied
+      // Note: attachEventListener automatically manages cleanup via view.eventListeners
+      view.attachEventListener('dom-ready', () => {
+        injectColorScheme()
+      })
+    }
+  }
+
+  updateAllViewsColorScheme(colorScheme: 'light' | 'dark') {
+    log.log('[main] Updating all WebContentsView color schemes to:', colorScheme)
+
+    // Update nativeTheme for Electron's internal handling
+    nativeTheme.themeSource = colorScheme
+
+    // Inject color scheme into all existing views
+    this.views.forEach((view) => {
+      if (view.wcv && !view.wcv.webContents.isDestroyed()) {
+        view.wcv.webContents
+          .executeJavaScript(
+            `
+          if (document.documentElement) {
+            document.documentElement.dataset.colorScheme = '${colorScheme}';
+            document.documentElement.style.colorScheme = '${colorScheme}';
+          }
+        `
+          )
+          .catch((err) => {
+            log.warn('[main] Failed to inject color scheme into view:', view.id, err)
+          })
+      }
+    })
   }
 
   getWebContentsViews() {
@@ -553,6 +628,10 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
     log.log('[main] webcontentsview-create: added view to window with id', view.id)
 
     this.emit('create', view)
+
+    // Apply current color scheme to newly created overlay view
+    const colorScheme = this.config.settingsValue?.app_style || 'light'
+    this.applyColorSchemeToView(view, colorScheme)
 
     if (opts.overlayId) {
       log.log(
@@ -877,6 +956,22 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
       })
 
       this.setupMessagePort(view)
+
+      // Inject color scheme into newly created view
+      const config = getUserConfig()
+      const colorScheme = config.settings?.app_style || 'light'
+      view.wcv.webContents
+        .executeJavaScript(
+          `
+        if (document.documentElement) {
+          document.documentElement.dataset.colorScheme = '${colorScheme}';
+          document.documentElement.style.colorScheme = '${colorScheme}';
+        }
+      `
+        )
+        .catch((err) => {
+          log.warn('[main] Failed to inject initial color scheme into view:', view.id, err)
+        })
     })
 
     view.attachEventListener(
@@ -1022,6 +1117,26 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   attachIPCEvents() {
     log.log('[main] webcontentsview-attachIPCEvents: attaching IPC event listeners')
     this.ipcEventListeners = [
+      // Listen for theme toggle to update color scheme
+      IPC_EVENTS_MAIN.toggleTheme.on((event) => {
+        if (!validateIPCSender(event)) return
+
+        const config = getUserConfig()
+        const colorScheme = config.settings?.app_style || 'light'
+        log.log('[main] Theme toggled, updating color scheme to:', colorScheme)
+        this.updateAllViewsColorScheme(colorScheme)
+      }),
+
+      // Listen for settings updates to update color scheme
+      IPC_EVENTS_MAIN.updateUserConfigSettings.on((event, settings) => {
+        if (!validateIPCSender(event)) return
+
+        if (settings.app_style) {
+          log.log('[main] Settings updated, updating color scheme to:', settings.app_style)
+          this.updateAllViewsColorScheme(settings.app_style)
+        }
+      }),
+
       IPC_EVENTS_MAIN.webContentsViewManagerAction.handle(async (event, { type, payload }) => {
         try {
           if (!validateIPCSender(event)) return null

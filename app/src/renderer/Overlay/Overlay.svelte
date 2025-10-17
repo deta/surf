@@ -32,8 +32,30 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
     document.body.classList.remove('hide-everything')
+
+    // Initialize dark mode
+    try {
+      // @ts-ignore - window.api is injected
+      const settings = await window.api.getSettings()
+      const appStyle = settings?.app_style || 'light'
+      document.documentElement.dataset.colorScheme = appStyle
+      document.documentElement.style.colorScheme = appStyle
+
+      // Listen for theme changes
+      // @ts-ignore - window.api is injected
+      const cleanup = window.api.onSettingsChanged?.((newSettings) => {
+        const newAppStyle = newSettings?.app_style || 'light'
+        document.documentElement.dataset.colorScheme = newAppStyle
+        document.documentElement.style.colorScheme = newAppStyle
+      })
+
+      return () => cleanup?.()
+    } catch (error) {
+      console.error('Failed to initialize theme:', error)
+    }
+
     // // Check if the mouse is within the bounds of the overlay
     // const checkMouseInOverlay = () => {
     //   const overlayElement = document.querySelector('.overlay-content')
@@ -95,12 +117,12 @@
     padding: 0;
     // border-radius: 18px;
     // overflow: hidden;
-    // background: #ffffff73;
+    // background: light-dark(#ffffff73, rgba(26, 36, 56, 0.45));
     // backdrop-filter: blur(10px);
-    // border: 0.5px solid rgba(0, 0, 0, 0.1);
+    // border: 0.5px solid light-dark(rgba(0, 0, 0, 0.1), rgba(71, 85, 105, 0.3));
     // box-shadow:
-    //   0 4px 30px rgba(0, 0, 0, 0.1),
-    //   0 2px 10px rgba(0, 0, 0, 0.1);
+    //   0 4px 30px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.25)),
+    //   0 2px 10px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2));
   }
 
   .overlay-debug {
@@ -117,16 +139,16 @@
     }
 
     button {
-      background: #fff;
+      background: light-dark(#fff, #1a2438);
       border: none;
       padding: 0.25rem 0.5rem;
       border-radius: 8px;
       pointer-events: all;
       font-size: 1rem;
-      color: #333;
+      color: light-dark(#333, #e5edff);
 
       &:hover {
-        background: #f0f0f0;
+        background: light-dark(#f0f0f0, #283549);
       }
     }
   }

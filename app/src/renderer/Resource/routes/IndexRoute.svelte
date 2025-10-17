@@ -296,13 +296,13 @@
 
   .empty {
     width: 100%;
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
     padding: 0.5rem 0.75rem;
     border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: rgba(0, 0, 0, 0.25);
+    color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
 
     p {
       max-width: 40ch;
@@ -344,6 +344,7 @@
       margin-bottom: 0.75rem;
       font-family: 'Gambarino';
       text-align: center;
+      color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
     }
   }
 

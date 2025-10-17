@@ -154,7 +154,9 @@
         aria-hidden="true"
       >
         <div class="cursor-container">
-          <div class="cursor"><Icon name="cursor" fill="#FF6426" size={position.height} /></div>
+          <div class="cursor">
+            <Icon name="cursor" fill="light-dark(#ff6426, #ff8a4c)" size={position.height} />
+          </div>
 
           <div bind:this={pillElement} class="pill" class:visible={isHovering}>
             <span>Ask Surf {isMac() ? '⌘' : 'ctrl'} ↵</span>
@@ -223,7 +225,7 @@
   .pill {
     margin-top: -2px;
     margin-left: 2px;
-    color: white;
+    color: light-dark(#ffffff, var(--on-app-background-dark, #e5edff));
     border-radius: 12px;
     padding: 2px 8px;
     font-size: 11px;
@@ -238,7 +240,7 @@
     background: paint(squircle) !important;
     --squircle-radius: 11px;
     --squircle-smooth: 0.28;
-    --squircle-fill: rgba(0, 0, 0, 0.5);
+    --squircle-fill: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.35));
   }
 
   .pill.visible {
@@ -246,9 +248,7 @@
     transform: translateX(0);
   }
 
-  :global(.dark) .popover-content {
-    background-color: transparent;
-    border-color: transparent;
-    color: white;
+  .popover-content {
+    color: inherit;
   }
 </style>

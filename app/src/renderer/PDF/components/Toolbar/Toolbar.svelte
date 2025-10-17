@@ -79,8 +79,8 @@
         <input
           type="text"
           bind:value={wantedPageNumber}
-          class="block w-12 text-right rounded-sm border border-slate-300 focus:shadow focus:border-blue-400 focus:ring-0 outline-none text-xs p-1 px-1.5 placeholder:text-gray-300 focus:placeholder:text-gray-400 placeholder:italic"
-          style="color: rgba(0,0,0,0.5);border-radius: 8px;"
+          class="block w-12 text-right rounded-sm focus:shadow focus:ring-0 outline-none text-xs p-1 px-1.5 placeholder:italic"
+          style="color: light-dark(rgba(0,0,0,0.5), rgba(255,255,255,0.6)); background: light-dark(#ffffff, #1e293b); border: 1px solid light-dark(rgba(203, 213, 225, 1), rgba(71, 85, 105, 0.4)); border-radius: 8px;"
           on:focus={(e) => {
             e.currentTarget.select()
           }}
@@ -112,7 +112,9 @@
         />
       </form>
 
-      <span style="color: rgba(0,0,0,0.5);"> of {$pdfSlickStore?.numPages ?? ''}</span>
+      <span style="color: light-dark(rgba(0,0,0,0.5), rgba(255,255,255,0.6));">
+        of {$pdfSlickStore?.numPages ?? ''}</span
+      >
     </div>
   </div>
 
@@ -148,7 +150,8 @@
 
 <style>
   .toolbar-wrapper {
-    background: #fff;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    background: light-dark(#ffffff, #1b2435);
+    border-bottom: 1px solid light-dark(rgba(0, 0, 0, 0.15), rgba(71, 85, 105, 0.4));
+    color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
   }
 </style>

@@ -57,7 +57,11 @@
 
 <OverlayPopover bind:open={isMenuOpen} position="bottom" height={170}>
   {#snippet trigger()}
-    <Button size="md" square>
+    <Button
+      size="md"
+      square
+      style="--bg: light-dark(rgba(0, 0, 0, 0.04), rgba(255, 255, 255, 0.08));"
+    >
       <Icon name="puzzle" size="1.085em" />
     </Button>
   {/snippet}
@@ -93,16 +97,35 @@
   .popover-content {
     background: radial-gradient(
       143.56% 143.56% at 50% -43.39%,
-      #eef4ff 0%,
-      #ecf3ff 50%,
-      #d2e2ff 100%
+      var(--accent-background, #eef4ff) 0%,
+      color-mix(in srgb, var(--accent-background, #ecf3ff) 85%, var(--accent, #6d82ff) 15%) 50%,
+      color-mix(in srgb, var(--accent-background, #ecf3ff) 88%, var(--accent, #6d82ff) 12%) 100%
     );
-    color: #586884;
+
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        143.56% 143.56% at 50% -43.39%,
+        var(--accent-background-dark, #182033) 0%,
+        color-mix(
+            in srgb,
+            var(--accent-background-dark, #182033) 70%,
+            var(--accent-dark, #8192ff) 30%
+          )
+          50%,
+        color-mix(
+            in srgb,
+            var(--accent-background-dark, #182033) 85%,
+            var(--accent-dark, #8192ff) 15%
+          )
+          100%
+      );
+    }
+    color: light-dark(var(--on-surface, #586884), var(--on-surface-dark, #cbd5f5));
     width: 200px;
     overflow: hidden;
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.1);
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
+    box-shadow: 0px 4px 16px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
     display: flex;
     align-items: center;
 
@@ -157,7 +180,10 @@
   }
 
   .action-button {
-    background: rgba(255, 255, 255, 0.4);
+    background: light-dark(
+      color-mix(in srgb, var(--surface-elevated, rgba(255, 255, 255, 1)) 70%, transparent),
+      rgba(17, 24, 39, 0.6)
+    );
     border-radius: 0.5rem;
     padding: 0.4rem;
     display: flex;
@@ -170,9 +196,13 @@
     flex: 0 0 auto;
     min-width: 40px;
     font-size: 0.8rem;
+    color: light-dark(var(--on-surface-muted, #586884), var(--on-surface-muted-dark, #cbd5f5));
 
     &:hover {
-      background: rgba(255, 255, 255, 0.8);
+      background: light-dark(
+        rgba(255, 255, 255, 0.9),
+        color-mix(in srgb, rgba(17, 24, 39, 0.8) 70%, var(--accent-dark, #8192ff) 30%)
+      );
     }
   }
 
@@ -192,5 +222,6 @@
 
   .info {
     font-size: 0.9rem;
+    color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
   }
 </style>

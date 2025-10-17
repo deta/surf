@@ -50,16 +50,12 @@
     right: 0;
     bottom: 0;
     height: 100%;
-    background: #fff;
+    background: light-dark(#fff, #171717);
+    color: light-dark(#000, #fff);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.95em;
-
-    :global(.dark) & {
-      background: #171717;
-      color: #fff;
-    }
   }
 
   .content {
@@ -80,12 +76,12 @@
     }
 
     a {
-      color: rgb(66, 93, 243);
+      color: light-dark(rgb(66, 93, 243), rgb(129, 146, 255));
       text-decoration: none;
       transition: color 0.2s;
 
       &:hover {
-        color: var(--color-link-dark);
+        color: light-dark(var(--color-link-dark), rgb(159, 173, 255));
       }
     }
 
@@ -94,14 +90,14 @@
       border: none;
       outline: none;
       border-radius: 8px;
-      background: #f73b95;
+      background: light-dark(#f73b95, #d63384);
       color: #fff;
 
       transition: color 0.2s;
       width: fit-content;
 
       &:hover {
-        background: #f92d90;
+        background: light-dark(#f92d90, #e04a94);
       }
 
       &:active {

@@ -150,18 +150,18 @@
     }
     
     &:not(.disabled):hover:not(.editing) {
-      background-color: rgba(0, 0, 0, 0.02);
+      background-color: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.05));
       border-radius: 4px;
     }
     
     &:not(.disabled):focus {
       outline: none;
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.08));
       border-radius: 4px;
     }
     
     &.editing {
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.08));
       border-radius: 4px;
     }
   }
@@ -192,22 +192,23 @@
     text-indent: inherit;
     
     &::placeholder {
-      color: rgba(0, 0, 0, 0.4);
+      color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.4));
       opacity: 1;
     }
     
     &::selection {
-      background-color: rgba(0, 123, 255, 0.3);
+      background-color: light-dark(rgba(0, 123, 255, 0.3), rgba(129, 146, 255, 0.35));
     }
   }
 
   .renamable-content {
     display: inline;
+    color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.95));
   }
 
   .renamable-empty {
     display: inline;
-    color: rgba(0, 0, 0, 0.4);
+    color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.4));
     font-style: italic;
   }
 </style>

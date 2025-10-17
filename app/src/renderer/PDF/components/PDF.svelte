@@ -344,7 +344,10 @@
   }
 </script>
 
-<div class="absolute inset-0 bg-slate-200/70 flex flex-col pdfSlick">
+<div
+  class="absolute inset-0 flex flex-col pdfSlick"
+  style="background: light-dark(rgba(226, 232, 240, 0.7), rgba(30, 41, 59, 0.7));"
+>
   <Toolbar />
   <div class="flex-1 flex">
     <Thumbsbar bind:thumbsRef={thumbs} />
@@ -385,7 +388,11 @@
 {/if}
 
 <div id="printContainer" />
-<dialog id="printServiceDialog" class="min-w-[200px]">
+<dialog
+  id="printServiceDialog"
+  class="min-w-[200px]"
+  style="background: light-dark(#ffffff, #1b2435); color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));"
+>
   <div class="row">
     <span data-l10n-id="print_progress_message">Preparing document for printing…</span>
   </div>
@@ -398,7 +405,10 @@
     >
   </div>
   <div class="buttonRow">
-    <button id="printCancel" class="dialogButton"
+    <button
+      id="printCancel"
+      class="dialogButton"
+      style="background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1)); color: light-dark(rgba(0, 0, 0, 0.85), rgba(255, 255, 255, 0.9));"
       ><span data-l10n-id="print_progress_close">Cancel</span></button
     >
   </div>

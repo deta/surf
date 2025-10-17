@@ -40,6 +40,7 @@
   let showLicenses = false
   let showMiscInfo = false
   let licenses: string
+  let isDarkMode = false
 
   const tabParam = new URLSearchParams(window.location.search).get(
     'tab'
@@ -108,6 +109,17 @@
       currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
       setTimeout(() => window.api.restartApp(), 800)
     }
+  }
+
+  const handleDarkModeToggle = (e: CustomEvent<boolean>) => {
+    if (!userConfigSettings) return
+    isDarkMode = e.detail
+    userConfigSettings.app_style = isDarkMode ? 'dark' : 'light'
+    handleSettingsUpdate()
+
+    // Apply immediately to settings window
+    document.documentElement.dataset.colorScheme = userConfigSettings.app_style
+    document.documentElement.style.colorScheme = userConfigSettings.app_style
   }
 
   const handleSelectModel = (e: CustomEvent<string>) => {
@@ -222,6 +234,12 @@
     currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
+
+    // Initialize dark mode state from settings
+    isDarkMode = userConfigSettings.app_style === 'dark'
+    // Apply color scheme immediately
+    document.documentElement.dataset.colorScheme = userConfigSettings.app_style || 'light'
+    document.documentElement.style.colorScheme = userConfigSettings.app_style || 'light'
 
     models.set(userConfigSettings.model_settings)
     selectedModel.set(userConfigSettings.selected_model)
@@ -370,6 +388,16 @@
           <p bind:this={migrationOutput}></p>
         </div>
         {#if userConfigSettings}
+          <div class="dark-mode-wrapper">
+            <SettingsOption
+              icon="moon"
+              title="Dark Mode"
+              description="Enable dark appearance for the application."
+              bind:value={isDarkMode}
+              on:update={handleDarkModeToggle}
+            />
+          </div>
+
           <div class="search-wrapper">
             <DefaultSearchEnginePicker
               bind:value={userConfigSettings.search_engine}
@@ -572,8 +600,8 @@
   main {
     height: 100vh;
     width: calc(100vw - (100vw - 100%));
-    color: var(--color-text);
-    background-color: var(--color-background);
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+    background-color: light-dark(var(--color-background), var(--app-background-dark, #0f172a));
     display: flex;
     flex-direction: row;
     overflow: hidden;
@@ -610,7 +638,7 @@
     align-items: stretch;
     padding: var(--t-4, 1rem);
     padding-top: var(--t-10, 4rem); /* Space for macOS traffic lights */
-    border-right: 0.5px solid var(--color-border);
+    border-right: 0.5px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
     width: 200px;
     z-index: 10;
 
@@ -620,6 +648,15 @@
       color(display-p3 0.7031 0.8325 0.9963) 69.23%,
       color(display-p3 0.7938 0.8654 0.9912) 93.37%
     );
+
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        453.65% 343.29% at 50.04% 0%,
+        rgba(30, 41, 59, 0.95) 0%,
+        rgba(15, 23, 42, 0.98) 69.23%,
+        rgba(15, 23, 42, 1) 93.37%
+      );
+    }
   }
 
   .tab {
@@ -628,7 +665,7 @@
     align-items: center;
     padding: var(--t-2, 0.5rem) var(--t-3, 0.75rem);
     border-radius: var(--t-11, 11px);
-    color: var(--color-text-muted);
+    color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
     width: 100%;
     justify-content: flex-start;
     border: 0.5px solid transparent;
@@ -641,15 +678,15 @@
       box-shadow 90ms ease-out;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.6);
+      background: light-dark(rgba(255, 255, 255, 0.6), rgba(30, 41, 59, 0.5));
       box-shadow:
-        inset 0 0 0 0.75px rgba(255, 255, 255, 0.1),
-        inset 0 0.5px 0 1px rgba(255, 255, 255, 0.2),
-        inset 0 -0.75px 0 1px rgba(0, 0, 0, 0.01);
+        inset 0 0 0 0.75px light-dark(rgba(255, 255, 255, 0.1), rgba(100, 116, 139, 0.1)),
+        inset 0 0.5px 0 1px light-dark(rgba(255, 255, 255, 0.2), rgba(148, 163, 184, 0.1)),
+        inset 0 -0.75px 0 1px light-dark(rgba(0, 0, 0, 0.01), rgba(0, 0, 0, 0.3));
     }
 
     &.active {
-      border: 0.5px solid var(--white, #fff);
+      border: 0.5px solid light-dark(var(--white, #fff), rgba(71, 85, 105, 0.6));
       background: radial-gradient(
         290.88% 100% at 50% 0%,
         rgba(237, 246, 255, 0.96) 0%,
@@ -661,7 +698,21 @@
         0 3px 3px 0 rgba(62, 71, 80, 0.02),
         0 1px 2px 0 rgba(62, 71, 80, 0.02),
         0 0 1px 0 rgba(0, 0, 0, 0.09);
-      color: var(--color-brand-dark);
+      color: light-dark(var(--color-brand-dark), var(--accent-dark, #8192ff));
+
+      @media (prefers-color-scheme: dark) {
+        background: radial-gradient(
+          290.88% 100% at 50% 0%,
+          rgba(30, 41, 59, 0.96) 0%,
+          rgba(15, 23, 42, 0.93) 100%
+        );
+        box-shadow:
+          0 -0.5px 1px 0 rgba(129, 146, 255, 0.15) inset,
+          0 1px 1px 0 rgba(71, 85, 105, 0.3) inset,
+          0 3px 3px 0 rgba(0, 0, 0, 0.3),
+          0 1px 2px 0 rgba(0, 0, 0, 0.2),
+          0 0 1px 0 rgba(0, 0, 0, 0.5);
+      }
     }
 
     h1 {
@@ -687,14 +738,14 @@
     display: flex;
     justify-content: center;
     padding: 3rem;
-    background-color: #e3f0ff;
+    background-color: light-dark(#e3f0ff, var(--surface-elevated-dark, #1b2435));
 
     box-shadow:
-      -0.5px 0 1px 0 rgb(250, 250, 250) inset,
-      0px 0 1px 0 #fff inset,
-      -3px 0 1px 0 rgba(0, 0, 0, 0.025),
-      -2px 0 1px 0 rgba(9, 10, 11, 0.01),
-      -1px 0 1px 0 rgba(9, 10, 11, 0.03);
+      -0.5px 0 1px 0 light-dark(rgb(250, 250, 250), rgba(15, 23, 42, 0.8)) inset,
+      0px 0 1px 0 light-dark(#fff, rgba(71, 85, 105, 0.3)) inset,
+      -3px 0 1px 0 light-dark(rgba(0, 0, 0, 0.025), rgba(0, 0, 0, 0.3)),
+      -2px 0 1px 0 light-dark(rgba(9, 10, 11, 0.01), rgba(0, 0, 0, 0.2)),
+      -1px 0 1px 0 light-dark(rgba(9, 10, 11, 0.03), rgba(0, 0, 0, 0.25));
 
     // display: flex;
     // flex-direction: column;
@@ -734,8 +785,8 @@
         line-height: 0.85;
         padding: 0.5rem;
         border-radius: 0.5rem;
-        background: #d7e1fd;
-        color: #678fff;
+        background: light-dark(#d7e1fd, rgba(129, 146, 255, 0.2));
+        color: light-dark(#678fff, var(--accent-dark, #8192ff));
       }
     }
 
@@ -745,17 +796,17 @@
       outline: none;
       border-radius: 0.5rem;
       background: none;
-      color: var(--color-link);
+      color: light-dark(var(--color-link), var(--accent-dark, #8192ff));
 
       transition: color 0.2s;
       font-size: 1.1rem;
 
       &:hover {
-        color: var(--color-link-dark);
+        color: light-dark(var(--color-link-dark), var(--accent, #6d82ff));
       }
       &:disabled {
         cursor: not-allowed;
-        color: var(--color-text-muted);
+        color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
       }
     }
   }
@@ -764,14 +815,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: var(--color-background-light);
-    border-bottom: 1px solid var(--color-border);
+    background-color: light-dark(
+      var(--color-background-light),
+      var(--surface-elevated-dark, #1b2435)
+    );
+    border-bottom: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
     border-radius: 1.25rem;
     padding: 1rem 1.25rem;
     text-align: center;
     width: 100%;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
 
     button {
       padding: 8px 16px;
@@ -822,7 +877,8 @@
 
   .dev-wrapper,
   .search-wrapper,
-  .teletype-wrapper {
+  .teletype-wrapper,
+  .dark-mode-wrapper {
     width: 100%;
     display: flex;
     align-items: center;
@@ -846,6 +902,22 @@
     transition:
       background-color 90ms ease-out,
       box-shadow 90ms ease-out;
+
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgba(30, 41, 59, 0.96) 0%,
+        rgba(15, 23, 42, 0.93) 100%
+      );
+      border: 0.5px solid rgba(71, 85, 105, 0.6);
+      box-shadow:
+        0 -0.5px 1px 0 rgba(129, 146, 255, 0.15) inset,
+        0 1px 1px 0 rgba(71, 85, 105, 0.3) inset,
+        0 3px 3px 0 rgba(0, 0, 0, 0.3),
+        0 1px 2px 0 rgba(0, 0, 0, 0.2),
+        0 1px 1px 0 rgba(0, 0, 0, 0.4),
+        0 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
   }
 
   .box {
@@ -865,7 +937,7 @@
 
     p {
       font-size: 1.1rem;
-      color: var(--color-text-muted);
+      color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
     }
   }
 
@@ -889,11 +961,12 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
 
     transition: color 0.2s;
 
     &:hover {
-      color: var(--color-link);
+      color: light-dark(var(--color-link), var(--accent-dark, #8192ff));
     }
   }
 
@@ -913,16 +986,16 @@
     overflow: auto;
     width: 100%;
     padding: 1rem;
-    border: 1px solid var(--color-border);
+    border: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
     border-radius: 8px;
-    background: var(--color-background-light);
-    color: var(--color-text);
+    background: light-dark(var(--color-background-light), var(--surface-elevated-dark, #1b2435));
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     outline: none;
     font-size: 1rem;
     font-family: inherit;
 
     &:focus {
-      border-color: var(--color-brand-light);
+      border-color: light-dark(var(--color-brand-light), var(--accent-dark, #8192ff));
     }
   }
 

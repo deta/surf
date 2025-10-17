@@ -119,7 +119,7 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: #ffffff73;
+    background: light-dark(var(--app-background), var(--app-background-dark));
     border: 0.5px solid rgba(0, 0, 0, 0.1);
 
     h1 {

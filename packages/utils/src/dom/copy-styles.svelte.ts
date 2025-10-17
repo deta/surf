@@ -15,6 +15,16 @@ export function copyStyles(containerWin: Window | null) {
 
   // Copy all styles from the current document to the new window
   const copyStyles = () => {
+    // Copy color-scheme from main document to overlay
+    const mainColorScheme = document.documentElement.style.colorScheme
+    const mainDataColorScheme = document.documentElement.dataset.colorScheme
+    if (mainColorScheme) {
+      containerDoc.documentElement.style.colorScheme = mainColorScheme
+    }
+    if (mainDataColorScheme) {
+      containerDoc.documentElement.dataset.colorScheme = mainDataColorScheme
+    }
+
     // Get current styles from main document and portal
     const mainStyles = document.querySelectorAll('style, link[rel="stylesheet"]')
     const portalStyles = containerDoc.querySelectorAll('style, link[rel="stylesheet"]')
@@ -124,6 +134,12 @@ export function copyStyles(containerWin: Window | null) {
     attributes: true,
     attributeFilter: ['href', 'media', 'disabled'],
     characterData: true // Add this to observe text content changes in <style> tags
+  })
+
+  // Also observe the documentElement for color-scheme changes
+  styleObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['style', 'data-color-scheme']
   })
 
   return () => {

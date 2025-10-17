@@ -156,7 +156,7 @@
     position: fixed;
     inset: 0;
     z-index: 10000;
-    background: rgba(0, 0, 0, 0.05);
+    background: light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
     backdrop-filter: blur(1px);
   }
   dialog {
@@ -169,9 +169,9 @@
     width: 100%;
     max-width: 70ch;
 
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.175);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    background: light-dark(#fff, #1a2438);
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.175), rgba(71, 85, 105, 0.4));
+    box-shadow: light-dark(0 2px 10px rgba(0, 0, 0, 0.05), 0 2px 10px rgba(0, 0, 0, 0.3));
     border-radius: 20px;
     padding: 1rem;
 
@@ -227,6 +227,7 @@
       > p {
         font-size: 0.9rem;
         opacity: 0.5;
+        color: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.7));
       }
 
       &.main {
@@ -263,16 +264,16 @@
 
     button {
       text-box: trim-both cap alphabetic;
-      background: rgba(0, 0, 0, 0.05);
+      background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
       border-radius: 1rem;
       font-size: 0.75rem;
       font-weight: 500;
-      color: rgba(0, 0, 0, 0.3);
+      color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3));
       padding: 0.5rem;
 
       &:hover {
-        color: rgba(0, 0, 0, 0.5);
-        background: rgba(0, 0, 0, 0.1);
+        color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
+        background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
       }
     }
   }

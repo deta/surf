@@ -552,7 +552,8 @@
     hr {
       margin-inline: 1.2ch;
       margin-block: 0.25rem;
-      border-top: 0.07rem solid rgba(0, 0, 0, 0.15);
+      border-top: 0.07rem solid
+        light-dark(var(--border-subtle, rgba(0, 0, 0, 0.15)), var(--border-subtle-dark, rgba(255, 255, 255, 0.18)));
     }
   }
 
@@ -591,7 +592,8 @@
     width: 100%;
     border-radius: 6px;
     padding: 0.25rem 0.5rem;
-    border: 1px solid rgba(0, 0, 0, 0.15);
+    border: 1px solid
+      light-dark(var(--border-subtle, rgba(0, 0, 0, 0.15)), var(--border-subtle-dark, rgba(255, 255, 255, 0.25)));
     background: transparent;
     font-size: 0.9em;
     font-weight: 500;
@@ -600,6 +602,7 @@
   }
 
   .search-input:focus {
-    border: 1px solid rgba(0, 0, 0, 0.4);
+    border: 1px solid
+      light-dark(var(--overlay-medium, rgba(0, 0, 0, 0.4)), var(--accent-muted-dark, rgba(129, 146, 255, 0.45)));
   }
 </style>

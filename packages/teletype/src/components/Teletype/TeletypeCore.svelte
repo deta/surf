@@ -1034,7 +1034,7 @@
   }
 
   :global(.send-button[data-button-root]) {
-    background: #8c9dff;
+    background: light-dark(#8c9dff, #6075f1);
     color: #fff;
     border-radius: 12px;
     padding: 0.25rem 0.33rem 0.25rem 0.5rem;
@@ -1044,7 +1044,7 @@
     align-items: center;
 
     &:hover:not(&:disabled) {
-      background: #8c9dff;
+      background: light-dark(#7d8ff3, #7d8ff3);
       color: #fff;
     }
 
@@ -1057,7 +1057,7 @@
   :global(.secondary-button[data-button-root]) {
     background: transparent;
     color: var(--text);
-    outline: 0.5px solid var(--border-color);
+    outline: light-dark(0.5px, 0) solid var(--border-color);
     outline-offset: -0.5px;
     border-radius: 12px;
     padding: 0.25rem 0.33rem 0.25rem 0.5rem;
@@ -1065,9 +1065,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    background: transparent;
 
     &:hover:not(&:disabled) {
-      background: rgba(0, 0, 0, 0.033);
+      background: light-dark(rgba(0, 0, 0, 0.033), rgba(255, 255, 255, 0.05));
       color: var(--text);
     }
   }
@@ -1084,8 +1085,8 @@
     text-align: center;
     padding: 0px;
     border-radius: 5px;
-    color: rgba(88, 104, 132, 1);
-    background: rgba(88, 104, 132, 0.2);
+    color: light-dark(rgba(88, 104, 132, 1), rgba(129, 146, 200, 1));
+    background: light-dark(rgba(88, 104, 132, 0.2), rgba(129, 146, 200, 0.25));
     display: flex;
     align-items: center;
     justify-content: center;

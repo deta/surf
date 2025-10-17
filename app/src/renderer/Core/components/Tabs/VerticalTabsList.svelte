@@ -219,7 +219,6 @@
     padding-top: 3rem;
     display: flex;
     flex-direction: column;
-    background: var(--app-background);
     --fold-width: 0.5rem;
     &:not(.mac) {
       padding-top: 0rem;
@@ -239,8 +238,15 @@
   :global(body[data-dragging='true']) .pin-zone-hint {
     height: 40px;
     opacity: 1;
-    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.1);
-    border: 1px dashed rgba(var(--accent-color-rgb, 0, 122, 204), 0.3);
+    background: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.1),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.15)
+    );
+    border: 1px dashed
+      light-dark(
+        rgba(var(--accent-color-rgb, 0, 122, 204), 0.3),
+        rgba(var(--accent-color-rgb, 129, 146, 255), 0.4)
+      );
   }
 
   :global(body[data-dragging='true']) .pin-zone-hint::before {
@@ -250,19 +256,25 @@
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 11px;
-    color: var(--on-surface-muted);
+    color: light-dark(var(--on-surface-muted), var(--on-surface-muted-dark));
     pointer-events: none;
   }
 
   /* Enhanced visual feedback when hovering over pin zone */
   .pin-zone-hint[data-drag-target='true'] {
-    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.2) !important;
-    border-color: rgba(var(--accent-color-rgb, 0, 122, 204), 0.5) !important;
+    background: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.2),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.25)
+    ) !important;
+    border-color: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.5),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.6)
+    ) !important;
     border-style: solid !important;
   }
 
   .pin-zone-hint[data-drag-target='true']::before {
-    color: var(--on-surface) !important;
+    color: light-dark(var(--on-surface), var(--on-surface-dark)) !important;
     font-weight: 600;
   }
 
@@ -282,7 +294,11 @@
         position: sticky;
         top: 0;
         height: 1px;
-        background: linear-gradient(to bottom, var(--border-color), transparent);
+        background: linear-gradient(
+          to bottom,
+          light-dark(var(--border-color), var(--border-color-dark)),
+          transparent
+        );
         z-index: 1;
       }
 
@@ -291,7 +307,11 @@
         position: sticky;
         bottom: 0;
         height: 1px;
-        background: linear-gradient(to top, var(--border-color), transparent);
+        background: linear-gradient(
+          to top,
+          light-dark(var(--border-color), var(--border-color-dark)),
+          transparent
+        );
         z-index: 1;
       }
     }
@@ -306,11 +326,11 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--border-color);
+      background: light-dark(var(--border-color), var(--border-color-dark));
       border-radius: 3px;
 
       &:hover {
-        background: var(--on-surface-muted);
+        background: light-dark(var(--on-surface-muted), var(--on-surface-muted-dark));
       }
     }
   }
@@ -321,11 +341,22 @@
     app-region: no-drag;
     display: flex;
     justify-content: center;
+
+    :global(button) {
+      background: light-dark(rgba(255, 255, 255, 0.5), rgba(35, 45, 65, 0.4));
+      color: light-dark(var(--on-surface), var(--on-surface-dark));
+      border: 0.5px solid light-dark(rgba(255, 255, 255, 0.3), rgba(71, 85, 105, 0.3));
+
+      &:hover {
+        background: light-dark(rgba(255, 255, 255, 0.7), rgba(35, 45, 65, 0.6));
+        border-color: light-dark(rgba(255, 255, 255, 0.5), rgba(71, 85, 105, 0.5));
+      }
+    }
   }
 
   .pinned-separator {
     height: 1px;
-    background: var(--border-color);
+    background: light-dark(var(--border-color), var(--border-color-dark));
     margin: 0.5rem 0.75rem;
     opacity: 0.3;
   }
@@ -358,12 +389,12 @@
     }
 
     &:hover::before {
-      background: rgba(0, 0, 0, 0.25);
+      background: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.2));
     }
 
     &:active::before,
     &[data-resizing='true']::before {
-      background: rgba(0, 0, 0, 0.5);
+      background: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.35));
       width: 4px;
     }
   }

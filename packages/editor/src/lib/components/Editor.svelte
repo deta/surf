@@ -672,24 +672,31 @@
     overflow-y: auto;
     overscroll-behavior: auto;
 
-    :global(.dark) & {
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
+    @media (prefers-color-scheme: dark) {
+      color: var(--on-surface-muted-dark);
+    }
 
-      &::-webkit-scrollbar-track {
-        background: #1e1e24;
-        border-radius: 50%;
-      }
+    :global(.tiptap),
+    :global(.tiptap *) {
+      color: inherit;
+    }
 
-      &::-webkit-scrollbar-thumb {
-        background: #4a4a57;
-        border-radius: 4px;
-      }
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
 
-      &::-webkit-scrollbar-thumb:hover {
-        background: #65657a;
-      }
+    &::-webkit-scrollbar-track {
+      background: light-dark(transparent, #1e1e24);
+      border-radius: 50%;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: light-dark(rgba(0, 0, 0, 0.2), #4a4a57);
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: light-dark(rgba(0, 0, 0, 0.3), #65657a);
     }
 
     :global(#stuff-stack) &,
@@ -721,21 +728,15 @@
 
   /* Suggestion pill styling */
   :global(.suggestion-pill) {
-    background: #e5e9ff;
+    background: light-dark(#e5e9ff, rgba(30, 58, 138, 0.4));
     border-radius: 12px;
     padding: 0 12px 1px 6px;
     margin: 0 1px;
     font-size: 1em;
-    color: #a4abc0;
+    color: light-dark(#a4abc0, #93c5fd);
     font-weight: 400;
     letter-spacing: 0.01em;
     line-height: 1;
     vertical-align: baseline;
-  }
-
-  :global(.dark .suggestion-pill) {
-    background: #1e3a8a;
-    border-color: #3b82f6;
-    color: #93c5fd;
   }
 </style>

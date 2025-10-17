@@ -631,41 +631,24 @@
   }
 
   header {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      #f3faff,
-      rgb(29 33 44),
-      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
-    );
-
-    background: var(--fill);
+    background: light-dark(#f3faff, rgb(29 33 44));
   }
 
   footer {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      #eaf3fa,
-      rgb(29 33 44),
-      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
-    );
+    background: light-dark(#eaf3fa, rgb(29 33 44));
+  }
 
-    background: var(--fill);
+  // Override Tailwind bg-gray classes with light-dark() support
+  :global(.collapsable-block.bg-gray-900) {
+    background-color: light-dark(#f9f9f9, #111827) !important;
+  }
+
+  :global(.collapsable-block .bg-gray-800) {
+    background-color: light-dark(#ffffff, #1f2937) !important;
+  }
+
+  :global(.code-container.bg-gray-900) {
+    background-color: light-dark(#f9f9f9, #111827) !important;
   }
 
   // @maxu god forgive me.. who made these resource preview stylings :'(… right… I

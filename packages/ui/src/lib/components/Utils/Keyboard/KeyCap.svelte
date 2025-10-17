@@ -78,7 +78,7 @@
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   }
   .key-cap {
-    --fill: #f3f4f6;
+    --fill: light-dark(#f3f4f6, #374151);
     --radius: 7px;
     background: var(--fill);
     border-radius: var(--radius);
@@ -89,6 +89,7 @@
     height: 100%;
     font-weight: 500;
     position: relative;
+    color: light-dark(#1f2937, #e5e7eb);
   }
   /* Size variants */
   .key-wrapper.tiny {
@@ -121,11 +122,11 @@
   }
   /* State variants */
   .key-wrapper:not(.active):not(.success) {
-    --key-shadow: #cde0f9;
+    --key-shadow: light-dark(#cde0f9, rgba(15, 23, 42, 0.5));
     filter: drop-shadow(0 1.5px 0px var(--key-shadow));
     .key-cap {
-      color: #1f2937;
-      --fill: #f3f4f6;
+      color: light-dark(#1f2937, #e5e7eb);
+      --fill: light-dark(#f3f4f6, #374151);
     }
     
     &.custom-color {
@@ -138,10 +139,10 @@
   }
   /* Active state */
   .key-wrapper.active:not(.success) {
-    --key-pressed: #e9f3fe;
+    --key-pressed: light-dark(#e9f3fe, #2563eb);
     transform: translateY(1.5px);
     .key-cap {
-      color: #1f2937;
+      color: light-dark(#1f2937, #e5e7eb);
       --fill: var(--key-pressed);
     }
     
@@ -156,31 +157,12 @@
   .key-wrapper.success {
     transform: translateY(1.5px);
     .key-cap {
-      color: white;
-      --fill: #19da89;
+      color: light-dark(#ffffff, #e5fdf3);
+      --fill: light-dark(#19da89, #059669);
     }
   }
   /* Modifier keys */
   .key-wrapper.modifier {
     font-weight: 600;
-  }
-  /* Dark mode */
-  @media (prefers-color-scheme: dark) {
-    .key-wrapper:not(.active):not(.success):not(.custom-color) {
-      .key-cap {
-        --fill: #374151;
-        color: #e5e7eb;
-      }
-    }
-    .key-wrapper.active:not(.success):not(.custom-color) {
-      .key-cap {
-        --fill: #2563eb;
-      }
-    }
-    .key-wrapper.success:not(.custom-color) {
-      .key-cap {
-        --fill: #059669;
-      }
-    }
   }
 </style>

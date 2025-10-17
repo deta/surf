@@ -2796,7 +2796,7 @@
     overflow: hidden;
     position: relative;
     padding-bottom: 0;
-    background: oklch(99.1% 0 0);
+    background: light-dark(oklch(99.1% 0 0), oklch(20% 0 0));
     display: flex;
     justify-content: center;
     align-items: center;
@@ -2805,8 +2805,7 @@
       background: #181818;
     }
 
-    --text-color: #1f163c;
-    --text-color-dark: #fff;
+    --text-color: light-dark(oklch(38.7% 0 0), oklch(92.9% 0 0));
   }
 
   .content {
@@ -2971,7 +2970,7 @@
 
     :global(.dark) & {
       :global(*):not(.mention, a, span) {
-        color: var(--text-color-dark) !important;
+        color: inherit !important;
       }
     }
 

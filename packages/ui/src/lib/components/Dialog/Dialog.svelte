@@ -163,8 +163,6 @@ again, as always and this doesnt actually happen. -->
 </dialog>
 
 <style lang="scss">
-  @use '@deta/ui/src/lib/styles/utils' as utils;
-
   :global(dialog.starting) {
     scale: 0.9 !important;
     opacity: 0 !important;
@@ -175,20 +173,12 @@ again, as always and this doesnt actually happen. -->
     }
   }
   dialog {
-          font-size: 0.9rem;
+    font-size: 0.9rem;
 
-    @include utils.light-dark-custom('background-fill-mix', #fbf5ef, #141619, #fbf5ef, #141619);
-    @include utils.light-dark-custom(
-      'fill',
-      #fbf5ef,
-      #141619,
-      color-mix(in srgb, var(--base-color), 55% var(--background-fill-mix))
-    );
-
-    --dialog-background: light-dark(#fff, #111b2b);
-    --dialog-background: var(--fill);
-    --dialog-border: light-dark(rgb(72 86 103 / 15%), rgb(188 191 215 / 20%));
-    --dialog-shadow: 0 3px 4px 0 rgba(50, 50, 93, 0.1), 0 2px 10px rgba(0, 0, 0, 0.1);
+    --dialog-background: light-dark(#ffffff, #1b2435);
+    --dialog-border: light-dark(rgba(72, 86, 103, 0.15), rgba(71, 85, 105, 0.4));
+    --dialog-shadow-primary: light-dark(rgba(50, 50, 93, 0.1), rgba(15, 23, 42, 0.35));
+    --dialog-shadow-secondary: light-dark(rgba(0, 0, 0, 0.1), rgba(15, 23, 42, 0.55));
 
     width: 32ch;
     margin: auto auto;
@@ -199,7 +189,7 @@ again, as always and this doesnt actually happen. -->
     border-radius: 1rem;
     -electron-corner-smoothing: 100%;
     border: 2px solid var(--dialog-border);
-    box-shadow: var(--dialog-shadow);
+    box-shadow: 0 3px 4px 0 var(--dialog-shadow-primary), 0 2px 10px var(--dialog-shadow-secondary);
 
     &:focus-within {
       outline: none;
@@ -215,7 +205,7 @@ again, as always and this doesnt actually happen. -->
     gap: 1.25ch;
 
     &::backdrop {
-      background: rgba(80, 80, 80, 0.5);
+      background: light-dark(rgba(80, 80, 80, 0.5), var(--overlay-modal-dark, rgba(15, 23, 42, 0.7)));
       transition:
         background 415ms,
         ease-out;
@@ -227,8 +217,7 @@ again, as always and this doesnt actually happen. -->
       margin-top: 0.25em;
       padding-block: 0.75em;
 
-      color: utils.contrast-color(var(--fill));
-      opacity: 0.75;
+      color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.75));
     }
     .details {
       display: flex;
@@ -244,14 +233,13 @@ again, as always and this doesnt actually happen. -->
         letter-spacing: 0.03px;
         text-align: center;
         text-wrap: pretty;
-        color: utils.contrast-color(var(--fill));
+        color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
       }
       > p {
         font-size: 0.9em;
         text-align: center;
         text-wrap: pretty;
-        color: utils.contrast-color(var(--fill));
-        opacity: 0.75;
+        color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.75));
         max-width: 30ch;
         margin: 0 auto;
       }
@@ -264,12 +252,13 @@ again, as always and this doesnt actually happen. -->
       margin-top: 0.75em;
 
       button {
-        --background: light-dark(var(--black-05), var(--white-26));
+        --background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
         flex: 1;
         background: var(--background);
         border: 1px solid transparent;
         border-radius: calc(1rem - 0.5rem); // 1em;
         -electron-corner-smoothing: 100%;
+        color: light-dark(rgba(0, 0, 0, 0.85), rgba(255, 255, 255, 0.9));
 
         min-height: 3.5ch;
         font-weight: 500;
@@ -285,22 +274,25 @@ again, as always and this doesnt actually happen. -->
         }
 
         &:hover {
-          background: color-mix(in oklab, var(--background) 92%, black 8%);
+          background: color-mix(in oklab, var(--background) 92%, light-dark(black, white) 8%);
         }
 
         &:focus-visible,
         &:active {
-          background: color-mix(in srgb, var(--background) 90%, black 10%);
+          background: color-mix(in srgb, var(--background) 90%, light-dark(black, white) 10%);
         }
       }
 
       .submit {
-        --background: #2497e9;
-        color: white;
+        --background: light-dark(#2497e9, var(--accent-dark, #8192ff));
+        color: light-dark(#ffffff, var(--on-app-background-dark, #e5edff));
       }
       .danger {
-        --background: #ff4d4f;
-        color: white;
+        --background: light-dark(#ff4d4f, var(--danger-dark, #f87171));
+        color: light-dark(#ffffff, var(--on-app-background-dark, #e5edff));
+      }
+      .muted {
+        color: light-dark(rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.6));
       }
     }
   }

@@ -220,8 +220,8 @@
       --corner-radius: 16px;
 
       padding: var(--padding);
-      background: #fff;
-      outline: 1px solid rgba(0, 0, 0, 0.075);
+      background: light-dark(#fff, #1a2438);
+      outline: 1px solid light-dark(rgba(0, 0, 0, 0.075), rgba(71, 85, 105, 0.3));
       border-radius: var(--corner-radius);
 
       width: var(--width, 100%);
@@ -229,7 +229,7 @@
       //height: var(--height, auto);
       content-visibility: auto;
 
-      box-shadow: rgba(99, 99, 99, 0.15) 0px 2px 8px 0px;
+      box-shadow: light-dark(rgba(99, 99, 99, 0.15), rgba(0, 0, 0, 0.3)) 0px 2px 8px 0px;
 
       transition:
         transform 123ms ease-out,
@@ -240,7 +240,7 @@
         border-radius: calc(var(--corner-radius) - var(--padding));
         overflow: hidden;
         height: 100%;
-        background: rgba(0, 0, 0, 0.03);
+        background: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
 
         .cover {
           position: absolute;
@@ -254,14 +254,14 @@
             justify-content: center;
             align-items: center;
             font-size: 1.15rem;
-            color: rgba(0, 0, 0, 0.25);
+            color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.25));
           }
         }
         .favicon {
           position: absolute;
           bottom: 0;
           right: 0;
-          background: white;
+          background: light-dark(white, #283549);
           width: 1.6rem;
           aspect-ratio: 1 / 1;
           //padding: calc(var(--padding) - 2px);
@@ -293,7 +293,12 @@
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
-                          opacity: 0.7;
+        opacity: 0.7;
+        color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
+      }
+
+      .subtitle {
+        color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
       }
     }
 
@@ -302,7 +307,7 @@
       .card {
         transform: scale(1.025) rotate3d(1, 2, 4, 1.5deg);
         // NOTE: We shouldnt animate this succer, use ::pseudo element and just animate its opacity instead
-        box-shadow: rgba(99, 99, 99, 0.2) 0px 4px 12px 0px;
+        box-shadow: light-dark(rgba(99, 99, 99, 0.2), rgba(0, 0, 0, 0.4)) 0px 4px 12px 0px;
       }
       .metadata {
         opacity: 0.5;
@@ -321,7 +326,7 @@
         transform: scale(0.98) rotate3d(1, 2, 4, 1.5deg);
         // NOTE: We shouldnt animate this succer, use ::pseudo element and just animate its opacity instead
 
-        box-shadow: rgba(99, 99, 99, 0.07) 0px 4px 12px 0px;
+        box-shadow: light-dark(rgba(99, 99, 99, 0.07), rgba(0, 0, 0, 0.2)) 0px 4px 12px 0px;
       }
     }
   }
@@ -331,7 +336,7 @@
     align-items: center;
     gap: 0.25rem;
     font-size: 0.8rem;
-    color: rgba(0, 0, 0, 0.5);
+    color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
     margin-top: 0.3rem;
   }
 </style>

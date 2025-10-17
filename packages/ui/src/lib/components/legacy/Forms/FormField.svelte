@@ -83,24 +83,28 @@
 
     label {
       font-size: 1rem;
-      color: var(--color-text);
+      color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
       white-space: nowrap;
     }
 
     input {
       width: 100%;
       padding: 0.5rem;
-      border: 1px solid var(--color-border);
+      border: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
       border-radius: 8px;
-      background: var(--color-background-light);
-      color: var(--color-text);
+      background: light-dark(var(--color-background-light), var(--surface-elevated-dark, #1b2435));
+      color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
       outline: none;
       font-size: 1rem;
       font-family: inherit;
       resize: vertical;
 
       &:focus {
-        border-color: var(--color-brand-light);
+        border-color: light-dark(var(--color-brand-light), var(--accent-dark, #8192ff));
+      }
+
+      &::placeholder {
+        color: light-dark(#9ca3af, #6b7280);
       }
     }
   }

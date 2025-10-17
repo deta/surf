@@ -434,6 +434,14 @@
     position: relative;
     mix-blend-mode: darken;
 
+    @media (prefers-color-scheme: dark) {
+      mix-blend-mode: lighten;
+
+      :global(svg.riso) {
+        --riso-m: rgb(160 110 255) !important;
+      }
+    }
+
     span {
       font-family: 'Inter', sans-serif;
       letter-spacing: 0.014rem;
@@ -475,7 +483,7 @@
       font-family: 'Inter', sans-serif;
       mask-image: linear-gradient(
         to right,
-        #000 var(--progress),
+        light-dark(#000, #fff) var(--progress),
         transparent calc(var(--progress) + 0.05rem)
       );
     }
@@ -483,7 +491,7 @@
     &.done {
       span {
         opacity: 0.75;
-        color: var(--on-surface);
+        color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
       }
       :global(svg.riso) {
         opacity: 0;

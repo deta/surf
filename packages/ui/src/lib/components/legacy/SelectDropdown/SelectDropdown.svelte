@@ -165,9 +165,7 @@
     loop
     typeahead={search === 'disabled'}
   >
-    <DropdownMenu.Trigger
-      class="focus-visible inline-flex items-center justify-center active:scale-98 focus:outline-none"
-    >
+    <DropdownMenu.Trigger class="dropdown-trigger">
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div
         on:mouseenter={(e) => openOnHover && handleTriggerMouseEnter(e)}
@@ -177,7 +175,7 @@
       </div>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content
-      class="xw-full rounded-xl w-[26ch] border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-xl no-drag focus:outline-none"
+      class="dropdown-content no-drag"
       transition={(node, params) => flyAndScaleDirectional(node, { ...params, side })}
       sideOffset={8}
       {side}
@@ -187,52 +185,42 @@
       <div
         bind:this={contentElem}
         bind:clientHeight={listElemHeight}
-        class="w-full max-h-[400px] overflow-auto flex flex-col"
+        class="dropdown-inner"
         style:height={keepHeightWhileSearching && $searchValue ? listElemHeight + 'px' : 'auto'}
         on:mouseenter={(e) => closeOnMouseLeave && handleMouseEnter(e)}
         on:mouseleave={(e) => closeOnMouseLeave && handleContentMouseLeave(e)}
       >
         {#if search !== 'disabled'}
-          <div class="flex-shrink-0 p-1 pb-1 z-10 relative" class:bottom-shadow={overflowTop}>
+          <div class="search-wrapper" class:bottom-shadow={overflowTop}>
             <input
               bind:this={inputElem}
               bind:value={$searchValue}
               placeholder={inputPlaceholder}
-              class="w-full px-2 py-1 text-[0.95rem] font-[450] dark:text-gray-100 bg-gray-100 dark:bg-gray-700/80 border border-gray-200 dark:border-gray-600 rounded-lg outline-1 outline outline-sky-700 focus:outline focus:outline-1"
+              class="search-input"
               use:focus={inputFocused}
             />
 
             {#if loading}
-              <div
-                class="absolute top-1/2 right-3 -translate-y-1/2 flex items-center justify-center"
-              >
+              <div class="loading-spinner">
                 <Icon name="spinner" class="opacity-50" />
               </div>
             {/if}
           </div>
         {/if}
 
-        <div
-          class="w-full h-full overflow-auto px-1 py-1"
-          bind:this={listElem}
-          on:scroll={handleScrollCheck}
-        >
+        <div class="list-container" bind:this={listElem} on:scroll={handleScrollCheck}>
           {#if $filterdItems.length > 0}
             {#each $filterdItems as item, idx (item.id + idx)}
               {#if item.topSeparator}
-                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px] my-1" />
+                <DropdownMenu.Separator class="separator" />
               {/if}
 
               <DropdownMenu.Item
                 onclick={() => dispatch('select', item.id)}
                 disabled={item.disabled}
-                class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none {item.disabled
-                  ? 'opacity-50'
-                  : ''} {selected === item.id
-                  ? 'text-sky-600 dark:text-sky-400'
-                  : 'dark:text-gray-100'} {item.kind === 'danger'
-                  ? 'text-red-600 dark:text-red-400'
-                  : ''}"
+                class="dropdown-item {item.disabled ? 'disabled' : ''} {selected === item.id
+                  ? 'selected'
+                  : ''} {item.kind === 'danger' ? 'danger' : ''}"
               >
                 <slot name="item" {item}>
                   <SelectDropdownItem {item} />
@@ -240,34 +228,24 @@
               </DropdownMenu.Item>
 
               {#if item.bottomSeparator}
-                <DropdownMenu.Separator class="bg-gray-100 dark:bg-gray-700 h-[1px] my-1" />
+                <DropdownMenu.Separator class="separator" />
               {/if}
             {/each}
           {:else if loading}
-            <div class="flex items-center justify-center h-20 text-gray-400 dark:text-gray-500">
-              {loadingPlaceholder}
-            </div>
+            <div class="placeholder-text">{loadingPlaceholder}</div>
           {:else}
             <slot name="empty">
-              <div class="flex items-center justify-center h-20 text-gray-400 dark:text-gray-500">
-                {emptyPlaceholder}
-              </div>
+              <div class="placeholder-text">{emptyPlaceholder}</div>
             </slot>
           {/if}
         </div>
 
         {#if footerItem}
-          <div
-            class="flex-shrink-0 border-t border-gray-200 dark:border-gray-600 px-0.5 py-0.5"
-            class:top-shadow={overflowBottom}
-          >
+          <div class="footer-wrapper" class:top-shadow={overflowBottom}>
             <slot name="footer">
               <DropdownMenu.Item
                 onclick={() => dispatch('select', footerItem.id)}
-                class="flex h-8 select-none items-center rounded-lg py-1 px-2 text-base font-medium !ring-0 !ring-transparent data-[highlighted]:bg-gray-200 dark:data-[highlighted]:bg-gray-700 focus:outline-none  {selected ===
-                footerItem.id
-                  ? 'text-sky-600 dark:text-sky-400'
-                  : 'dark:text-gray-100'}"
+                class="dropdown-item {selected === footerItem.id ? 'selected' : ''}"
               >
                 <slot name="item" item={footerItem}>
                   <SelectDropdownItem item={footerItem} />
@@ -283,21 +261,153 @@
 {/if}
 
 <style lang="scss">
-  .top-shadow {
-    // shadow to show that the list content continues underneath this element
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  :global(.dropdown-trigger) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
 
-    :global(.dark) & {
-      box-shadow: 0 2px 10px rgba(255, 255, 255, 0.15);
+    &:focus-visible {
+      outline: 2px solid light-dark(#0ea5e9, #38bdf8);
+      outline-offset: 2px;
+    }
+
+    &:active {
+      transform: scale(0.98);
     }
   }
 
-  .bottom-shadow {
-    // shadow to show that the list content continues underneath this element
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.25);
+  :global(.dropdown-content) {
+    width: 26ch;
+    border-radius: 12px;
+    border: 1px solid light-dark(#e5e7eb, #374151);
+    background: light-dark(#ffffff, #1f2937);
+    box-shadow: 0 20px 25px -5px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5)),
+      0 10px 10px -5px light-dark(rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.3));
+    outline: none;
+    z-index: 1000;
+  }
 
-    :global(.dark) & {
-      box-shadow: 0 -2px 10px rgba(255, 255, 255, 0.15);
+  .dropdown-inner {
+    width: 100%;
+    max-height: 400px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-wrapper {
+    flex-shrink: 0;
+    padding: 0.25rem;
+    padding-bottom: 0.25rem;
+    z-index: 10;
+    position: relative;
+
+    &.bottom-shadow {
+      box-shadow: 0 -2px 10px light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.15));
+    }
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 450;
+    color: light-dark(#1f2937, #f3f4f6);
+    background: light-dark(#f3f4f6, rgba(55, 65, 81, 0.8));
+    border: 1px solid light-dark(#e5e7eb, #4b5563);
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s;
+
+    &:focus {
+      outline: 1px solid light-dark(#0369a1, #0ea5e9);
+      border-color: light-dark(#0369a1, #0ea5e9);
+    }
+
+    &::placeholder {
+      color: light-dark(#9ca3af, #6b7280);
+    }
+  }
+
+  .loading-spinner {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .list-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: 0.25rem;
+  }
+
+  :global(.separator) {
+    background: light-dark(#f3f4f6, #374151);
+    height: 1px;
+    margin: 0.25rem 0;
+  }
+
+  :global(.dropdown-item) {
+    display: flex;
+    height: 2rem;
+    user-select: none;
+    align-items: center;
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: light-dark(#1f2937, #f3f4f6);
+    outline: none !important;
+    cursor: pointer;
+    transition: all 0.15s;
+    ring: 0 !important;
+    box-shadow: none !important;
+
+    &:hover,
+    &[data-highlighted] {
+      background: light-dark(#e5e7eb, #374151) !important;
+    }
+
+    &.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+
+      &:hover {
+        background: transparent !important;
+      }
+    }
+
+    &.selected {
+      color: light-dark(#0284c7, #38bdf8);
+    }
+
+    &.danger {
+      color: light-dark(#dc2626, #f87171);
+    }
+  }
+
+  .placeholder-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 5rem;
+    color: light-dark(#9ca3af, #6b7280);
+    font-size: 0.95rem;
+  }
+
+  .footer-wrapper {
+    flex-shrink: 0;
+    border-top: 1px solid light-dark(#e5e7eb, #4b5563);
+    padding: 0.125rem;
+
+    &.top-shadow {
+      box-shadow: 0 2px 10px light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
     }
   }
 </style>

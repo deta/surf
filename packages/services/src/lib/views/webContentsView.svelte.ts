@@ -925,9 +925,13 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
 
   async refreshBackgroundColor() {
     try {
+      // Use theme-aware fallback color
+      const isDarkMode = this.config?.settingsValue?.app_style === 'dark'
+      const fallbackColor = isDarkMode ? '#1a1a1a' : 'rgba(255, 255, 255, 1)'
+
       // first grab the background color of the view by executing JavaScript in the view
       const backgroundColor = await this.executeJavaScript(
-        `document.body ? getComputedStyle(document.body).backgroundColor : 'rgba(255, 255, 255, 1)'`
+        `document.body ? getComputedStyle(document.body).backgroundColor : '${fallbackColor}'`
       )
 
       if (backgroundColor) {

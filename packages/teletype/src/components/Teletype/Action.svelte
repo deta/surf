@@ -458,8 +458,8 @@
     &:not(.horizontal) {
       &.active {
         border-left-color: var(--text);
-        background: var(--background-accent);
-        background: var(--background-accent-p3);
+        background: light-dark(var(--background-accent), var(--background-dark));
+        background: light-dark(var(--background-accent-p3), var(--background-accent-p3-dark));
       }
 
       &.option.active {
@@ -467,8 +467,8 @@
       }
 
       &:hover {
-        background: var(--background-accent);
-        background: var(--background-accent-p3);
+        background: light-dark(var(--background-accent), var(--background-dark));
+        background: light-dark(var(--background-accent-p3), var(--background-accent-p3-dark));
         filter: brightness(0.99);
       }
     }

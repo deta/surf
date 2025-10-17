@@ -47,13 +47,13 @@
 
 <style lang="scss">
   :root {
-    --usage-good: #10b981;
-    --usage-warning: #f59e0b;
-    --usage-danger: #ef4444;
-    --usage-bg: #e5e7eb;
-    --usage-text: #374151;
-    --usage-text-muted: #6b7280;
-    --usage-white: #ffffff;
+    --usage-good: light-dark(#10b981, #34d399);
+    --usage-warning: light-dark(#f59e0b, #fbbf24);
+    --usage-danger: light-dark(#ef4444, #f87171);
+    --usage-bg: light-dark(#e5e7eb, rgba(51, 65, 85, 0.5));
+    --usage-text: light-dark(#374151, #cbd5f5);
+    --usage-text-muted: light-dark(#6b7280, #94a3b8);
+    --usage-white: light-dark(#ffffff, #e5edff);
   }
 
   .usage-bar {
@@ -131,7 +131,7 @@
     border-radius: 9999px;
     overflow: hidden;
     position: relative;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 1px 3px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
   }
 
   .bar-fill {

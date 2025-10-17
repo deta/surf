@@ -97,7 +97,7 @@
 
   .modal {
     &.outer-wrapper {
-      background: rgba(123, 123, 123, 0.3);
+      background: light-dark(rgba(123, 123, 123, 0.3), rgba(0, 0, 0, 0.5));
     }
 
     & :global(.box) {

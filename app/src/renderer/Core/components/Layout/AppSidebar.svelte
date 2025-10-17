@@ -242,12 +242,18 @@
     }
 
     &:hover::before {
-      background: rgba(0, 0, 0, 0.25);
+      background: light-dark(
+        var(--overlay-strong, rgba(0, 0, 0, 0.25)),
+        var(--overlay-strong-dark, rgba(15, 23, 42, 0.6))
+      );
     }
 
     &:active::before,
     &[data-resizing='true']::before {
-      background: rgba(0, 0, 0, 0.5);
+      background: light-dark(
+        var(--overlay-modal, rgba(0, 0, 0, 0.5)),
+        var(--overlay-modal-dark, rgba(15, 23, 42, 0.7))
+      );
       width: 4px;
     }
   }

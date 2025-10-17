@@ -193,44 +193,36 @@
     }
 
     &.active {
-      border: 0.5px solid #fff;
-      border: 0.5px solid color(display-p3 1 1 1);
-      background: radial-gradient(
-        290.88% 100% at 50% 0%,
-        rgba(237, 246, 255, 0.96) 0%,
-        rgba(246, 251, 255, 0.93) 100%
+      border: 0.5px solid light-dark(#fff, var(--border-subtle-dark));
+      background: light-dark(
+        radial-gradient(
+          290.88% 100% at 50% 0%,
+          rgba(237, 246, 255, 0.96) 0%,
+          rgba(246, 251, 255, 0.93) 100%
+        ),
+        radial-gradient(
+          290.88% 100% at 50% 0%,
+          color-mix(in srgb, var(--surface-elevated-dark) 90%, transparent) 0%,
+          color-mix(in srgb, var(--app-background-dark) 85%, transparent) 100%
+        )
       );
-      background: radial-gradient(
-        290.88% 100% at 50% 0%,
-        color(display-p3 0.9365 0.9644 0.9997 / 0.96) 0%,
-        color(display-p3 0.9686 0.9843 1 / 0.93) 100%
-      );
-      box-shadow:
+      box-shadow: light-dark(
         0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
         0 1px 1px 0 #fff inset,
         0 12px 5px 0 #3e4750,
         0 7px 4px 0 rgba(62, 71, 80, 0.01),
-        0 3px 3px 0 rgba(62, 71, 80, 0.02),
-        0 1px 2px 0 rgba(62, 71, 80, 0.02),
+        0 3px 3px 0 rgba(62, 71, 80, 0.01),
+        0 1px 2px 0 rgba(62, 71, 80, 0.01),
         0 1px 1px 0 #000,
         0 1px 1px 0 rgba(0, 0, 0, 0.01),
-        0 1px 1px 0 rgba(0, 0, 0, 0.05),
-        0 0 1px 0 rgba(0, 0, 0, 0.09);
-      box-shadow:
-        0 -0.5px 1px 0 color(display-p3 0.5294 0.7333 0.9961 / 0.15) inset,
-        0 1px 1px 0 color(display-p3 1 1 1) inset,
-        0 12px 5px 0 color(display-p3 0.251 0.2784 0.3098 / 0),
-        0 7px 4px 0 color(display-p3 0.251 0.2784 0.3098 / 0.01),
-        0 3px 3px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
-        0 1px 2px 0 color(display-p3 0.251 0.2784 0.3098 / 0.02),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0.01),
-        0 1px 1px 0 color(display-p3 0 0 0 / 0.05),
-        0 0 1px 0 color(display-p3 0 0 0 / 0.09);
+        0 1px 1px 0 rgba(0, 0, 0, 0.02),
+        0 0 1px 0 rgba(0, 0, 0, 0.04)
+      ,
+        0 8px 18px var(--shadow-soft-dark));
       .tab-title {
-        color: var(--on-surface-accent);
+        color: light-dark(var(--on-surface-accent), var(--on-surface-accent-dark));
       }
-      color: var(--on-surface-accent);
+      color: light-dark(var(--on-surface-accent), var(--on-surface-accent-dark));
     }
 
     // Pinned tab styles
@@ -282,9 +274,10 @@
           left: -25%;
           width: 150%;
           height: 100%;
-          background: rgba(255, 255, 255, 0.6);
+          background: light-dark(var(--white-60), var(--tab-hover-overlay-dark));
           border-radius: 8px;
-          outline: 0.5px solid rgba(255, 255, 255, 0.6);
+          outline: 0.5px solid
+            light-dark(var(--white-60), color-mix(in srgb, var(--overlay-light-dark) 65%, transparent));
           z-index: 1;
         }
       }
@@ -305,27 +298,29 @@
       .tab-title {
         -webkit-mask-image: linear-gradient(
           to right,
-          #000 calc(100% - 2.5rem),
+          light-dark(var(--black), var(--white)) calc(100% - 2.5rem),
           transparent calc(100% - 1.25rem)
         );
       }
     }
 
     &:hover:not(.active) {
+    &:hover:not(.active) {
       border-radius: 18px;
-      border: 0.5px solid #fff;
-      border: 0.5px solid color(display-p3 1 1 1);
-      background: radial-gradient(
-        290.88% 100% at 50% 0%,
-        rgba(237, 246, 255, 0.77) 0%,
-        rgba(246, 251, 255, 0.74) 100%
+      border: 0.5px solid light-dark(#fff, var(--border-subtle-dark));
+      background: light-dark(
+        radial-gradient(
+          290.88% 100% at 50% 0%,
+          rgba(237, 246, 255, 0.77) 0%,
+          rgba(246, 251, 255, 0.74) 100%
+        ),
+        radial-gradient(
+          290.88% 100% at 50% 0%,
+          color-mix(in srgb, var(--surface-elevated-dark) 85%, transparent) 0%,
+          color-mix(in srgb, var(--app-background-dark) 70%, transparent) 100%
+        )
       );
-      background: radial-gradient(
-        290.88% 100% at 50% 0%,
-        color(display-p3 0.9365 0.9644 0.9997 / 0.77) 0%,
-        color(display-p3 0.9686 0.9843 1 / 0.74) 100%
-      );
-      box-shadow:
+      box-shadow: light-dark(
         0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
         0 1px 1px 0 #fff inset,
         0 12px 5px 0 #3e4750,
@@ -335,10 +330,11 @@
         0 1px 1px 0 #000,
         0 1px 1px 0 rgba(0, 0, 0, 0.01),
         0 1px 1px 0 rgba(0, 0, 0, 0.02),
-        0 0 1px 0 rgba(0, 0, 0, 0.04);
-      box-shadow:
-        0 -0.5px 1px 0 color(display-p3 0.5294 0.7333 0.9961 / 0.15) inset,
-        0 1px 1px 0 color(display-p3 1 1 1) inset,
+        0 0 1px 0 rgba(0, 0, 0, 0.04)
+      ,
+        0 6px 14px var(--shadow-soft-dark));
+      transition: none;
+    }
         0 12px 5px 0 color(display-p3 0.251 0.2784 0.3098 / 0),
         0 7px 4px 0 color(display-p3 0.251 0.2784 0.3098 / 0.01),
         0 3px 3px 0 color(display-p3 0.251 0.2784 0.3098 / 0.01),
@@ -384,7 +380,7 @@
     white-space: nowrap;
     -webkit-font-smoothing: subpixel-antialiased;
     text-rendering: optimizeLegibility;
-    color: var(--on-app-background);
+    color: light-dark(var(--on-app-background), var(--on-app-background-dark));
     transition: opacity 200ms ease;
 
     &.hidden {
@@ -406,13 +402,13 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 120ms ease;
-    color: var(--on-surface-muted);
+    color: light-dark(var(--on-surface-muted), var(--on-surface-muted-dark));
 
     &:hover {
-      color: var(--accent);
+      color: light-dark(var(--on-surface-muted), var(--on-surface-muted-dark));
       opacity: 1;
     }
-  }
+        color: light-dark(var(--accent), var(--accent-dark));
 
   .pin-indicator {
     position: absolute;

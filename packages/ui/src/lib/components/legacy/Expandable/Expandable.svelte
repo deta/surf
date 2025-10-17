@@ -39,7 +39,7 @@
     width: 100%;
     overflow: hidden;
     border-radius: 0.5rem;
-    color: var(--color-text);
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
   }
 
   .header {
@@ -56,7 +56,7 @@
     h1 {
       font-size: 1.1rem;
       font-weight: 500;
-      color: var(--color-text);
+      color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     }
   }
 

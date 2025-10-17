@@ -35,7 +35,11 @@
         loading="lazy"
       />
     {:else}
-      <Icon name="screenshot" size="20px" color="black" />
+      <Icon
+        name="screenshot"
+        size="20px"
+        color="light-dark(black, var(--on-app-background-dark, #e5edff))"
+      />
     {/if}
   {/await}
 </div>

@@ -32,11 +32,11 @@
   .wrapper {
     width: 100%;
     border-radius: 0.75rem;
-    color: var(--color-text);
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: 1.25rem;
-    background: #e6e6e6;
+    background: light-dark(#e6e6e6, rgba(30, 41, 59, 0.5));
   }
 </style>

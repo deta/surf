@@ -366,12 +366,13 @@
       font-family: var(--default);
       font-weight: var(--medium);
       font-size: 0.9rem;
-      background:
-        linear-gradient(
+      --status-shimmer: light-dark(#aae5ff, rgba(147, 197, 253, 0.65));
+      --status-base: light-dark(#399bf1, var(--accent-dark, #8192ff));
+      background: linear-gradient(
           90deg,
           transparent 0%,
           transparent 40%,
-          #aae5ff 45%,
+          var(--status-shimmer) 45%,
           45%,
           transparent 50%,
           transparent 100%
@@ -380,7 +381,7 @@
           90deg,
           transparent 0%,
           transparent 40%,
-          white 45%,
+          light-dark(#ffffff, rgba(226, 232, 240, 0.7)) 45%,
           transparent 50%,
           transparent 100%
         ),
@@ -388,7 +389,7 @@
           90deg,
           transparent 0%,
           transparent 40%,
-          #aae5ff 45%,
+          var(--status-shimmer) 45%,
           transparent 50%,
           transparent 100%
         ),
@@ -396,7 +397,7 @@
           90deg,
           transparent 0%,
           transparent 40%,
-          #aae5ff 45%,
+          var(--status-shimmer) 45%,
           transparent 50%,
           transparent 100%
         ),
@@ -404,7 +405,7 @@
           90deg,
           transparent 0%,
           transparent 40%,
-          #aae5ff 45%,
+          var(--status-shimmer) 45%,
           transparent 50%,
           transparent 100%
         ),
@@ -416,7 +417,7 @@
           transparent 50%,
           transparent 100%
         ),
-        #399bf1;
+        var(--status-base);
       background-size:
         200% 100%,
         200% 100%,
@@ -617,7 +618,7 @@
       cursor: pointer;
       border-radius: 9px;
       background: transparent;
-      color: #6d82ff;
+      color: light-dark(#6d82ff, var(--accent-dark, #8192ff));
       font-size: 13px;
       cursor: pointer;
       border: none;
@@ -628,11 +629,11 @@
         opacity 150ms ease-out;
 
       &:hover:not(:disabled) {
-        background: #f3f5ff;
+        background: light-dark(#f3f5ff, var(--accent-background-dark, #1e2639));
       }
 
       &:disabled {
-        color: #808794;
+        color: light-dark(#808794, var(--on-surface-muted-dark, #94a3b8));
         opacity: 0.4;
         cursor: not-allowed !important;
       }

@@ -249,14 +249,14 @@
 
   .empty {
     width: 100%;
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
     padding: 0.75rem 0.75rem;
     border-radius: 10px;
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    color: rgba(0, 0, 0, 0.25);
+    color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
     text-align: center;
     text-wrap: pretty;
     p {
@@ -264,7 +264,7 @@
     }
     :global(button) {
       margin-bottom: 0.5rem;
-      background: rgb(198 206 249 / 40%);
+      background: light-dark(rgb(198 206 249 / 40%), rgba(100, 116, 180, 0.3));
       color: var(--accent);
     }
   }
@@ -282,6 +282,7 @@
     h1 {
       font-size: 30px;
       font-family: 'Gambarino';
+      color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
     }
   }
   .cover.title {

@@ -325,7 +325,7 @@
 
       > label {
         opacity: 0.5;
-        color: var(--text-color);
+        color: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.7));
         leading-trim: both;
         text-edge: cap;
         font-family: Inter;
@@ -355,14 +355,14 @@
 
   .empty {
     width: 100%;
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
     padding: 0.75rem 0.75rem;
     border-radius: 10px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    color: rgba(0, 0, 0, 0.25);
+    color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
     text-align: center;
     text-wrap: pretty;
     p {
@@ -372,7 +372,7 @@
     :global(button) {
       margin-bottom: 0.5rem;
       color: var(--accent);
-      background: rgb(198 206 249 / 40%);
+      background: light-dark(rgb(198 206 249 / 40%), rgba(100, 116, 180, 0.3));
     }
   }
 
@@ -390,6 +390,7 @@
       font-size: 30px;
       font-family: 'Gambarino';
       text-align: center;
+      color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
     }
   }
 

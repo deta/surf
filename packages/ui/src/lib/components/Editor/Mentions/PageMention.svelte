@@ -174,20 +174,21 @@
 
     &:hover,
     &.active,
-    &.editing, &:global([data-context-menu-anchor])  {
-      background: rgba(0, 0, 0, 0.05);
+    &.editing,
+    &:global([data-context-menu-anchor]) {
+      background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.08));
     color: color-mix(in oklch, currentColor, transparent 10%);
     }
 
     > .text {
       text-decoration: underline;
-      text-decoration-color: rgba(0, 0, 0, 0.1);
+      text-decoration-color: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15));
       text-decoration-color: color-mix(in oklch, currentColor, transparent 90%);
       text-underline-offset: 2px;
 
       &:empty:before {
         content: attr(placeholder);
-        color: rgba(0,0,0,0.175);
+        color: light-dark(rgba(0, 0, 0, 0.175), rgba(255, 255, 255, 0.4));
         pointer-events: none;
         user-select: none;
       }
@@ -203,6 +204,6 @@
     }
   }
   :global([data-context-menu-anchor] .mention-page) {
-    background: rgba(0, 0, 0, 0.05);
+    background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.08));
   }
 </style>

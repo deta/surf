@@ -30,8 +30,8 @@
     gap: 0.5rem;
     padding: 1rem;
     border-radius: 0.5rem;
-    background-color: var(--color-surface, #f9fafb);
-    border: 1px solid var(--color-border, #e5e7eb);
+    background-color: light-dark(var(--color-surface, #f9fafb), rgba(15, 23, 42, 0.6));
+    border: 1px solid light-dark(var(--color-border, #e5e7eb), rgba(71, 85, 105, 0.4));
   }
 
   .usage-header {
@@ -42,7 +42,7 @@
 
   .label {
     font-weight: 500;
-    color: var(--color-text, #111827);
+    color: light-dark(var(--color-text, #111827), var(--on-surface-dark, #cbd5f5));
   }
 
   .progress-container {
@@ -53,6 +53,6 @@
 
   .reset-info {
     font-size: 0.75rem;
-    color: var(--color-text-muted, #9ca3af);
+    color: light-dark(var(--color-text-muted, #9ca3af), var(--text-subtle-dark, #94a3b8));
   }
 </style>

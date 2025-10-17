@@ -543,7 +543,7 @@
     padding-bottom: calc(0.4em - 1px);
     padding-inline: 0.6rem;
     width: fit-content;
-    background: rgba(0, 0, 0, 0.06);
+    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
     margin-right: 3px;
     cursor: default;
     letter-spacing: 0.1em;
@@ -570,11 +570,7 @@
       width: 1em;
       height: 1em;
       flex-shrink: 0;
-      color: #0e53a3;
-
-      :global(.dark) & {
-        color: #d1d1c2;
-      }
+      color: light-dark(#0e53a3, #d1d1c2);
     }
 
     &.wide {
@@ -598,29 +594,16 @@
     }
 
     &.active {
-      background: #e4d3fd;
-      border: 1px solid #aa8df2;
-
-      :global(.dark) & {
-        background: #374151;
-        border: 1px solid #4b5565;
-      }
+      background: light-dark(#e4d3fd, #374151);
+      border: 1px solid light-dark(#aa8df2, #4b5565);
 
       &:hover {
-        background: rgba(183, 198, 218, 0.2);
-
-        :global(.dark) & {
-          background: rgba(183, 198, 218, 0.2);
-        }
+        background: light-dark(rgba(183, 198, 218, 0.2), rgba(183, 198, 218, 0.2));
       }
     }
 
     &:hover {
-      background: rgba(183, 198, 218, 0.2);
-
-      :global(.dark) & {
-        background: rgba(183, 198, 218, 0.2);
-      }
+      background: light-dark(rgba(183, 198, 218, 0.2), rgba(183, 198, 218, 0.2));
     }
   }
 

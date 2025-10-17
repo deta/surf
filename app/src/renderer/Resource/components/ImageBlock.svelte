@@ -226,13 +226,13 @@
   .caption-text {
     cursor: text;
     padding: 0.25rem 0.5rem;
-    color: rgba(0, 0, 0, 0.4);
+    color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.4));
     font-size: 0.75rem;
     line-height: 1.3;
     transition: color 0.15s ease;
 
     &:hover {
-      color: rgba(0, 0, 0, 0.6);
+      color: light-dark(rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.6));
     }
   }
 
@@ -241,7 +241,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: rgba(0, 0, 0, 0.7);
+    color: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.7));
     font-size: 0.75rem;
     line-height: 1.3;
     font-family: inherit;
@@ -252,7 +252,7 @@
     box-sizing: border-box;
 
     &::placeholder {
-      color: rgba(0, 0, 0, 0.3);
+      color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3));
     }
   }
 </style>

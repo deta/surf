@@ -131,6 +131,17 @@
   .add-tab-btn-container {
     flex-shrink: 0;
     app-region: no-drag;
+
+    :global(button) {
+      background: light-dark(rgba(255, 255, 255, 0.5), rgba(35, 45, 65, 0.4));
+      color: light-dark(var(--on-surface), var(--on-surface-dark));
+      border: 0.5px solid light-dark(rgba(255, 255, 255, 0.3), rgba(71, 85, 105, 0.3));
+
+      &:hover {
+        background: light-dark(rgba(255, 255, 255, 0.7), rgba(35, 45, 65, 0.6));
+        border-color: light-dark(rgba(255, 255, 255, 0.5), rgba(71, 85, 105, 0.5));
+      }
+    }
   }
 
   /* View Transitions for smooth tab reordering */
@@ -154,8 +165,15 @@
     width: 100px;
     opacity: 1;
     height: -webkit-fill-available;
-    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.1);
-    border: 1px dashed rgba(var(--accent-color-rgb, 0, 122, 204), 0.3);
+    background: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.1),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.15)
+    );
+    border: 1px dashed
+      light-dark(
+        rgba(var(--accent-color-rgb, 0, 122, 204), 0.3),
+        rgba(var(--accent-color-rgb, 129, 146, 255), 0.4)
+      );
   }
 
   :global(body[data-dragging='true']) .pin-zone-hint::before {
@@ -165,20 +183,26 @@
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 10px;
-    color: var(--on-surface-muted);
+    color: light-dark(var(--on-surface-muted), var(--on-surface-muted-dark));
     pointer-events: none;
     white-space: nowrap;
   }
 
   /* Enhanced visual feedback when hovering over pin zone */
   .pin-zone-hint[data-drag-target='true'] {
-    background: rgba(var(--accent-color-rgb, 0, 122, 204), 0.2) !important;
-    border-color: rgba(var(--accent-color-rgb, 0, 122, 204), 0.5) !important;
+    background: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.2),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.25)
+    ) !important;
+    border-color: light-dark(
+      rgba(var(--accent-color-rgb, 0, 122, 204), 0.5),
+      rgba(var(--accent-color-rgb, 129, 146, 255), 0.6)
+    ) !important;
     border-style: solid !important;
   }
 
   .pin-zone-hint[data-drag-target='true']::before {
-    color: var(--on-surface) !important;
+    color: light-dark(var(--on-surface), var(--on-surface-dark)) !important;
     font-weight: 600;
   }
 

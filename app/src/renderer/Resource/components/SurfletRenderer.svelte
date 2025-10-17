@@ -811,7 +811,7 @@
   .code-container pre {
     margin: 0 !important;
     border-radius: 0 0 0.7rem 0.7rem;
-    border: 1px dashed #dddddd;
+    border: 1px dashed light-dark(#dddddd, #444444);
   }
 
   code-block {
@@ -871,54 +871,42 @@
   }
 
   header {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      #f3faff,
-      rgb(29 33 44),
-      color-mix(in srgb, var(--base-color), 70% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix))
-    );
-
-    background: var(--fill);
+    background: light-dark(#f3faff, rgb(29 33 44));
   }
 
   .preview-group {
-    @include utils.light-dark-custom(
-      'background-fill-mix',
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1),
-      rgba(255, 255, 255, 1),
-      rgba(0, 0, 0, 1)
-    );
-    @include utils.light-dark-custom(
-      'fill',
-      color-mix(in srgb, #f3faff, 7% black),
-      color-mix(in srgb, rgb(29 33 44), 8% white),
-      color-mix(in srgb, var(--base-color), 40% var(--background-fill-mix)),
-      color-mix(in srgb, var(--base-color), 5% var(--background-fill-mix))
-    );
-
     button {
-      background: var(--fill);
+      background: light-dark(
+        color-mix(in srgb, #f3faff, 7% black),
+        color-mix(in srgb, rgb(29 33 44), 8% white)
+      );
       color: var(--contrast-color);
       border: none;
 
       &.active {
-        @include utils.light-dark-custom(
-          'fill',
+        background: light-dark(
           color-mix(in srgb, #f3faff, 15% black),
-          color-mix(in srgb, rgb(29 33 44), 15% white),
-          color-mix(in srgb, var(--base-color), 5% var(--background-fill-mix)),
-          color-mix(in srgb, var(--base-color), 60% var(--background-fill-mix))
+          color-mix(in srgb, rgb(29 33 44), 15% white)
         );
       }
     }
+  }
+
+  // Override Tailwind bg classes with light-dark() support
+  :global(code-block.bg-gray-900) {
+    background-color: light-dark(#f9f9f9, #111827) !important;
+  }
+
+  :global(code-block .bg-gray-800) {
+    background-color: light-dark(#ffffff, #1f2937) !important;
+  }
+
+  :global(code-block .bg-white) {
+    background-color: light-dark(#ffffff, #1e2433) !important;
+  }
+
+  // Override inline text color
+  :global(code-block .code-wrapper) {
+    color: light-dark(#1a1a1a, #e5e7eb) !important;
   }
 </style>

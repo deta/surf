@@ -75,12 +75,12 @@
 <style lang="scss">
   .popover-content-wrapper {
     display: flex;
-    //background: white;
-    //border: 1px solid #eee;
+    //background: light-dark(white, #1a2438);
+    //border: 1px solid light-dark(#eee, rgba(71, 85, 105, 0.3));
     border-radius: 12px;
     overflow: hidden;
     height: calc(100vh - 32px);
-    // box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    // box-shadow: 0 2px 8px light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
   }
 
   .popover-root {

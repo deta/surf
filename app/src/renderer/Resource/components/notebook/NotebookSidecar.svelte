@@ -12,7 +12,7 @@
     left: calc(100% + 3.5rem);
     max-width: 400px;
     width: 100%;
-    border: 1px solid var(--border-color);
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(71, 85, 105, 0.3));
     border-radius: 12px;
     padding: 0.75rem 1rem;
     display: flex;
@@ -20,7 +20,7 @@
     gap: 0.5rem;
     opacity: 0.5;
     transition: opacity 223ms ease-out;
-    color: rgba(0, 0, 0, 0.75);
+    color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.8));
 
     &:hover {
       opacity: 1;

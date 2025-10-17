@@ -255,7 +255,7 @@
     gap: 0.33rem;
     margin: 0 0.25rem;
     padding: 0.33rem 0.33rem 0.4rem 0.33rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: light-dark(rgba(255, 255, 255, 0.1), rgba(15, 23, 42, 0.35));
     border-radius: 10px;
 
     &.tiny {
@@ -265,13 +265,10 @@
     }
   }
   .separator {
-    color: #fff;
+    color: light-dark(#ffffff, var(--on-surface-dark, #cbd5f5));
     margin-bottom: 2px;
     &.dark {
-      color: #9ca3af;
-    }
-    @media (prefers-color-scheme: dark) {
-      color: #9ca3af;
+      color: light-dark(#9ca3af, var(--text-subtle-dark, #94a3b8));
     }
   }
 </style>

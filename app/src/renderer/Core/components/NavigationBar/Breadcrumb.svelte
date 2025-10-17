@@ -63,7 +63,10 @@
     background: transparent;
     &:hover:not(.separator):not(.disabled),
     &.active {
-      background: rgba(0, 0, 0, 0.04);
+      background: light-dark(
+        var(--overlay-light, rgba(0, 0, 0, 0.04)),
+        var(--overlay-light-dark, rgba(15, 23, 42, 0.22))
+      );
     }
 
     &.muted {

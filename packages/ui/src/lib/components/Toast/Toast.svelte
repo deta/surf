@@ -379,25 +379,25 @@
 
   .error {
     .icon {
-      color: IndianRed;
+      color: light-dark(IndianRed, var(--danger-dark, #f87171));
     }
   }
 
   .success {
     .icon {
-      color: MediumSeaGreen;
+      color: light-dark(MediumSeaGreen, var(--success-dark, #4ade80));
     }
   }
 
   .warning {
     .icon {
-      color: DarkOrange;
+      color: light-dark(DarkOrange, var(--warning-dark, #fbbf24));
     }
   }
 
   .info {
     .icon {
-      color: SkyBlue;
+      color: light-dark(SkyBlue, var(--brand-info-dark, #8ea8ff));
     }
   }
 

@@ -100,7 +100,7 @@
     gap: 1rem;
     padding: 1rem;
     border-radius: 0.5rem;
-    color: var(--color-text);
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     text-align: left;
     margin-bottom: 1rem;
     width: 100%;
@@ -117,13 +117,13 @@
         margin: 0 0 0.5rem 0;
         font-size: 1.2rem;
         font-weight: 600;
-        color: var(--color-text);
+        color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
       }
 
       p {
         margin: 0;
         font-size: 1.1rem;
-        color: var(--color-text-muted);
+        color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
         line-height: 1.5;
       }
     }
@@ -194,7 +194,7 @@
       margin: 0 0 1rem 0;
       font-size: 1.5rem;
       font-weight: 600;
-      color: var(--color-text);
+      color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
       text-align: center;
     }
   }
@@ -230,19 +230,35 @@
       background-color 90ms ease-out,
       box-shadow 90ms ease-out;
 
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgba(30, 41, 59, 0.96) 0%,
+        rgba(15, 23, 42, 0.93) 100%
+      );
+      border: 0.5px solid rgba(71, 85, 105, 0.6);
+      box-shadow:
+        0 -0.5px 1px 0 rgba(129, 146, 255, 0.15) inset,
+        0 1px 1px 0 rgba(71, 85, 105, 0.3) inset,
+        0 3px 3px 0 rgba(0, 0, 0, 0.3),
+        0 1px 2px 0 rgba(0, 0, 0, 0.2),
+        0 1px 1px 0 rgba(0, 0, 0, 0.4),
+        0 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
+
     .extension-info {
       flex: 1;
 
       .extension-name {
         font-size: 1.1rem;
         font-weight: 500;
-        color: var(--color-text);
+        color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
         margin-bottom: 0.25rem;
       }
 
       .extension-version {
         font-size: 0.95rem;
-        color: var(--color-text-muted);
+        color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
 
         span {
           font-style: italic;
@@ -255,18 +271,18 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 1rem;
-      border: 1px solid #fecaca;
+      border: 1px solid light-dark(#fecaca, rgba(220, 38, 38, 0.4));
       border-radius: 0.5rem;
-      background-color: #fef2f2;
-      color: #dc2626;
+      background-color: light-dark(#fef2f2, rgba(220, 38, 38, 0.15));
+      color: light-dark(#dc2626, #f87171);
       font-size: 0.9rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
 
       &:hover {
-        background-color: #fee2e2;
-        border-color: #fca5a5;
+        background-color: light-dark(#fee2e2, rgba(220, 38, 38, 0.25));
+        border-color: light-dark(#fca5a5, rgba(248, 113, 113, 0.5));
       }
 
       &:active {

@@ -2038,17 +2038,12 @@
     overflow: hidden;
     position: relative;
     padding-bottom: 0;
-    background: #fff;
+    background: light-dark(#fff, #181818);
     display: flex;
     justify-content: center;
     align-items: center;
 
-    :global(.dark) & {
-      background: #181818;
-    }
-
-    --text-color: #1f163c;
-    --text-color-dark: #fff;
+    --text-color: light-dark(#1f163c, #fff);
   }
 
   .content {
@@ -2118,16 +2113,8 @@
   }
 
   :global(body .text-resource-wrapper .tiptap ::selection) {
-    color: var(--mixed-bg);
-    background: var(--contrast-color);
-              background: rgba(216, 236, 255, 1);
-          background: rgba(204, 229, 255, 1);
-          color: #222;
-
-  }
-  :global(body.custom.dark .text-resource-wrapper .tiptap ::selection) {
-    color: var(--mixed-bg-dark);
-    background: var(--contrast-color);
+    color: light-dark(#222, var(--mixed-bg-dark));
+    background: light-dark(rgba(204, 229, 255, 1), var(--contrast-color));
   }
 
   :global(.tiptap) {
@@ -2180,15 +2167,13 @@
     }
 
     :global(code:not(pre code)) {
-      background: #030712;
+      background: light-dark(#030712, rgba(255, 255, 255, 0.1));
       padding: 0.2em 0.4em;
       font-size: 0.9em;
     }
 
-    :global(.dark) & {
-      :global(*):not(.mention, a, span) {
-        color: var(--text-color-dark) !important;
-      }
+    :global(*):not(.mention, a, span) {
+      color: inherit !important;
     }
   }
 </style>

@@ -48,13 +48,13 @@
     line-height: 1;
     font-size: 1.2rem;
     font-weight: 500;
-    color: var(--color-text);
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     margin: 0 0 0.25rem 0;
   }
 
   .description {
     font-size: 0.9rem;
-    color: var(--color-text-secondary);
+    color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
     margin: 0;
     line-height: 1.3;
   }
@@ -64,9 +64,9 @@
     line-height: 1;
     padding: 0.5rem;
     border-radius: 8px;
-    border: 1px solid var(--color-border);
-    background: var(--color-background);
-    color: var(--color-text);
+    border: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
+    background: light-dark(var(--color-background), var(--surface-elevated-dark, #1b2435));
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
     min-width: 24ch;
     flex-shrink: 0;
   }

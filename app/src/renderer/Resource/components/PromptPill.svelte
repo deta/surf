@@ -62,7 +62,7 @@
 
     color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.5));
     //background: light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.035));
-    background: light-dark(rgba(250, 250, 250, 0.85), rgba(0, 0, 0, 0.85));
+    background: light-dark(rgba(250, 250, 250, 0.85), rgba(26, 36, 56, 0.85));
     backdrop-filter: blur(8px);
     border: 0.5px solid light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
 
@@ -72,7 +72,7 @@
       transition-delay: 0ms;
       &:hover {
         color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.75));
-        background: light-dark(rgba(0, 0, 0, 0.075), rgba(255, 255, 255, 0.075));
+        background: light-dark(rgba(0, 0, 0, 0.075), rgba(40, 53, 73, 0.9));
 
         &.direction-vertical {
           --offset-x: 1px;
@@ -85,7 +85,7 @@
       }
       &:active {
         --scale: 0.975;
-        background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+        background: light-dark(rgba(0, 0, 0, 0.1), rgba(50, 65, 90, 0.95));
       }
     }
     &.disabled {

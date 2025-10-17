@@ -60,12 +60,12 @@
 
   outline: none;
   background: var(--bg);
-  color: inherit;
+  color: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.8));
   opacity: 0.8;
 
   &:hover:not(&:disabled),
   &.active {
-    --bg: rgba(0,0,0,0.05);
+    --bg: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.1));
   }
   
   &:disabled {
@@ -81,10 +81,18 @@
     &:active {
       scale: 0.95;
       opacity: 1;
-      --bg: linear-gradient(to top, rgba(0,0,0, 0.1), rgba(0,0,0, 0.12));
+      --bg: linear-gradient(
+        to top,
+        light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.18)),
+        light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.22))
+      );
     }
     &.active {
-      --bg: linear-gradient(to top, rgba(0,0,0, 0.1), rgba(0,0,0, 0.12));
+      --bg: linear-gradient(
+        to top,
+        light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.18)),
+        light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.22))
+      );
     }
   }
   

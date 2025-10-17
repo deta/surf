@@ -51,9 +51,12 @@
     padding-inline: 2rem;
     box-sizing: content-box;
 
-    color: var(--on-surface-heavy);
+    color: light-dark(var(--on-surface-heavy, #374151), var(--on-surface-dark, #cbd5f5));
 
-    background: light-dark(var(--app-background-light), rgba(24, 24, 24, 1));
+    background: light-dark(
+      var(--app-background-light, #fefeff),
+      var(--app-background-dark, #1c2b3d)
+    );
 
     &:active,
     &:focus {

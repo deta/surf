@@ -397,7 +397,7 @@
             on:select={handleSelectedModelChange}
           >
             <button
-              class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
+              class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
             >
               {#if $selectedModel}
                 <Icon name={$selectedModel.icon} />
@@ -468,7 +468,7 @@
       <div slot="header" class="flex items-center gap-2">
         <button
           on:click={handleCreateNewModel}
-          class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
+          class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 hover:bg-gray-700/10 dark:hover:bg-gray-700/80 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
         >
           <Icon name="add" />
         </button>
@@ -485,7 +485,7 @@
           on:select={handleSelectedProviderChange}
         >
           <button
-            class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 bg-gray-300/75 hover:bg-gray-400/50 dark:hover:bg-gray-800 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
+            class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
           >
             {#if $selectedProvider}
               <Icon name={$selectedProvider.icon} />
@@ -652,6 +652,24 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+
+    h2 {
+      color: light-dark(#1f2937, #cbd5f5);
+    }
+
+    p {
+      color: light-dark(#374151, #94a3b8);
+      line-height: 1.6;
+    }
+
+    a {
+      color: light-dark(#0284c7, #38bdf8);
+      text-decoration: underline;
+
+      &:hover {
+        color: light-dark(#0369a1, #0ea5e9);
+      }
+    }
   }
 
   .dev-wrapper {
@@ -678,6 +696,22 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgba(30, 41, 59, 0.96) 0%,
+        rgba(15, 23, 42, 0.93) 100%
+      );
+      border: 0.5px solid rgba(71, 85, 105, 0.6);
+      box-shadow:
+        0 -0.5px 1px 0 rgba(129, 146, 255, 0.15) inset,
+        0 1px 1px 0 rgba(71, 85, 105, 0.3) inset,
+        0 3px 3px 0 rgba(0, 0, 0, 0.3),
+        0 1px 2px 0 rgba(0, 0, 0, 0.2),
+        0 1px 1px 0 rgba(0, 0, 0, 0.4),
+        0 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
   }
 
   .quota-header {
@@ -702,12 +736,42 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+
+    h2 {
+      color: light-dark(#1f2937, #cbd5f5);
+    }
+
+    p {
+      color: light-dark(#374151, #94a3b8);
+      line-height: 1.6;
+    }
+
+    a {
+      color: light-dark(#0284c7, #38bdf8);
+
+      &:hover {
+        color: light-dark(#0369a1, #0ea5e9);
+      }
+    }
   }
 
   .details-text {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+
+    p {
+      color: light-dark(#374151, #94a3b8);
+      line-height: 1.6;
+    }
+
+    a {
+      color: light-dark(#0284c7, #38bdf8);
+
+      &:hover {
+        color: light-dark(#0369a1, #0ea5e9);
+      }
+    }
   }
 
   .tiers-wrapper {
@@ -721,5 +785,18 @@
     flex-direction: column;
     gap: 0.75rem;
     padding-bottom: 1rem;
+
+    p {
+      color: light-dark(#374151, #94a3b8);
+      line-height: 1.6;
+    }
+
+    a {
+      color: light-dark(#0284c7, #38bdf8);
+
+      &:hover {
+        color: light-dark(#0369a1, #0ea5e9);
+      }
+    }
   }
 </style>

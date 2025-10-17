@@ -91,7 +91,7 @@
   .empty-state {
     padding: 2rem 1rem;
     text-align: center;
-    color: rgba(0, 0, 0, 0.5);
+    color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
 
     .default-empty {
       display: flex;

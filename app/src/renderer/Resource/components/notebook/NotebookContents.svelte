@@ -625,10 +625,10 @@
   .notebook-create {
     margin-left: 0.2rem;
     height: 100%;
-    --color: rgba(0, 0, 0, 0.25);
+    --color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
     border: 1px dashed var(--color);
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.015);
+    background: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.02));
 
     display: flex;
     flex-direction: column;
@@ -660,16 +660,16 @@
   .empty,
   .loading {
     width: 100%;
-    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
     padding: 0.75rem 0.75rem;
     border-radius: 10px;
     gap: 0.5rem;
-    color: rgba(0, 0, 0, 0.25);
+    color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
     text-align: center;
     text-wrap: pretty;
 
     h1 {
-      color: rgba(0, 0, 0, 0.75);
+      color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.8));
     }
 
     p {
@@ -677,7 +677,7 @@
       line-height: var(--title-sm-lineHeight);
       letter-spacing: 0.015em;
       font-weight: 400;
-      color: rgba(0, 0, 0, 0.5);
+      color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
       max-width: 60ch;
     }
   }
@@ -698,9 +698,9 @@
   }
 
   .import-btn {
-    --color-link: rgba(96, 117, 241, 1);
-    --color-link-muted: rgba(96, 117, 241, 0.6);
-    --color-link-hover: rgb(125, 143, 243);
+    --color-link: light-dark(rgba(96, 117, 241, 1), rgba(129, 146, 255, 1));
+    --color-link-muted: light-dark(rgba(96, 117, 241, 0.6), rgba(129, 146, 255, 0.6));
+    --color-link-hover: light-dark(rgb(125, 143, 243), rgb(150, 165, 255));
 
     background: none;
     border: none;

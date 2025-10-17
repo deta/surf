@@ -64,8 +64,8 @@
     width: 12rem;
     max-width: 15rem;
     border-radius: 12px;
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(0, 0, 0, 0.025);
+    background: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.025), rgba(71, 85, 105, 0.2));
 
     interpolate-size: allow-keywords;
     transition-behavior: allow-discrete;
@@ -99,8 +99,8 @@
     }
 
     &:focus-within {
-      background: rgba(0, 0, 0, 0.045);
-      border-color: rgba(0, 0, 0, 0.1);
+      background: light-dark(rgba(0, 0, 0, 0.045), rgba(255, 255, 255, 0.08));
+      border-color: light-dark(rgba(0, 0, 0, 0.1), rgba(71, 85, 105, 0.35));
     }
 
     .icon {
@@ -111,6 +111,7 @@
       display: flex;
       align-items: center;
       opacity: 0.5;
+      color: light-dark(rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.6));
 
       interpolate-size: allow-keywords;
       transition: opacity 200ms ease-out;
@@ -124,9 +125,15 @@
     appearance: none;
     background: transparent;
     font-size: 13px;
+    color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
+    caret-color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
 
     width: 100%;
     padding: 0.25rem 0.5rem;
+
+    &::placeholder {
+      color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.4));
+    }
 
     &:focus {
       outline: none;

@@ -30,7 +30,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: start;
-    gap: var(--t-1);
     border-radius: var(--t-3);
     font-family: var(--default);
     font-size: var(--t-13);
@@ -41,22 +40,22 @@
     overflow: hidden;
     line-height: 0.8;
     padding: var(--t-1) var(--t-2);
-    width: fit-content;
-    background: rgba(0, 0, 0, 0.06);
+    max-width: 100%;
+    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.1));
     margin-right: var(--t-1);
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
-      background: rgba(109, 130, 255, 0.2);
+      background: light-dark(rgba(109, 130, 255, 0.2), rgba(109, 130, 255, 0.3));
     }
   }
-
   .citation-content {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
     gap: var(--t-1);
+    overflow: hidden;
+    max-width: 100%;
   }
 
   .citation-icon {
@@ -77,6 +76,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
   }
 
   :global(.dark) .headless-citation {

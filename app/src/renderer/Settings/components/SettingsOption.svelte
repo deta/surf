@@ -88,10 +88,6 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: var(--color-background-dark);
-    border-bottom: 1px solid var(--color-border);
-    padding: 1.5rem;
-    border-radius: 12px;
     width: 100%;
 
     & :global(.section) {
@@ -113,14 +109,14 @@
         h2 {
           font-size: 1.2rem;
           font-weight: 500;
-          color: var(--color-text);
+          color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
         }
       }
 
       p {
         font-size: 1.1rem;
         opacity: 0.6;
-        color: var(--color-text-muted);
+        color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
       }
     }
   }

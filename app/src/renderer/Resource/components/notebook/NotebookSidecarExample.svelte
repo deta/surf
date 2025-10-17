@@ -104,7 +104,7 @@
   p {
     font-size: 0.85rem;
     line-height: 1.4;
-    color: rgba(0, 0, 0, 0.6);
+    color: light-dark(rgba(0, 0, 0, 0.6), rgba(255, 255, 255, 0.6));
   }
 
   ul {
@@ -169,7 +169,7 @@
         opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
       margin-top: 0.5rem;
       will-change: transform, opacity;
-      background: #8c9dff;
+      background: light-dark(#8c9dff, #6075f1);
       color: #fff;
       border-radius: 10px;
       padding: 0.2rem 0.5rem;
@@ -188,7 +188,7 @@
         transition:
           transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
           opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        background: #8c9dff;
+        background: light-dark(#7d8ff3, #7d8ff3);
         color: #fff;
       }
 
@@ -213,7 +213,7 @@
     border: none;
     padding: 0.25rem;
     border-radius: 5px;
-    color: rgba(0, 0, 0, 0.4);
+    color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.4));
     opacity: 0;
 
     &:hover {

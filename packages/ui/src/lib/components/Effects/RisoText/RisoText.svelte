@@ -64,10 +64,10 @@
 
   const COLOR_PALETTES: Record<string, { k: string; c: string; m: string; y: string }> = {
     DEFAULT_CMYK: {
-      k: 'black',
-      c: 'cyan',
-      m: 'magenta',
-      y: 'yellow'
+      k: 'var(--riso-k)',
+      c: 'var(--riso-c)',
+      m: 'var(--riso-m)',
+      y: 'var(--riso-y)'
     }
   }
   const colorPalette = COLOR_PALETTES.DEFAULT_CMYK
@@ -131,20 +131,20 @@
 
     <!-- Generates single dots with optional gradient emulating ink bleed -->
     <radialGradient id="{id}_K_dot" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="black" stop-opacity="1" />
-      <stop offset="100%" stop-color="black" stop-opacity={1 - incBleed} />
+      <stop offset="0%" stop-color={colorPalette.k} stop-opacity="1" />
+      <stop offset="100%" stop-color={colorPalette.k} stop-opacity={1 - incBleed} />
     </radialGradient>
     <radialGradient id="{id}_Y_dot" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="yellow" stop-opacity="1" />
-      <stop offset="100%" stop-color="yellow" stop-opacity={1 - incBleed} />
+      <stop offset="0%" stop-color={colorPalette.y} stop-opacity="1" />
+      <stop offset="100%" stop-color={colorPalette.y} stop-opacity={1 - incBleed} />
     </radialGradient>
     <radialGradient id="{id}_C_dot" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="cyan" stop-opacity="1" />
-      <stop offset="100%" stop-color="cyan" stop-opacity={1 - incBleed} />
+      <stop offset="0%" stop-color={colorPalette.c} stop-opacity="1" />
+      <stop offset="100%" stop-color={colorPalette.c} stop-opacity={1 - incBleed} />
     </radialGradient>
     <radialGradient id="{id}_M_dot" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="magenta" stop-opacity="1" />
-      <stop offset="100%" stop-color="magenta" stop-opacity={1 - incBleed} />
+      <stop offset="0%" stop-color={colorPalette.m} stop-opacity="1" />
+      <stop offset="100%" stop-color={colorPalette.m} stop-opacity={1 - incBleed} />
     </radialGradient>
 
     <!-- Create dot pattern for each CMYK color channel -->
@@ -271,6 +271,11 @@
 <style lang="scss">
   svg.riso {
     font-size: 1em;
+
+    --riso-k: light-dark(#000000, #ffffff);
+    --riso-c: light-dark(#00ffff, rgb(100, 255, 218));
+    --riso-m: light-dark(#ff00ff, rgb(255, 110, 199));
+    --riso-y: light-dark(#ffff00, rgb(255, 230, 109));
 
     rect {
       transform-box: fill-box;

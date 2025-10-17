@@ -49,6 +49,16 @@
     tabsService.activeTab?.view?.webContents.updatePageQuery(value)
   }, 100)
 
+  // Listen for settings changes and apply color scheme
+  onMount(() => {
+    const unsubscribe = config.settings.subscribe((settings) => {
+      const appStyle = settings?.app_style || 'light'
+      document.documentElement.dataset.colorScheme = appStyle
+      document.documentElement.style.colorScheme = appStyle
+    })
+    return unsubscribe
+  })
+
   onMount(() => {
     let unsub
     wait(500).then(() => (unsub = prepareContextMenu(true)))
@@ -332,29 +342,39 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: var(--app-background);
+    background: radial-gradient(
+      300% 7% at 50.04% 0%,
+      light-dark(#deedfe, #1a2438) 0%,
+      light-dark(#b3d4fe, #0f141f) 69.23%,
+      light-dark(#c9dcfd, #0f141f) 93.37%
+    );
+    background: radial-gradient(
+      300% 7% at 50.04% 0%,
+      light-dark(color(display-p3 0.8807 0.9291 0.9921), color(display-p3 0.102 0.1412 0.2196)) 0%,
+      light-dark(color(display-p3 0.7031 0.8325 0.9963), color(display-p3 0.06 0.08 0.12)) 69.23%,
+      light-dark(color(display-p3 0.7938 0.8654 0.9912), color(display-p3 0.06 0.08 0.12)) 93.37%
+    );
     display: flex;
     flex-direction: column;
 
     &.vertical-layout {
       flex-direction: column;
+      background: radial-gradient(
+        50% 300% at 0% 50%,
+        light-dark(#deedfe, #1a2438) 0%,
+        light-dark(#b3d4fe, #0f141f) 69.23%,
+        light-dark(#c9dcfd, #0f141f) 93.37%
+      );
+      background: radial-gradient(
+        50% 300% at 0% 50%,
+        light-dark(color(display-p3 0.8807 0.9291 0.9921), color(display-p3 0.102 0.1412 0.2196)) 0%,
+        light-dark(color(display-p3 0.7031 0.8325 0.9963), color(display-p3 0.06 0.08 0.12)) 69.23%,
+        light-dark(color(display-p3 0.7938 0.8654 0.9912), color(display-p3 0.06 0.08 0.12)) 93.37%
+      );
     }
   }
 
   .app-bar {
-    background: radial-gradient(
-      453.65% 343.29% at 50.04% 0%,
-      #deedff 0%,
-      #abd6ff 69.23%,
-      #c6ddff 93.37%
-    );
-    background: radial-gradient(
-      453.65% 343.29% at 50.04% 0%,
-      color(display-p3 0.8807 0.9291 0.9921) 0%,
-      color(display-p3 0.7031 0.8325 0.9963) 69.23%,
-      color(display-p3 0.7938 0.8654 0.9912) 93.37%
-    );
-
     :global(body.os_mac) & {
       padding-left: 5rem;
     }
@@ -644,6 +664,37 @@
 
   .windows-menu-button {
     app-region: no-drag;
+  }
+
+  .vertical-app-bar {
+    height: 40px;
+    min-height: 32px;
+    background: light-dark(var(--app-background), var(--app-background-dark));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    app-region: drag;
+
+    :global(body.os_mac) & {
+      padding-left: 5rem;
+    }
+
+    .windows-menu-button {
+      app-region: no-drag;
+    }
+
+    .mac-traffic-lights-spacer {
+      width: 5rem;
+      height: 100%;
+    }
+  }
+
+  .vertical-main {
+    flex: 1;
+    display: flex;
+    height: calc(100% - 32px);
+    overflow: hidden;
   }
 
   .vertical-tabs-container {

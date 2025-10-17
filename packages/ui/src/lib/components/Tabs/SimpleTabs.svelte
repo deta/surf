@@ -52,6 +52,7 @@
     border-radius: 10px;
     transition: all 69ms ease-out;
     opacity: 0.5;
+    color: light-dark(rgba(0, 0, 0, 0.7), rgba(255, 255, 255, 0.7));
 
     &.disabled {
       opacity: 0.5;
@@ -59,12 +60,13 @@
     }
 
     &:hover:not(.disabled):not(.active) {
-      background: rgba(0, 0, 0, 0.075);
+      background: light-dark(rgba(0, 0, 0, 0.075), rgba(255, 255, 255, 0.1));
     cursor: pointer;
     }
 
     &.active {
       opacity: 1;
+      color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.95));
     }
 
     .label {

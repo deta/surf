@@ -53,6 +53,7 @@
   }
 
   import { isDev, wait } from '@deta/utils'
+  import { copyStyles } from '@deta/utils/src/dom/copy-styles.svelte'
   import { type Overlay, type OverlayManager, useOverlayManager, useViewManager } from '@deta/services/views'
   import ContextMenu from './ContextMenu.svelte'
 
@@ -67,6 +68,7 @@
   let overlay: Overlay | null = null
 
   const log = useLogScope('ContextMenu')
+  let styleCleanup: (() => void) | null = null
 
   /**
    * Call once at app startup to prepare listener.
@@ -145,6 +147,11 @@
           height: 600
         }
       })
+      
+      // Copy styles including color-scheme to overlay window
+      if (overlay?.window) {
+        styleCleanup = copyStyles(overlay.window)
+      }
     }
 
     // await wait(50)
@@ -167,6 +174,11 @@
 
     contextMenuOpen.set(false)
     contextMenuKey.set(null)
+
+    if (styleCleanup) {
+      styleCleanup()
+      styleCleanup = null
+    }
 
     if (overlay) {
       overlayManager.destroy(overlay.id)

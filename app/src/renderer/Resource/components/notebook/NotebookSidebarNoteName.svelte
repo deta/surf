@@ -122,40 +122,25 @@
       >
         <g filter="url(#filter0_ddd_1996_3278)">
           <rect
+            class="note-bg"
             x="1"
             y="3.00195"
             width="29"
             height="36"
             rx="5"
             transform="rotate(-2 1 3.00195)"
-            fill="#F9F9F9"
-            style="fill:#F9F9F9;fill:color(display-p3 0.9781 0.9781 0.9781);fill-opacity:1;"
           />
           <rect
+            class="note-border"
             x="0.482855"
             y="2.51971"
             width="30"
             height="37"
             rx="5.5"
             transform="rotate(-2 0.482855 2.51971)"
-            stroke="#E8E8E8"
-            stroke-opacity="0.52"
-            style="stroke:#E8E8E8;stroke:color(display-p3 0.9107 0.9107 0.9107);stroke-opacity:0.51;"
           />
-          <path
-            d="M6.24121 9.82227L12.2376 9.61287"
-            stroke="black"
-            stroke-opacity="0.16"
-            style="stroke:black;stroke-opacity:0.25;"
-            stroke-linecap="round"
-          />
-          <path
-            d="M6.38086 13.8203L19.3729 13.3666"
-            stroke="black"
-            stroke-opacity="0.16"
-            style="stroke:black;stroke-opacity:0.25;"
-            stroke-linecap="round"
-          />
+          <path class="note-line" d="M6.24121 9.82227L12.2376 9.61287" stroke-linecap="round" />
+          <path class="note-line" d="M6.38086 13.8203L19.3729 13.3666" stroke-linecap="round" />
         </g>
         <defs>
           <filter
@@ -225,7 +210,8 @@
       <Icon name={fallbackIcon} size="1em" />
     </div>
     <div class="details">
-      <span style="color: rgba(0,0,0,0.75);">{fallbackText}</span>
+      <span style="color: light-dark(rgba(0,0,0,0.75), rgba(255,255,255,0.8));">{fallbackText}</span
+      >
     </div>
   {/if}
 </li>
@@ -241,7 +227,7 @@
 
     &:hover,
     &:global([data-context-menu-anchor]) {
-      background: rgba(0, 0, 0, 0.03);
+      background: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
     }
 
     .details {
@@ -261,6 +247,7 @@
       font-style: normal;
       font-weight: 400;
       line-height: 0.9355rem; /* 106.916% */
+      color: light-dark(rgba(0, 0, 0, 0.9), rgba(255, 255, 255, 0.9));
 
       overflow: hidden;
       display: -webkit-box;
@@ -279,7 +266,7 @@
     }
 
     .note.empty {
-      --color: rgba(0, 0, 0, 0.25);
+      --color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
       border: 1px dashed var(--color);
       rotate: -2deg;
       width: 34px;
@@ -291,5 +278,18 @@
       align-items: center;
       color: var(--color);
     }
+  }
+
+  :global(.note-bg) {
+    fill: light-dark(#f9f9f9, #1e2433);
+  }
+
+  :global(.note-border) {
+    stroke: light-dark(rgba(232, 232, 232, 0.52), rgba(255, 255, 255, 0.15));
+    fill: none;
+  }
+
+  :global(.note-line) {
+    stroke: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
   }
 </style>

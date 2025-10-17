@@ -371,30 +371,14 @@
 
 <style lang="scss">
   .bubble-menu-wrapper {
-    --ctx-background: #fff;
-    --ctx-border: rgba(0, 0, 0, 0.25);
-    --ctx-shadow-color: rgba(0, 0, 0, 0.12);
-
+    --color-menu: light-dark(#210e1f, #fff);
+    --color-menu-muted: light-dark(#949494, #949494);
     --ctx-item-hover: #2497e9;
-    --ctx-item-text: #210e1f;
-    --ctx-item-text-hover: #fff;
 
-    :global(.dark) & {
-      --color-menu: #fff;
-      --color-menu-muted: #949494;
-      --ctx-background: #1a1a1a;
-      --ctx-border: rgba(255, 255, 255, 0.25);
-      --ctx-shadow-color: rgba(0, 0, 0, 0.5);
-
-      --ctx-item-hover: #2497e9;
-      --ctx-item-text: #fff;
-      --ctx-item-text-hover: #fff;
-    }
-
-    background: var(--ctx-background);
+    background: light-dark(#fff, rgb(29 33 44));
     border-radius: 9px;
-    border: 0.5px solid var(--ctx-border);
-    box-shadow: 0 2px 10px var(--ctx-shadow-color);
+    border: 0.5px solid light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.15));
+    box-shadow: 0 2px 10px light-dark(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.5));
     user-select: none;
     font-size: 0.95em;
     position: relative;
@@ -419,6 +403,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: 0.95em;
+    color: var(--color-menu);
   }
 
   .menu-section {
@@ -460,6 +445,11 @@
     outline: none;
     border: none;
     font-size: 0.95em;
+    color: var(--color-menu);
+
+    &::placeholder {
+      color: var(--color-menu-muted);
+    }
   }
 
   .input-wrapper {
