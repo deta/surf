@@ -51,23 +51,10 @@
   const models = writable<Model[]>([])
   const selectedModel = writable<string>('')
 
-  const debouncedPromptUpdate = useDebounce((id: string, content: string) => {
-    // @ts-ignore
-    window.api.updatePrompt(id, content)
-  }, 500)
-
   const getAppInfo = async () => {
     // @ts-ignore
     const info = await window.api.getAppInfo()
     version = info.version
-  }
-
-  const getUserId = () => {
-    if (!userConfig) {
-      return null
-    }
-
-    return userConfig.anon_telemetry ? userConfig.anon_id : userConfig.user_id
   }
 
   const checkForUpdates = async () => {
@@ -349,30 +336,6 @@
           </div>
         {/if}
 
-        {#if userConfig && userConfig.anon_telemetry}
-          <div
-            class="default-wrapper"
-            style="flex-direction: column;align-items: stretch;text-align: left;"
-          >
-            <div style="display: flex;align-items: center;justify-content: space-between;">
-              <span style="max-width:40ch; text-align: left;"
-                >Help us improve Surf by allowing us to contact you via email based on your usage
-                behavior.
-              </span>
-              <button on:click={helpUsImproveSurf}>Help us improve Surf</button>
-            </div>
-            <small style="opacity: 0.7;"
-              >Note, that even with this enabled, we don't have any insights into any private
-              contents you are accessing.<br /><a
-                style="cursor: pointer;"
-                target="_blank"
-                href="https://deta.notion.site/Analytics-152a5244a717812281f7cf4037bb66d7"
-                >Learn More</a
-              ></small
-            >
-          </div>
-        {/if}
-
         {#if isDev}
           <div class="dev-wrapper">
             <h3>Migration</h3>
@@ -437,15 +400,6 @@
             </div>
             Miscellaneous
           </div>
-
-          {#if showMiscInfo}
-            {#await getUserId() then id}
-              <div style="display: flex; gap: 1ch; align-items: center;">
-                <span><b>Surf ID:</b></span>
-                <span style="user-select: text;">{id ?? 'no ID set'}</span>
-              </div>
-            {/await}
-          {/if}
         </div>
       </article>
     {:else if $activeTab === 'ai'}

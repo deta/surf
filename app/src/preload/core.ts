@@ -6,7 +6,6 @@ import mime from 'mime-types'
 import fetch from 'cross-fetch'
 
 import { promises as fsp } from 'fs'
-import { AppActivationResponse, createAPI, createAuthenticatedAPI } from '@deta/api'
 import {
   type EditablePrompt,
   type UserSettings,
@@ -41,7 +40,7 @@ import {
   SpaceBasicData
 } from '@deta/services/ipc'
 
-import { getUserConfig, getUserStats } from '../main/config'
+import { getUserConfig } from '../main/config'
 import { initBackend } from './helpers/backend'
 import type { MessagePortCallbackPrimary } from '@deta/services/messagePort'
 
@@ -51,11 +50,6 @@ const USER_DATA_PATH =
 const DISABLE_TAB_SWITCHING_SHORTCUTS = process.argv.includes('--disable-tab-switching-shortcuts')
 
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
-let userStats = getUserStats(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
-
-const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
-const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
-const APP_VERSION = import.meta.env.P_VITE_APP_VERSION ?? 'n/a'
 
 const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
@@ -254,17 +248,6 @@ const eventHandlers = {
       try {
         userConfig.settings = settings
         callback(settings)
-      } catch (error) {
-        // noop
-      }
-    })
-  },
-
-  onUserStatsChange: (callback: (stats: UserStats) => void) => {
-    return IPC_EVENTS_RENDERER.userStatsChange.on((_, stats) => {
-      try {
-        userStats = stats
-        callback(stats)
       } catch (error) {
         // noop
       }
@@ -697,41 +680,8 @@ const api = {
     return IPC_EVENTS_RENDERER.getUserStats.invoke()
   },
 
-  deanonymizeUser: async () => {
-    if (!API_KEY) {
-      console.error('API key is not set, cannot deanonymize user.')
-      return
-    }
-
-    const api = createAuthenticatedAPI(API_BASE, API_KEY, APP_VERSION)
-
-    // Figure out what id to use:
-    let userId = userConfig.anon_id ?? userConfig.user_id
-    if (userId === undefined) {
-      console.error('Could not get valid user id... something is misconfigured!')
-      return
-    }
-
-    await api.setUserTelemetryId(userId)
-  },
-
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
-  },
-
-  activateAppUsingKey: async (key: string, acceptedTerms: boolean) => {
-    const api = createAPI(API_BASE)
-
-    const res = await api.activateAppUsingKey(key, acceptedTerms)
-    if (res.ok && (res.data as AppActivationResponse)) {
-      IPC_EVENTS_RENDERER.updateUserConfig.send({ api_key: res.data.api_key })
-    }
-    return res
-  },
-
-  resendInviteCode: async (email: string) => {
-    const api = createAPI(API_BASE)
-    return await api.resendInviteCode(email)
   },
 
   getUserConfigSettings: () => userConfig.settings,

@@ -48,7 +48,6 @@
     "debug": "^4.4.3",
     "7zip-min": "^1.4.4",
     "@babel/plugin-transform-arrow-functions": "^7.25.9",
-    "@deta/api": "*",
     "@deta/editor": "*",
     "@deta/services": "*",
     "@deta/types": "*",

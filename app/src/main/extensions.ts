@@ -1,4 +1,3 @@
-import { AuthenticatedAPI } from '@deta/api'
 import { dialog, webContents, BrowserWindow, Session, WebContents } from 'electron'
 import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { installChromeWebStore } from 'electron-chrome-web-store'
@@ -15,7 +14,6 @@ export class ExtensionsManager {
   private mainWindow: BrowserWindow | null = null
   private extensionsSession: Session | null = null
   private constructor() {}
-  private api: AuthenticatedAPI | null = null
 
   public static getInstance(): ExtensionsManager {
     if (!ExtensionsManager.instance) {
@@ -71,12 +69,10 @@ export class ExtensionsManager {
   public async initialize(
     mainWindow: BrowserWindow,
     extensionsSession: Session,
-    api: AuthenticatedAPI,
     handleOpenUrl: (url: string) => void
   ) {
     this.mainWindow = mainWindow
     this.extensionsSession = extensionsSession
-    this.api = api
     this.extensions = new ElectronChromeExtensions({
       license: 'Patron-License-2020-11-19',
       session: extensionsSession,
@@ -116,18 +112,6 @@ export class ExtensionsManager {
           buttons: ['Cancel', 'Install (Experimental)']
         })
         const action = returnValue.response === 0 ? 'deny' : 'allow'
-        if (action === 'allow' && !isDev) {
-          this.api
-            ?.trackInstalledExtension(details.id, true)
-            .then((res) => {
-              if (!res.ok) {
-                log.error('Failed to track installed extension', res)
-              }
-            })
-            .catch((error) => {
-              log.error('Failed to track installed extension', error)
-            })
-        }
         return { action }
       }
     })
