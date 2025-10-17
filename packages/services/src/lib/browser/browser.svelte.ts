@@ -14,8 +14,7 @@ import {
   type OpenResourceOptions,
   type OpenTarget,
   ResourceTagsBuiltInKeys,
-  ResourceTypes,
-  TelemetryCreateTabSource
+  ResourceTypes
 } from '@deta/types'
 import { useNotebookManager } from '../notebooks'
 import { ViewManagerEmitterNames, ViewType } from '../views/types'
@@ -74,10 +73,6 @@ export class BrowserService {
 
       this.tabsManager.on(TabsServiceEmitterNames.ACTIVATED, (tab) => {
         this.handleActiveTabChange(tab)
-      }),
-
-      this.messagePort.trackEvent.on(async ({ eventName, eventProperties }) => {
-        this.resourceManager.telemetry.trackEvent(eventName, eventProperties)
       }),
 
       this.messagePort.openResource.on(async ({ resourceId, target, offline }, viewId) => {
@@ -141,7 +136,6 @@ export class BrowserService {
     }
 
     const active = details.disposition !== 'background-tab'
-    this.resourceManager.telemetry.trackCreateTab(TelemetryCreateTabSource.WebpageLinkClick)
     this.tabsManager.create(details.url, {
       active,
       activate: true
@@ -562,7 +556,6 @@ export class BrowserService {
       const reusedNoteView = await this.reuseNoteViewIfPossible(data, opts)
       if (reusedNoteView) {
         this.log.debug('Reused existing new note view')
-        this.resourceManager.telemetry.trackNoteCreate()
         return reusedNoteView
       }
 

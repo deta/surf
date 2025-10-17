@@ -26,7 +26,6 @@ import {
   type Model
 } from '@deta/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
-import type { Telemetry } from '../telemetry'
 import { EventContext, GeneratePromptsEventTrigger, SummarizeEventContentSource } from '@deta/types'
 
 export interface AppCreationResult {
@@ -44,7 +43,6 @@ export class AIService {
   resourceManager: ResourceManager
   sffs: SFFS
   config: ConfigService
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
   showChatSidebar: Writable<boolean>
@@ -59,7 +57,6 @@ export class AIService {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
     this.config = config
-    this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
 
     this.showChatSidebar = writable(false)
@@ -346,14 +343,6 @@ export class AIService {
 
     this.log.debug('Generated prompts', parsedPrompts)
 
-    if (opts?.context || opts?.trigger) {
-      this.telemetry.trackGeneratePrompts(
-        opts.context ?? EventContext.Chat,
-        opts.trigger ?? GeneratePromptsEventTrigger.Click,
-        opts.onboarding ?? false
-      )
-    }
-
     return parsedPrompts
   }
 
@@ -413,13 +402,7 @@ export class AIService {
       SIMPLE_SUMMARIZER_PROMPT + (opts?.systemPrompt ? ' ' + opts.systemPrompt : ''),
       { tier: ModelTiers.Standard }
     )
-
     this.log.debug('Summarized completion', completion)
-
-    if (opts?.context && opts?.contentSource) {
-      this.telemetry.trackSummarizeText(opts.contentSource, opts.context)
-    }
-
     return completion
   }
 

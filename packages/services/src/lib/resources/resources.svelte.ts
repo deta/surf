@@ -41,7 +41,6 @@ import {
   type NotebookData,
   type OpenTarget
 } from '@deta/types'
-// import type { Telemetry } from './telemetry'
 import {
   EventBusMessageType,
   EventContext,
@@ -65,8 +64,6 @@ import { EventEmitterBase, ResourceTag, SearchResourceTags } from '@deta/utils'
 import { type CtxItem } from '@deta/ui'
 import { Notebook } from '../notebooks'
 import { SvelteMap } from 'svelte/reactivity'
-
-type Telemetry = any
 
 export const getPrimaryResourceType = (type: string) => {
   if (type.startsWith(ResourceTypes.DOCUMENT)) {
@@ -684,18 +681,15 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
   private log: ScopedLogger
   sffs: SFFS
   config: ConfigService
-  telemetry: Telemetry
-  // ai!: AIService
 
   resources = $state() as SvelteMap<string, ResourceObject>
 
   static self: ResourceManager
 
-  constructor(telemetry: Telemetry, config: ConfigService) {
+  constructor(config: ConfigService) {
     super()
     this.log = useLogScope('SFFSResourceManager')
     this.sffs = new SFFS()
-    this.telemetry = telemetry
     this.config = config
     this.resources = new SvelteMap()
 
@@ -894,19 +888,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
       resource.rawData = data
       await resource.writeData()
     }
-
-    const isSilent = tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SILENT)?.value === 'true'
-    const isFromSpace = !!tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SPACE_SOURCE)?.value
-
-    // TODO: should we also track auto saved resources?
-    // if (!isSilent && !isFromSpace) {
-    //   this.telemetry.trackEvent(TelemetryEventTypes.CreateResource, {
-    //     kind: getPrimaryResourceType(type),
-    //     type: type,
-    //     savedWithAction: tags?.find((t) => t.name === ResourceTagsBuiltInKeys.SAVED_WITH_ACTION)
-    //       ?.value
-    //   })
-    // }
 
     this.emit(ResourceManagerEvents.Created, resource)
     return resource
@@ -1171,7 +1152,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
       // delete resource from sffs
       await this.sffs.deleteResource(id)
       // better to handle in user land
-      // this.telemetry.trackEvent(TelemetryEventTypes.DeleteResource, { type: resource.type })
     }
 
     this.resources.delete(resource.id)
@@ -1476,8 +1456,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
       fullMetadata,
       tags
     )
-
-    if (isUserAction) this.telemetry.trackNoteCreate()
 
     return resource as ResourceNote
   }
@@ -1893,8 +1871,8 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     }
   }
 
-  static provide(telemetry: Telemetry, config: ConfigService) {
-    const resourceManager = new ResourceManager(telemetry, config)
+  static provide(config: ConfigService) {
+    const resourceManager = new ResourceManager(config)
 
     setContext('resourceManager', resourceManager)
 

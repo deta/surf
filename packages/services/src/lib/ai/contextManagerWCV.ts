@@ -6,7 +6,6 @@ import { PageChatUpdateContextItemType, type PageChatUpdateContextEventTrigger }
 
 import type { Resource, ResourceManager } from '../resources'
 import type { TabItem } from '../tabs'
-import type { Telemetry } from '../telemetry'
 
 import {
   type ContextItem,
@@ -53,7 +52,6 @@ export class ContextManagerWCV {
 
   ai: AIService
   resourceManager: ResourceManager
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
   messagePort = useMessagePortClient()
 
@@ -61,7 +59,6 @@ export class ContextManagerWCV {
     this.key = key
     this.ai = ai
     this.resourceManager = resourceManager
-    this.telemetry = resourceManager.telemetry
     this.log = useLogScope(`ContextManagerWCV ${key}`)
 
     this.cachedItemPrompts = new Map()

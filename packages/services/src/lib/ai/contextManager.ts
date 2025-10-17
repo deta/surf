@@ -22,7 +22,6 @@ import { ResourceTagsBuiltInKeys } from '@deta/types'
 
 import { ResourceJSON, type Resource, type ResourceManager } from '../resources'
 import { TabsServiceEmitterNames, type TabItem, type TabsService } from '../tabs'
-import type { Telemetry } from '../telemetry'
 
 import {
   type StoredContextItem,
@@ -95,7 +94,6 @@ export class ContextManager {
   resourceManager: ResourceManager
   notebookManager: NotebookManager
   viewManager: ViewManager
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
   constructor(
@@ -112,7 +110,6 @@ export class ContextManager {
     this.resourceManager = resourceManager
     this.notebookManager = useNotebookManager()
     this.viewManager = useViewManager()
-    this.telemetry = resourceManager.telemetry
     this.log = useLogScope(`ContextManager ${key}`)
 
     this.cachedItemPrompts = new Map()
@@ -456,17 +453,6 @@ export class ContextManager {
     //     this.tabsManager.addTabToSelection(linkedTab.id)
     //   }
     // }
-
-    if (trigger) {
-      this.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.Add,
-        currentContextLength + 1,
-        1,
-        this.getUpdateEventItemType(item),
-        trigger
-      )
-    }
-
     return item
   }
 
@@ -479,7 +465,6 @@ export class ContextManager {
       return
     }
 
-    const currentContextLength = this.itemsValue.length
     this.updateItems((items) =>
       items.filter((item) => {
         if (item.id === id) {
@@ -499,36 +484,14 @@ export class ContextManager {
     )
 
     this.persistItems()
-
-    if (trigger) {
-      this.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.Remove,
-        currentContextLength - 1,
-        1,
-        this.getUpdateEventItemType(existingItem),
-        trigger
-      )
-    }
   }
 
   removeAllExcept(ids: string | string[], trigger?: PageChatUpdateContextEventTrigger) {
     const idsArray = Array.isArray(ids) ? ids : [ids]
     this.log.debug('Removing all context items except', idsArray)
-    const currentContextLength = this.itemsValue.length
-
     this.updateItems((items) => items.filter((item) => idsArray.includes(item.id)))
 
     this.persistItems()
-
-    if (trigger) {
-      this.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.ExcludeOthers,
-        currentContextLength - idsArray.length,
-        idsArray.length,
-        undefined,
-        trigger
-      )
-    }
   }
 
   getTabFromItem(item: ContextItem) {
@@ -652,25 +615,12 @@ export class ContextManager {
     }
   }
 
-  async addTabs(tabs: string[], trigger?: PageChatUpdateContextEventTrigger) {
-    const currentContextLength = this.itemsValue.length
-
+  async addTabs(tabs: string[], _trigger?: PageChatUpdateContextEventTrigger) {
     const addedItems = await Promise.all(
       tabs.map((tabId) => {
         return this.addTab(tabId)
       })
     )
-
-    if (trigger) {
-      this.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.MultiSelect,
-        currentContextLength + tabs.length,
-        tabs.length,
-        PageChatUpdateContextItemType.PageTab,
-        trigger
-      )
-    }
-
     return addedItems.length > 0 ? addedItems[0] : undefined
   }
 
@@ -907,9 +857,7 @@ export class ContextManager {
     return (item ?? null) as ContextItemResource | ContextItemPageTab | ContextItemActiveTab | null
   }
 
-  clear(trigger?: PageChatUpdateContextEventTrigger) {
-    const currentContextLength = this.itemsValue.length
-
+  clear(_trigger?: PageChatUpdateContextEventTrigger) {
     this.updateItems(() => [])
     this.persistItems()
 
@@ -917,16 +865,6 @@ export class ContextManager {
     // if (this.key === DEFAULT_CONTEXT_MANAGER_KEY) {
     //   this.tabsManager.clearTabSelection()
     // }
-
-    if (trigger) {
-      this.telemetry.trackPageChatContextUpdate(
-        PageChatUpdateContextEventAction.Clear,
-        0,
-        currentContextLength,
-        undefined,
-        trigger
-      )
-    }
   }
 
   updateItems(updateFn: (items: ContextItem[]) => ContextItem[]) {
@@ -1121,7 +1059,6 @@ export class ContextService {
   tabsManager: TabsService
   resourceManager: ResourceManager
   notebookManager: NotebookManager
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
   private _items: Writable<{ item: ContextItem; scopes: string[] }[]>
@@ -1139,7 +1076,6 @@ export class ContextService {
     this.tabsManager = tabsManager
     this.resourceManager = resourceManager
     this.notebookManager = notebookManager
-    this.telemetry = resourceManager.telemetry
     this.log = useLogScope('ContextService')
 
     this._items = writable([])

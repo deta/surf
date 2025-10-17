@@ -1,10 +1,5 @@
 import { tick } from 'svelte'
 import { type Writable, type Readable, writable, derived, get } from 'svelte/store'
-import {
-  PageChatUpdateContextEventAction,
-  PageChatUpdateContextEventTrigger,
-  PageChatUpdateContextItemType
-} from '@deta/types'
 
 import type { TabItem } from '../../tabs'
 
@@ -148,18 +143,6 @@ export class ContextItemActiveTab extends ContextItemBase {
         const newItem = new ContextItemResource(this.service, resource, tab)
         this.item.set(newItem)
 
-        // Only track if the item is new and a completely different tab
-        const showChatSidebar = this.service.ai.showChatSidebarValue
-        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.service.telemetry.trackPageChatContextUpdate(
-            PageChatUpdateContextEventAction.ActiveChanged,
-            0, // TODO: figure out how to get the correct count
-            0,
-            PageChatUpdateContextItemType.PageTab,
-            PageChatUpdateContextEventTrigger.ActiveTabChanged
-          )
-        }
-
         return newItem
       } else if (tab.view.typeValue === ViewType.Resource) {
         this.log.debug('Preparing resource tab', tab)
@@ -181,18 +164,6 @@ export class ContextItemActiveTab extends ContextItemBase {
         const newItem = new ContextItemResource(this.service, resource, tab)
         this.item.set(newItem)
 
-        // Only track if the item is new and a completely different tab
-        const showChatSidebar = this.service.ai.showChatSidebarValue
-        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.service.telemetry.trackPageChatContextUpdate(
-            PageChatUpdateContextEventAction.ActiveChanged,
-            0, // TODO: figure out how to get the correct count
-            0,
-            PageChatUpdateContextItemType.PageTab,
-            PageChatUpdateContextEventTrigger.ActiveTabChanged
-          )
-        }
-
         return newItem
       } else if (tab.view.typeValue === ViewType.Notebook) {
         this.log.debug('Preparing notebook tab', tab)
@@ -213,18 +184,6 @@ export class ContextItemActiveTab extends ContextItemBase {
         this.log.debug('Prepared notebook tab', tab.id, notebook)
         const newItem = new ContextItemNotebook(this.service, notebook, tab)
         this.item.set(newItem)
-
-        // Only track if the item is new and a completely different tab
-        const showChatSidebar = this.service.ai.showChatSidebarValue
-        if (existingItem && tab.id !== existingTab?.id && showChatSidebar) {
-          this.service.telemetry.trackPageChatContextUpdate(
-            PageChatUpdateContextEventAction.ActiveChanged,
-            0, // TODO: figure out how to get the correct count
-            0,
-            PageChatUpdateContextItemType.PageTab,
-            PageChatUpdateContextEventTrigger.ActiveTabChanged
-          )
-        }
 
         return newItem
       } else {

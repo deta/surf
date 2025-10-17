@@ -14,7 +14,6 @@ import {
   type DownloadRequestMessage,
   type DownloadUpdatedMessage,
   type DownloadDoneMessage,
-  type TelemetryEventTypes,
   type SFFSResource,
   type DownloadPathResponseMessage,
   SettingsWindowTab,
@@ -222,18 +221,6 @@ const eventHandlers = {
     return IPC_EVENTS_RENDERER.adBlockerStateChange.on((_, { partition, state }) => {
       try {
         callback(partition, state)
-      } catch (error) {
-        // noop
-      }
-    })
-  },
-
-  onTrackEvent: (
-    callback: (name: TelemetryEventTypes, properties: Record<string, any>) => void
-  ) => {
-    return IPC_EVENTS_RENDERER.trackEvent.on((_, { name, properties }) => {
-      try {
-        callback(name, properties)
       } catch (error) {
         // noop
       }

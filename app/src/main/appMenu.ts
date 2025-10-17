@@ -5,7 +5,6 @@ import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
 import { join } from 'path'
 import { isAppSetup, isDefaultBrowser } from './utils'
-import { TelemetryEventTypes } from '@deta/types'
 import { createSettingsWindow } from './settingsWindow'
 import { updateUserConfig, getUserConfig } from './config'
 import { execFile } from 'child_process'
@@ -439,5 +438,4 @@ export const useAsDefaultBrowser = async (): Promise<void> => {
   }
 
   updateUserConfig({ defaultBrowser: isSet })
-  ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: isSet })
 }

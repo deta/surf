@@ -211,12 +211,6 @@ export const handleInlineAI = async (
     ...(includePageContext ? [`Additional context from the page: "${pageContext}"`] : [])
   ]
 
-  if (type === 'custom') {
-    ai.telemetry.trackUsePrompt(PromptType.Custom, EventContext.Inline)
-  } else {
-    ai.telemetry.trackUsePrompt(PromptType.BuiltIn, EventContext.Inline, type)
-  }
-
   let transformation: string | null = ''
   if (type === 'summarize') {
     const prompt = await getPrompt(PromptIDs.INLINE_SUMMARIZER)

@@ -26,7 +26,6 @@ import {
 } from '@deta/types/src/ai.types'
 import { handleQuotaDepletedError, parseAIError } from './helpers'
 import { useTabs, type TabsService } from '../tabs'
-import type { Telemetry } from '../telemetry'
 import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
 import { type ContextItem, ContextManager, ContextService } from './contextManager'
 import {
@@ -53,7 +52,6 @@ export class AIService {
   resourceManager: ResourceManager
   sffs: SFFS
   config: ConfigService
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
   contextService: ContextService
   fallbackContextManager: ContextManager | ContextManagerWCV
@@ -87,7 +85,6 @@ export class AIService {
     this.resourceManager = resourceManager
     this.sffs = resourceManager.sffs
     this.config = config
-    this.telemetry = resourceManager.telemetry
     this.log = useLogScope('AI')
 
     if (global) {
@@ -564,14 +561,6 @@ export class AIService {
 
     this.log.debug('Generated prompts', parsedPrompts)
 
-    if (opts?.context || opts?.trigger) {
-      this.telemetry.trackGeneratePrompts(
-        opts.context ?? EventContext.Chat,
-        opts.trigger ?? GeneratePromptsEventTrigger.Click,
-        opts.onboarding ?? false
-      )
-    }
-
     return parsedPrompts
   }
 
@@ -786,7 +775,6 @@ export class AIService {
       this.log.error('Failed to save custom tool:', error)
       return
     }
-    this.telemetry.trackCreatePrompt(PromptType.Custom)
   }
 
   async deleteCustomAiApp(id: string) {
@@ -797,7 +785,6 @@ export class AIService {
       this.log.error('Failed to delete custom tool:', error)
       return
     }
-    this.telemetry.trackDeletePrompt(PromptType.Custom)
   }
 
   async summarizeText(
@@ -815,11 +802,6 @@ export class AIService {
     )
 
     this.log.debug('Summarized completion', completion)
-
-    if (opts?.context && opts?.contentSource) {
-      this.telemetry.trackSummarizeText(opts.contentSource, opts.context)
-    }
-
     return completion
   }
 

@@ -119,15 +119,6 @@
     //   log.error('Error adding resource to space', error)
     //   throw error
     // }
-    // try {
-    //   await oasis.telemetry.trackAddResourceToSpace(
-    //     $resource.type,
-    //     AddResourceToSpaceEventTrigger.Chat
-    //   )
-    // } catch (error) {
-    //   log.warn('Error tracking add resource to space', error)
-    //   // Non-critical error, don't throw
-    // }
   }
 
   const addPreviewImageToResource = async (imageId: string) => {

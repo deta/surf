@@ -11,7 +11,6 @@ import {
   defaultShortcuts,
   ShortcutActions
 } from '../shortcuts'
-import { setupTelemetry } from './telemetry'
 import { provideAI } from '../ai'
 import { createDownloadsManager } from '../downloads.svelte'
 import { createBrowser } from '../browser'
@@ -23,11 +22,8 @@ export const initServices = () => {
   log.debug('Initializing services...')
 
   const messagePort = useMessagePortPrimary()
-  const telemetry = setupTelemetry('')
   const config = provideConfig()
-  // Is mir egal das det scheiße is muss build yetz!
-  telemetry.apiKey = config?.getConfig()?.api_key
-  const resourceManager = createResourceManager(telemetry, config)
+  const resourceManager = createResourceManager(config)
   const notebookManager = createNotebookManager(resourceManager, config, messagePort)
   const viewManager = createViewManager(resourceManager)
   const tabsService = createTabsService(viewManager)
@@ -43,7 +39,6 @@ export const initServices = () => {
   log.debug('Services initialized!')
 
   return {
-    telemetry,
     config,
     viewManager,
     tabsService,

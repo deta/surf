@@ -4,8 +4,7 @@ import {
   WebContentsViewActionType,
   type WebContentsViewData,
   WebContentsViewManagerActionType,
-  type Fn,
-  TelemetryViewType
+  type Fn
 } from '@deta/types'
 import {
   useLogScope,
@@ -484,26 +483,6 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   setSidebarState({ open, view }: { open?: boolean; view?: WebContentsView | null }) {
     if (view !== undefined) this.activeSidebarView = view
     if (open !== undefined) {
-      if (this.sidebarViewOpen === false && open === true && this.activeSidebarView) {
-        const { type: view_type, id: view_resource_id } = this.activeSidebarView.typeDataValue
-        // NOTE: Make digestable for telemetry, we should make this prettier
-        const telem_tab_type: Record<ViewType, TelemetryViewType> = {
-          [ViewType.Page]: TelemetryViewType.Webpage,
-          [ViewType.Notebook]: TelemetryViewType.Notebook,
-          [ViewType.NotebookHome]: TelemetryViewType.SurfRoot,
-          [ViewType.Resource]: TelemetryViewType.Resource
-        }[view_type]
-
-        if (view_type === ViewType.Resource && view_resource_id) {
-          this.resourceManager
-            .getResource(view_resource_id, { includeAnnotations: false })
-            .then((resource) => {
-              this.resourceManager.telemetry.trackOpenSidebar(telem_tab_type, resource?.type)
-            })
-        } else {
-          this.resourceManager.telemetry.trackOpenSidebar(telem_tab_type)
-        }
-      }
       this.sidebarViewOpen = open
 
       this.emit(ViewManagerEmitterNames.SIDEBAR_CHANGE, open, view ?? undefined)

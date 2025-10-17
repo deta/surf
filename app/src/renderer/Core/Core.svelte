@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
 
   import { useLogScope, setLogLevel } from '@deta/utils/io'
-  import { TelemetryCreateTabSource, ViewLocation, ViewType, type Fn } from '@deta/types'
+  import { ViewLocation, ViewType, type Fn } from '@deta/types'
 
   import { ShortcutActions } from '@deta/services/shortcuts'
   import { initServices } from '@deta/services/helpers'
@@ -28,7 +28,6 @@
   const log = useLogScope('Core')
 
   const {
-    telemetry,
     config,
     viewManager,
     tabsService,
@@ -71,8 +70,6 @@
   )
   onMount(async () => {
     log.debug('Core component mounted')
-    await telemetry.init({ configService: config })
-
     // Initialize tab orientation from saved config
     initializeTabOrientation()
 
@@ -118,7 +115,6 @@
         viewManager.setSidebarState({ open: false })
 
       tabsService.openNewTabPage()
-      telemetry.trackCreateTab(TelemetryCreateTabSource.KeyboardShortcut)
 
       return true
     })

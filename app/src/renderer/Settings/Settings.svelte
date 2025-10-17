@@ -188,8 +188,6 @@
 
   const helpUsImproveSurf = async () => {
     window.api.deanonymizeUser()
-    // TODO: (maxu): Enable again when we get telemetry to work inside settings.svelte
-    //telemetry.trackChangeTelemetryAnonymization(false)
 
     const { closeType: confirmed } = await openDialog({
       title: 'Share your email with us',

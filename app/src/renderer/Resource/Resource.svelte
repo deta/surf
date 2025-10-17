@@ -6,7 +6,6 @@
   import { prepareContextMenu } from '@deta/ui'
   import { provideConfig } from '@deta/services'
   import { createNotebookManager } from '@deta/services/notebooks'
-  import { setupTelemetry } from '@deta/services/helpers'
   import { createResourceManager } from '@deta/services/resources'
   import { createTeletypeService } from '@deta/services/teletype'
   import { useMessagePortClient } from '@deta/services/messagePort'
@@ -20,8 +19,7 @@
 
   const messagePort = useMessagePortClient()
   const config = provideConfig()
-  const telemetry = setupTelemetry(config.getConfig().api_key)
-  const resourceManager = createResourceManager(telemetry, config)
+  const resourceManager = createResourceManager(config)
   const notebookManager = createNotebookManager(resourceManager, config, messagePort)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
@@ -46,10 +44,6 @@
   $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
 
   onMount(prepareContextMenu)
-  onMount(async () => {
-    await telemetry.init({ messagePort })
-  })
-
   onMount(() => {
     const unsubs = [
       messagePort.navigateURL.handle(({ url }) => {

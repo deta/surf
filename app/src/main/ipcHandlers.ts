@@ -25,7 +25,7 @@ import { getAnnouncementsWindow } from './announcementsWindow'
 import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
-import { IPC_EVENTS_MAIN, NewWindowRequest, TrackEvent } from '@deta/services/ipc'
+import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
 import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
@@ -553,16 +553,6 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.adBlockerStateChange.sendToWebContents(window.webContents, { partition, state })
-  },
-
-  trackEvent: (name: TrackEvent['name'], properties: TrackEvent['properties']) => {
-    const window = getMainWindow()
-    if (!window) {
-      log.error('Main window not found')
-      return
-    }
-
-    IPC_EVENTS_MAIN.trackEvent.sendToWebContents(window.webContents, { name, properties })
   },
 
   getPrompts: () => {

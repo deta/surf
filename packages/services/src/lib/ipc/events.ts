@@ -7,7 +7,6 @@ import type {
   DownloadDoneMessage,
   DownloadRequestMessage,
   DownloadUpdatedMessage,
-  TelemetryEventTypes,
   SFFSResource,
   SettingsWindowTab,
   Announcement,
@@ -29,11 +28,6 @@ export interface AdblockerStateChange {
 
 export interface BrowserFocusChange {
   state: 'focused' | 'unfocused'
-}
-
-export interface TrackEvent {
-  name: TelemetryEventTypes
-  properties: Record<string, any>
 }
 
 export interface NewWindowRequest {
@@ -209,7 +203,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   openImporter: ipcService.addEvent<void>('open-importer'),
   browserFocusChange: ipcService.addEvent<BrowserFocusChange>('browser-focus-change'),
   adBlockerStateChange: ipcService.addEvent<AdblockerStateChange>('adblocker-state-change'),
-  trackEvent: ipcService.addEvent<TrackEvent>('track-event'),
   toggleSidebar: ipcService.addEvent<boolean | undefined>('toggle-sidebar'),
   toggleTabsPosition: ipcService.addEvent<void>('toggle-tabs-position'),
   toggleTheme: ipcService.addEvent<void>('toggle-theme'),

@@ -6,7 +6,6 @@ import type {
   OpenNotebookOptions,
   OpenResourceOptions,
   OpenTarget,
-  TelemetryEventTypes,
   ViewLocation
 } from '@deta/types'
 
@@ -119,10 +118,6 @@ export interface MPCitationClick extends MessagePortEvent {
   payload: CitationClickEvent
 }
 
-export interface MPTrackEvent extends MessagePortEvent {
-  payload: { eventName: TelemetryEventTypes; eventProperties?: Record<string, any> }
-}
-
 export interface MPExternStateNotebookChanged extends MessagePortEvent {
   payload: { resourceIds: string[]; notebookId: string }
 }
@@ -178,7 +173,6 @@ type MessagePortEventRegistry = {
   extern_state_notebookRemoveResources: MPExternStateNotebookChanged
   extern_state_notebooksChanged: MPExternStateNotebooksChanged
 
-  trackEvent: MPTrackEvent
   teletypeSetQuery: MPTeletypeSetQuery
   teletypeSearch: MPTeletypeSearchRequest
   teletypeExecuteAction: MPTeletypeExecuteAction
@@ -227,7 +221,6 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
       'extern-state-notebooks-changed'
     ),
 
-    trackEvent: messagePortService.addEvent<MPTrackEvent>('track-event'),
     teletypeSetQuery: messagePortService.addEvent<MPTeletypeSetQuery>('teletype-set-query'),
     teletypeExecuteAction:
       messagePortService.addEvent<MPTeletypeExecuteAction>('teletype-execute-action'),

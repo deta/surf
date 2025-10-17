@@ -30,7 +30,6 @@ import {
   ResourceManagerEvents
 } from '../resources'
 import { type ConfigService } from '../config'
-import { type Telemetry } from '../telemetry'
 import type { SpaceBasicData } from '../ipc/events'
 
 import { Notebook } from './notebook.svelte'
@@ -47,7 +46,6 @@ type NotebookSettings = BaseKVItem & {
 export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandlers> {
   private messagePort: MessagePortClient | MessagePortPrimary
   private config: ConfigService
-  private telemetry: Telemetry
   private log: ReturnType<typeof useLogScope>
   resourceManager: ResourceManager
 
@@ -76,7 +74,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
   ) {
     super()
     this.log = useLogScope('NotebookManager')
-    this.telemetry = resourceManager.telemetry
     this.resourceManager = resourceManager
     this.config = config
 
@@ -385,7 +382,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     this.notebooks.set(space.id, space)
 
     await this.loadNotebooks()
-    if (isUserAction) this.telemetry.trackNotebookCreate()
     this.emit(NotebookManagerEvents.Created, space.id)
     return space
   }
@@ -455,7 +451,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     //await Promise.all(filtered.map((space, idx) => space.updateIndex(idx)))
 
     await this.loadNotebooks()
-    if (isUserAction) this.telemetry.trackNotebookDelete()
     this.emit(NotebookManagerEvents.Deleted, notebookId)
   }
 
@@ -611,9 +606,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
 
     if (isUserAction)
       validResources.forEach((resource) => {
-        this.telemetry.trackSurfRemoveResource()
         if (resource?.type !== ResourceTypes.DOCUMENT_SPACE_NOTE) return
-        this.telemetry.trackNoteDelete()
       })
 
     this.log.debug('deleted resources:', resourceIds)
