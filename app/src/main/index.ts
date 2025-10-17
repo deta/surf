@@ -4,7 +4,6 @@ import { readdir, unlink, stat } from 'fs/promises'
 import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { isDev, isMac, isWindows } from '@deta/utils/system'
-import { AuthenticatedAPI } from '@deta/api'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 
 import { createWindow, getMainWindow } from './mainWindow'
@@ -13,8 +12,6 @@ import { registerShortcuts, unregisterShortcuts } from './shortcuts'
 import { setupAdblocker } from './adblocker'
 import { ipcSenders, setupIpc } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
-import { createSetupWindow } from './setupWindow'
-import { checkIfAppIsActivated } from './activation'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { AppUpdater, silentCheckForUpdates } from './appUpdates'
@@ -207,40 +204,6 @@ const initializeApp = async () => {
 
   setupIpc(backendRootPath)
 
-  if (!is.dev) {
-    log.log('Checking if app is setup')
-
-    if (!userConfig.api_key) {
-      log.debug('No api key found, prompting user to enter invite token')
-      createSetupWindow()
-      return
-    }
-
-    try {
-      const isActivated = await checkIfAppIsActivated(
-        CONFIG.appVersion || '0.0.0',
-        userConfig.api_key
-      )
-      if (!isActivated) {
-        log.debug('App not activated, prompting user to enter invite token again')
-        createSetupWindow()
-        return
-      }
-    } catch (error) {
-      log.error('Error checking if app is activated:', error)
-
-      // NOTE: this is a workaround for cases when already activated app users get kicked out randomly
-      // don't force setup window on errors other than 404 from server
-      // let other errors through as `api_key` has already been set
-      // this also means people can put a random api key in the config manually and Surf will start regardless
-      const status = (error as any).status
-      if (status && status === 404) {
-        createSetupWindow()
-        return
-      }
-    }
-  }
-
   if (isDev) {
     log.log('Running in development mode, setting app icon to dev icon')
     app.dock?.setIcon(join(app.getAppPath(), 'build/resources/dev/icon.png'))
@@ -249,12 +212,6 @@ const initializeApp = async () => {
   markAppAsSetup()
   await setupAdblocker()
   setAppMenu()
-
-  if (CONFIG.forceSetupWindow) {
-    log.debug('Forcing setup window to open')
-    createSetupWindow()
-    return
-  }
 
   createWindow()
 
@@ -306,12 +263,7 @@ const initializeApp = async () => {
     const webviewsSession = session.fromPartition('persist:horizon')
     const extensionsManager = ExtensionsManager.getInstance()
     try {
-      await extensionsManager.initialize(
-        mainWindow,
-        webviewsSession,
-        new AuthenticatedAPI(import.meta.env.M_VITE_API_BASE, userConfig.api_key ?? '', fetch),
-        handleOpenUrl
-      )
+      await extensionsManager.initialize(mainWindow, webviewsSession, handleOpenUrl)
     } catch (error) {
       log.error('Error initializing extensions:', error)
     }

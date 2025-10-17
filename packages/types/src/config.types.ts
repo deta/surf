@@ -1,15 +1,9 @@
 import type { Model } from './ai.types'
 
 export type UserConfig = {
-  user_id?: string
-  api_key?: string
-  email?: string
-  anon_id?: string
-  anon_telemetry?: boolean
   defaultBrowser: boolean
   initialized_tabs: boolean
   settings: UserSettings
-  activation_timestamp?: number
   show_changelog: boolean
 }
 
@@ -38,7 +32,6 @@ export type UserSettings = {
     completed_chat: boolean
     completed_stuff: boolean
   }
-  personas: string[]
   sync_base_url?: string
   sync_auth_token?: string
   selected_model: string
