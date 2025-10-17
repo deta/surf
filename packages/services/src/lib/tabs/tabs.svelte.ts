@@ -8,7 +8,7 @@ import {
   useLogScope
 } from '@deta/utils'
 import { KVStore, useKVTable } from '../kv'
-import { type Fn, TelemetryViewType, TelemetryCreateTabSource } from '@deta/types'
+import { type Fn } from '@deta/types'
 import { useViewManager, WebContentsView, ViewManager } from '../views'
 import { derived, get, writable, type Readable } from 'svelte/store'
 import { ViewManagerEmitterNames, ViewType, WebContentsViewEmitterNames } from '../views/types'
@@ -23,7 +23,6 @@ import {
 } from './tabs.types'
 import { ResourceManager, useResourceManager } from '../resources'
 import { tick } from 'svelte'
-import { Telemetry } from '@deta/services'
 
 /**
  * Represents a single tab in the browser window. Each TabItem is associated with a WebContentsView
@@ -163,7 +162,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private log: ScopedLogger
   private viewManager: ViewManager
   private resourceManager: ResourceManager
-  private telemetry: Telemetry
   private kv: KVStore<KVTabItem>
   private closedTabs: ClosedTabs
 
@@ -213,7 +211,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     this.log = useLogScope('TabsService')
     this.viewManager = viewManager ?? useViewManager()
     this.resourceManager = useResourceManager()
-    this.telemetry = this.resourceManager.telemetry
     this.kv = useKVTable<KVTabItem>('tabs')
     this.closedTabs = new ClosedTabs()
 
@@ -420,8 +417,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   async openOrCreate(
     url: string,
     opts: Partial<CreateTabOptions> = {},
-    isUserAction = false,
-    interactionSource: TelemetryCreateTabSource | undefined = undefined
+    isUserAction = false
   ): Promise<TabItem> {
     this.log.debug('Opening or creating tab for URL:', url, opts)
 
@@ -447,7 +443,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     }
 
     this.log.debug('Tab does not exist, creating new one')
-    if (isUserAction && interactionSource) this.telemetry.trackCreateTab(interactionSource)
     return this.create(url, opts)
   }
 
@@ -583,7 +578,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
       await this.kv.delete(id)
 
-      if (userAction) this.telemetry.trackDeleteTab()
       this.emit(TabsServiceEmitterNames.DELETED, id)
 
       if (this.tabs.length <= 0) {
@@ -614,27 +608,6 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
         this.activateTab(tab.id)
         this.viewManager.activate(tab.view.id)
-
-        if (userAction) {
-          const { type: tab_type, id: tab_resource_id } = tab.view.typeDataValue
-          // NOTE: Make digestable for telemetry, we should make this prettier
-          const telem_tab_type: Record<ViewType, TelemetryViewType> = {
-            [ViewType.Page]: TelemetryViewType.Webpage,
-            [ViewType.Notebook]: TelemetryViewType.Notebook,
-            [ViewType.NotebookHome]: TelemetryViewType.SurfRoot,
-            [ViewType.Resource]: TelemetryViewType.Resource
-          }[tab_type]
-
-          if (tab_resource_id) {
-            this.resourceManager
-              .getResource(tab_resource_id, { includeAnnotations: false })
-              .then((resource) => {
-                this.resourceManager.telemetry.trackActivateTab(telem_tab_type, resource?.type)
-              })
-          } else {
-            this.resourceManager.telemetry.trackActivateTab(telem_tab_type)
-          }
-        }
 
         // To make the extensions work we need to inform the main process about the active tab's webContents id
         tab.view.waitForWebContentsReady().then((webContents) => {

@@ -2,7 +2,6 @@
   import { onMount, tick } from 'svelte'
   import { provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
-  import { setupTelemetry } from '@deta/services/helpers'
   import { provideAI } from '@deta/services/ai'
   import { ResourceTypes, WEB_RESOURCE_TYPES, type CitationClickEvent } from '@deta/types'
 
@@ -22,8 +21,7 @@
   const log = useLogScope('ResourceRenderer')
   const messagePort = useMessagePortClient()
   const config = provideConfig()
-  const telemetry = setupTelemetry()
-  const resourceManager = createResourceManager(telemetry, config)
+  const resourceManager = createResourceManager(config)
   const ai = provideAI(resourceManager, config, false)
 
   const contextManager = ai.contextManager
@@ -51,15 +49,8 @@
       return
     }
 
-    await telemetry.init({ messagePort })
-
     resource = await resourceManager.getResource(resourceId)
     log.debug('Loaded resource:', resource)
-
-    if (resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE) {
-      // NOTE: Ideally messagePort events optionally get queued up until connection established
-      wait(100).then(() => telemetry.trackNoteOpen())
-    }
 
     // if ([ResourceTypes.ARTICLE, ResourceTypes.LINK].includes(resource.type)) {
     //   // @ts-ignore - TODO: Add to window d.ts

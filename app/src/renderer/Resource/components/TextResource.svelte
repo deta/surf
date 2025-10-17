@@ -89,7 +89,6 @@
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
   import { type AITool, ModelTiers, Provider } from '@deta/types/src/ai.types'
   import { Toast, useToasts } from '@deta/ui'
-  import { useTelemetry } from '@deta/services'
   import { useConfig } from '@deta/services'
   import { createWikipediaAPI, WebParser } from '@deta/web-parser'
   import EmbeddedResource from './EmbeddedResource.svelte'
@@ -138,7 +137,6 @@
   const resourceManager = useResourceManager()
   const ai = useAI()
   const toasts = useToasts()
-  const telemetry = useTelemetry()
   const config = useConfig()
   const wikipediaAPI = createWikipediaAPI()
 
@@ -692,12 +690,6 @@
 
       editor.commands.insertContentAt(position, citationElem)
     }
-
-    telemetry.trackNoteCreateCitation(
-      resource.type,
-      NoteCreateCitationEventTrigger.Drop,
-      showOnboarding
-    )
   }
 
   const processDropSpace = (position: number, space: OasisSpace) => {
@@ -720,12 +712,6 @@
         }
       ])
       .run()
-
-    telemetry.trackNoteCreateCitation(
-      DragTypeNames.SURF_SPACE,
-      NoteCreateCitationEventTrigger.Drop,
-      showOnboarding
-    )
   }
 
   const handleEditorFilePaste = async (e: CustomEvent<{ files: File[]; htmlData?: string }>) => {
@@ -1221,13 +1207,6 @@
         contextMentions.forEach((mention) => {
           chatContextManager.addMentionItem(mention)
         })
-        // ai.telemetry.trackPageChatContextUpdate(
-        //   PageChatUpdateContextEventAction.Add,
-        //   contextManager.itemsValue.length,
-        //   mentions.length,
-        //   undefined,
-        //   PageChatUpdateContextEventTrigger.EditorMention
-        // )
       }
     } else if ($selectedContext) {
       log.debug('Adding selected context to context', $selectedContext)
@@ -1308,7 +1287,6 @@
       if (!chat || !query) {
         log.error('Failed to create chat')
         updateAIGenerationProgress(100, 'Error generating AI output')
-        telemetry.trackNoteGenerateCompletion({ failed: true })
         return
       }
 
@@ -1410,7 +1388,6 @@
           type: 'error',
           value: errorMsg
         })
-        telemetry.trackNoteGenerateCompletion({ failed: true })
       } else if (!response.output) {
         log.error('No output found')
 
@@ -1419,7 +1396,6 @@
           type: 'error',
           value: 'Sorry, no response was generated for an unknown reason.'
         })
-        telemetry.trackNoteGenerateCompletion({ failed: true })
       } else {
         const content = await parseChatOutputToHtml(response.output)
 
@@ -1428,7 +1404,6 @@
         await wait(200)
         aiGeneration.updateStatus('completed')
         chatInputComp?.dismissStatus()
-        telemetry.trackNoteGenerateCompletion({ failed: false })
 
         // Generate title if needed (empty/default title and any AI generation)
         const shouldGenerateTitle =
@@ -1462,7 +1437,6 @@
 
       // Update global AI generation state to indicate error
       updateAIGenerationProgress(100, 'Error generating AI output')
-      telemetry.trackNoteGenerateCompletion({ failed: true })
     } finally {
       // Reset both local and global generation state
       isGeneratingAI.set(false)
@@ -1493,8 +1467,6 @@
       log.debug('mention click', e.detail)
       const { item, action } = e.detail
       const { id, type } = item
-
-      telemetry.trackNoteOpenMention(getMentionType(id, type), action, showOnboarding)
 
       if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
         log.debug('Built-in or model mention clicked, cannot be opened')
@@ -1581,8 +1553,6 @@
   const handleMentionInsert = (e: CustomEvent<MentionItem>) => {
     const { id, type } = e.detail
     log.debug('mention insert', id, type)
-
-    telemetry.trackNoteCreateMention(getMentionType(id, type), showOnboarding)
   }
 
   const handleRewrite = async (e: CustomEvent<EditorRewriteEvent>) => {
@@ -1783,8 +1753,6 @@
     try {
       log.debug('Selected context', e.detail)
       selectedContext.set(e.detail)
-
-      telemetry.trackNoteChangeContext(getMentionType(e.detail), showOnboarding)
     } catch (e) {
       log.error('Error selecting context', e)
       toasts.error('Failed to select context')
@@ -2121,8 +2089,6 @@
 
       // Prevent starting a new generation if one is already running
       if (checkIfAlreadyRunning('run prompt')) return
-
-      telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
 
       hideInfoPopover()
 
@@ -2619,7 +2585,6 @@
       !(editorElement === document.activeElement || editorElement.contains(document.activeElement))
     )
       return
-    telemetry.trackNoteUpdate()
 
     const mentions = editorElem.getMentions()
     if (mentions.length > 0) {

@@ -5,7 +5,6 @@ import { join, dirname } from 'path'
 import { mkdirSync } from 'fs'
 import { isDev, isMac, isWindows } from '@deta/utils/system'
 import { AuthenticatedAPI } from '@deta/api'
-import { TelemetryEventTypes } from '@deta/types'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 
 import { createWindow, getMainWindow } from './mainWindow'
@@ -207,7 +206,6 @@ const initializeApp = async () => {
   const userConfig = getUserConfig()
 
   setupIpc(backendRootPath)
-  createSetupWindow()
 
   if (!is.dev) {
     log.log('Checking if app is setup')
@@ -279,7 +277,6 @@ const initializeApp = async () => {
   IPC_EVENTS_MAIN.appReady.once(async () => {
     const appIsDefaultBrowser = await isDefaultBrowser()
     if (userConfig.defaultBrowser !== appIsDefaultBrowser) {
-      ipcSenders.trackEvent(TelemetryEventTypes.SetDefaultBrowser, { value: appIsDefaultBrowser })
       updateUserConfig({ defaultBrowser: appIsDefaultBrowser })
     }
 

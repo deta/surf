@@ -12,7 +12,6 @@ import {
 import { useLogScope, blobToSmallImageUrl, isMainRenderer } from '@deta/utils'
 import { getIconString, IconTypes } from '@deta/icons'
 
-import { type Telemetry } from '../telemetry'
 import { type ResourceManager } from '../resources'
 
 import type { NotebookManager } from './notebookManager.svelte'
@@ -24,7 +23,6 @@ export class Notebook {
   private log: ReturnType<typeof useLogScope>
   private notebookManager: NotebookManager
   private resourceManager: ResourceManager
-  private telemetry: Telemetry
 
   id: string
   createdAt: string
@@ -45,7 +43,6 @@ export class Notebook {
     this.log = useLogScope(`Notebook ${this.id}`)
     this.notebookManager = oasis
     this.resourceManager = oasis.resourceManager
-    this.telemetry = oasis.telemetry
 
     this.data = space.name
   }
@@ -111,36 +108,19 @@ export class Notebook {
     return result
   }
 
-  async addResources(resourceIds: string[], origin: SpaceEntryOrigin, isUserAction = false) {
+  async addResources(resourceIds: string[], origin: SpaceEntryOrigin, _isUserAction = false) {
     this.log.debug('adding resources to space', resourceIds, origin)
     await this.resourceManager.addItemsToSpace(this.id, resourceIds, origin)
 
     this.log.debug('added resources to space, updating contents')
     await this.fetchContents()
 
-    resourceIds.forEach((resource_id) => {
-      this.resourceManager
-        .getResource(resource_id)
-        .then((resource) => {
-          if (!resource) {
-            this.log.error(`Could not fetch resource ${resource_id} for telemetry event.`)
-            return
-          }
-          this.telemetry.trackNotebookAddResource(resource.type)
-        })
-        .catch((e) => {
-          this.log.error(`Error fetch resource ${resource_id} for telemetry event.`, e)
-        })
-    })
     this.notebookManager.emit(NotebookManagerEvents.AddedResources, this.id, resourceIds)
   }
 
-  async removeResources(resourceIds: string[], isUserAction = false) {
+  async removeResources(resourceIds: string[], _isUserAction = false) {
     this.resourceManager.removeItemsFromSpace(this.id, resourceIds)
-
     this.contents = this.contents.filter((entry) => !resourceIds.includes(entry.entry_id))
-
-    if (isUserAction) resourceIds.forEach(() => this.telemetry.trackNotebookRemoveResource())
     this.notebookManager.emit(NotebookManagerEvents.RemovedResources, this.id, resourceIds)
     return resourceIds
   }

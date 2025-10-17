@@ -15,12 +15,9 @@
   import { Button } from '@deta/ui'
   import { HTMLAxisDragZone } from '@deta/dragcula'
   import { createTabsDragAndDrop, cleanupDropIndicators } from './TabsList/dnd.svelte'
-  import { useTelemetry } from '@deta/services'
-  import { TelemetryCreateTabSource } from '@deta/types'
   import { onDestroy } from 'svelte'
 
   const tabsService = useTabs()
-  const telemetry = useTelemetry()
 
   let containerElement: HTMLDivElement
   let scrollContainerElement: HTMLDivElement
@@ -39,7 +36,6 @@
 
   const handleNewTab = () => {
     tabsService.openNewTabPage()
-    telemetry.trackCreateTab(TelemetryCreateTabSource.NewTabButton)
   }
 
   // Resize handle functions

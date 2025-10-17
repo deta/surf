@@ -16,7 +16,6 @@ import {
 } from '@deta/types'
 import { ChatMode, ModelTiers, Provider, type Model } from '@deta/types/src/ai.types'
 import { parseAIError, parseChatResponseSources } from './helpers'
-import type { Telemetry } from '../telemetry'
 import {
   PageChatMessageSentEventError,
   PageChatMessageSentEventTrigger,
@@ -93,7 +92,6 @@ export class AIChat {
   contextManager: ContextManager | ContextManagerWCV
   resourceManager: ResourceManager
   sffs: SFFS
-  telemetry: Telemetry
   log: ReturnType<typeof useLogScope>
 
   private activeGenerations = new Map<string, boolean>()
@@ -121,7 +119,6 @@ export class AIChat {
     this.contextManager = contextManager
     this.sffs = ai.sffs
     this.resourceManager = ai.resourceManager
-    this.telemetry = ai.telemetry
     this.log = useLogScope('AIChat')
 
     this.userMessages = derived([this.messages], ([messages]) => {
@@ -704,24 +701,6 @@ export class AIChat {
 
     let contextSize = generalMode ? 0 : 0
     let usedPageScreenshot = false
-    let numInlineImages = 0
-
-    const basicTelemtryData = {
-      trigger: options.trigger,
-      onboarding: options.onboarding ?? false,
-      contextSize: contextSize,
-      numTabs: contextItemCount.tabs,
-      numSpaces: contextItemCount.spaces,
-      numResources: contextItemCount.resources,
-      numScreenshots: numInlineImages,
-      numPreviousMessages: previousMessages.length,
-      tookPageScreenshot: usedPageScreenshot,
-      generatedArtifact: false,
-      embeddingModel: this.ai.config.settingsValue.embedding_model,
-      chatModelProvider: model?.provider,
-      chatModelName:
-        model.provider === Provider.Custom ? (model.custom_model_name ?? 'custom') : model.id
-    } as PageChatMessageSentData
 
     try {
       response = {
@@ -755,7 +734,6 @@ export class AIChat {
 
       this.log.debug('Context items processed', resourceIds, inlineImages)
 
-      basicTelemtryData.numScreenshots = inlineImages.length
       this.updateParsedResponse(response?.id ?? '', {
         usedInlineScreenshot
       })
@@ -910,24 +888,6 @@ export class AIChat {
           })
 
           this.status.set('idle')
-
-          if (content.includes('```html')) {
-            basicTelemtryData.generatedArtifact = true
-          }
-
-          if (options.trigger) {
-            if (options.ragOnly) {
-              await this.telemetry.trackSimilaritySearch(basicTelemtryData)
-            } else {
-              await this.telemetry.trackPageChatMessageSent(basicTelemtryData)
-              if (
-                contextItemCount.spaces > 0 &&
-                options.trigger === PageChatMessageSentEventTrigger.SidebarChat
-              ) {
-                await this.telemetry.trackChatWithSpace(options.trigger)
-              }
-            }
-          }
         } else {
           this.log.debug('Generation stopped, not updating response')
           this.status.set('idle')
@@ -966,27 +926,6 @@ export class AIChat {
         setTimeout(() => {
           this.error.set(null)
         }, 10000)
-      }
-
-      if (options.trigger) {
-        if (options.ragOnly) {
-          await this.telemetry.trackSimilaritySearch({
-            ...basicTelemtryData,
-            error: parsedError.type
-          })
-        } else {
-          await this.telemetry.trackPageChatMessageSent({
-            ...basicTelemtryData,
-            error: parsedError.type
-          })
-
-          if (
-            contextItemCount.spaces > 0 &&
-            options.trigger === PageChatMessageSentEventTrigger.SidebarChat
-          ) {
-            await this.telemetry.trackChatWithSpace(options.trigger, parsedError.type)
-          }
-        }
       }
 
       // Clean up the generation tracking even in case of error

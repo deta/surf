@@ -17,7 +17,7 @@
   import { Icon } from '@deta/icons'
   import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
   import { type RouteResult } from '@mateothegreat/svelte5-router'
-  import { useConfig, useTelemetry, useTeletypeService } from '@deta/services'
+  import { useConfig, useTeletypeService } from '@deta/services'
   import NotebookSidebar from '../components/notebook/NotebookSidebar.svelte'
   import NotebookLayout from '../layouts/NotebookLayout.svelte'
   import NotebookEditor from '../components/notebook/NotebookEditor/NotebookEditor.svelte'
@@ -42,7 +42,6 @@
   const log = useLogScope('NotebookDetailRoute')
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
-  const telemetry = useTelemetry()
   const config = useConfig()
   const ai = provideAI(resourceManager, config, false)
   const teletype = useTeletypeService()
@@ -161,7 +160,6 @@
   onMount(async () => {
     if (notebookId) {
       // NOTE: Ideally messagePort events optionally get queued up until connection established
-      wait(100).then(() => telemetry.trackNotebookOpen())
       notebook = await notebookManager.getNotebook(notebookId)
     } else {
       notebook = notebookId

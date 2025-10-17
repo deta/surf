@@ -44,10 +44,7 @@
     wait,
     htmlToMarkdown
   } from '@deta/utils'
-  import {
-    generateContentHash,
-    parseChatOutputToHtml
-  } from '@deta/services/ai'
+  import { generateContentHash, parseChatOutputToHtml } from '@deta/services/ai'
   import {
     startAIGeneration,
     endAIGeneration,
@@ -75,20 +72,17 @@
     type JumpToWebviewTimestampEvent
   } from '@deta/types'
   import { provideAI } from '@deta/services/ai'
-  import {
-    SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
-  } from '@deta/services/constants'
+  import { SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT } from '@deta/services/constants'
   import type { ChatPrompt, MentionAction } from '@deta/types'
   import { Toast, useToasts } from '@deta/ui'
   import { useConfig } from '@deta/services'
   import { createWikipediaAPI } from '@deta/web-parser'
   import { isGeneratedResource } from '@deta/services/resources'
-  import { updateCaretPopoverVisibility, type CaretPosition } from '@deta/editor/extensions/CaretIndicator'
   import {
-    NOTE_MENTION,
-    EVERYTHING_MENTION,
-    INBOX_MENTION
-  } from '@deta/services/constants'
+    updateCaretPopoverVisibility,
+    type CaretPosition
+  } from '@deta/editor/extensions/CaretIndicator'
+  import { NOTE_MENTION, EVERYTHING_MENTION, INBOX_MENTION } from '@deta/services/constants'
   import {
     BUILT_IN_SLASH_COMMANDS,
     type SlashCommandPayload,
@@ -98,10 +92,7 @@
   import CaretPopover from './CaretPopover.svelte'
   // import { openContextMenu } from '@deta/ui'
   import { createResourcesFromMediaItems, processPaste } from '@deta/services'
-  import {
-    createMentionsFetcher,
-    createResourcesMentionsFetcher
-  } from '@deta/services/ai'
+  import { createMentionsFetcher, createResourcesMentionsFetcher } from '@deta/services/ai'
   import type { LinkClickHandler } from '@deta/editor/extensions/Link'
   import { EditorAIGeneration, NoteEditor } from '@deta/services/ai'
   import { useTabs } from '@deta/services/tabs'
@@ -116,7 +107,6 @@
 
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
-  const telemetry = resourceManager.telemetry
   const toasts = useToasts()
   const config = useConfig()
   const tabs = useTabs()
@@ -202,7 +192,10 @@
       )
 
       // Add event listener for button insertion
-      document.addEventListener('insert-button-to-note', handleInsertButtonToNote as unknown as EventListener)
+      document.addEventListener(
+        'insert-button-to-note',
+        handleInsertButtonToNote as unknown as EventListener
+      )
 
       const value = resource.parsedData
       unsubscribeValue = value.subscribe((value) => {
@@ -228,11 +221,11 @@
       })
 
       title = resource.metadata?.name ?? 'Untitled'
-    //   unsubscribeTitle = resource.title.subscribe((value) => {
-    //     if (value) {
-    //       title = value
-    //     }
-    //   })
+      //   unsubscribeTitle = resource.title.subscribe((value) => {
+      //     if (value) {
+      //       title = value
+      //     }
+      //   })
 
       log.debug('text resource', resource, title, $content)
 
@@ -327,18 +320,8 @@
   const emptyPlaceholder = 'Start typing or hit space for suggestions…'
 
   const editorPlaceholder = derived(
-    [
-      floatingMenuShown,
-      showPrompts,
-      generatingPrompts,
-      autocompleting
-    ],
-    ([
-      $floatingMenuShown,
-      $showPrompts,
-      $generatingPrompts,
-      $autocompleting
-    ]) => {
+    [floatingMenuShown, showPrompts, generatingPrompts, autocompleting],
+    ([$floatingMenuShown, $showPrompts, $generatingPrompts, $autocompleting]) => {
       if ($autocompleting) {
         return ''
       }
@@ -474,7 +457,6 @@
       //           render_id: resource.id,
       //           content: ''
       //         })
-
       //         editor.commands.insertContentAt(position, citationElem)
       //       }
       //     }
@@ -587,7 +569,6 @@
 
   export const submitChatMessage = async () => {
     try {
-
       const editor = editorElem.getEditor()
       const content = editor.getHTML()
       const query = getEditorContentText(content)
@@ -612,17 +593,10 @@
         contextMentions.forEach((mention) => {
           chatContextManager.addMentionItem(mention)
         })
-        ai.telemetry.trackPageChatContextUpdate(
-          PageChatUpdateContextEventAction.Add,
-          chatContextManager.itemsValue.length,
-          mentions.length,
-          undefined,
-          PageChatUpdateContextEventTrigger.EditorMention
-        )
       }
-    // } else if ($selectedContext) {
-    //   log.debug('Adding selected context to context', $selectedContext)
-    //   chatContextManager.addSpace($selectedContext)
+      // } else if ($selectedContext) {
+      //   log.debug('Adding selected context to context', $selectedContext)
+      //   chatContextManager.addSpace($selectedContext)
     } else {
       log.debug('Adding active space to context', resource.id)
       chatContextManager.addActiveSpaceContext('resources')
@@ -870,8 +844,6 @@
       const { item, action } = e.detail
       const { id, type } = item
 
-      // telemetry.trackNoteOpenMention(getMentionType(id, type as unknown as MentionEventType), action, showOnboarding)
-
       if (action === 'overlay') {
         if (id === INBOX_MENTION.id) {
           openSpaceInStuff('inbox')
@@ -925,8 +897,6 @@
   const handleMentionInsert = (e: CustomEvent<MentionItem>) => {
     const { id, type } = e.detail
     log.debug('mention insert', id, type)
-
-    // telemetry.trackNoteCreateMention(getMentionType(id, type as unknown as MentionEventType), showOnboarding)
   }
 
   const handleOpenBubbleMenu = () => {
@@ -979,18 +949,18 @@
         return
       }
 
-    //   if (target === 'preview') {
-    //     globalMiniBrowser.openResource(resource.id, {
-    //       from: OpenInMiniBrowserEventFrom.NoteLink
-    //     })
-    //   } else if (target === 'details') {
-    //     oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: 'auto' })
-    //   } else {
-    //     tabsManager.openResourcFromContextAsPageTab(resource.id, {
-    //       active: activeTab,
-    //       trigger: CreateTabEventTrigger.NoteLink
-    //     })
-    //   }
+      //   if (target === 'preview') {
+      //     globalMiniBrowser.openResource(resource.id, {
+      //       from: OpenInMiniBrowserEventFrom.NoteLink
+      //     })
+      //   } else if (target === 'details') {
+      //     oasis.openResourceDetailsSidebar(resource.id, { select: true, selectedSpace: 'auto' })
+      //   } else {
+      //     tabsManager.openResourcFromContextAsPageTab(resource.id, {
+      //       active: activeTab,
+      //       trigger: CreateTabEventTrigger.NoteLink
+      //     })
+      //   }
 
       return
     }
@@ -1086,21 +1056,20 @@
     // }
   }
 
-//   const handleSelectContext = (e: CustomEvent<string>) => {
-//     try {
-//       log.debug('Selected context', e.detail)
-//       selectedContext.set(e.detail)
+  //   const handleSelectContext = (e: CustomEvent<string>) => {
+  //     try {
+  //       log.debug('Selected context', e.detail)
+  //       selectedContext.set(e.detail)
 
-//       if ($similarityResults) {
-//         runSimilaritySearch($similarityResults.text, $similarityResults.range, false)
-//       }
+  //       if ($similarityResults) {
+  //         runSimilaritySearch($similarityResults.text, $similarityResults.range, false)
+  //       }
 
-//       telemetry.trackNoteChangeContext(getMentionType(e.detail), showOnboarding)
-//     } catch (e) {
-//       log.error('Error selecting context', e)
-//       toasts.error('Failed to select context')
-//     }
-//   }
+  //     } catch (e) {
+  //       log.error('Error selecting context', e)
+  //       toasts.error('Failed to select context')
+  //     }
+  //   }
 
   const selectElemText = (selector: string) => {
     const elem = document.querySelector(selector)
@@ -1422,11 +1391,6 @@
         //const builtIn = BUILT_IN_PAGE_PROMPTS.find((p) => p.prompt === prompt.prompt)
         //promptType = builtIn ? PromptType.BuiltIn : PromptType.Generated
       }
-      // telemetry.trackUsePrompt(
-      //   promptType,
-      //   EventContext.Chat,
-      //   prompt.label ? prompt.label.toLowerCase() : undefined
-      // )
 
       runPrompt(prompt, { focusEnd: true, autoScroll: true, showPrompt: true })
     } catch (e) {
@@ -1442,8 +1406,6 @@
       if (checkIfAlreadyRunning('run prompt')) return
 
       const mentions = editorElem.getMentions()
-
-      // telemetry.trackUsePrompt(PromptType.Generated, EventContext.Note, undefined, showOnboarding)
 
       hideInfoPopover()
 
@@ -1480,7 +1442,6 @@
     //   log.error('Chat input component not initialized')
     //   return
     // }
-
     // chatInputComp.setContent(content, focus)
   }
 
@@ -1496,7 +1457,6 @@
     //   log.error('Could not get chat input editor instance')
     //   return
     // }
-
     // const chatInputEditor = chatInputEditorElem.getEditor()
     // chatInputEditor.commands.focus()
   }
@@ -1515,10 +1475,7 @@
       // const cleanCode = surfletCode.replace(/```javascript|```/g, '')
 
       // Create a surflet node with the code
-      const surfletNode = editor.view.state.schema.nodes.surflet?.create(
-        { codeContent: '' },
-        null
-      )
+      const surfletNode = editor.view.state.schema.nodes.surflet?.create({ codeContent: '' }, null)
 
       if (!surfletNode) {
         log.error('Surflet node type not found in schema')
@@ -1634,15 +1591,15 @@
       // if (needsFocusChatBar) setTimeout(() => focusInput(), 150)
 
       await generateAndInsertAIOutput(
-          query,
-          mentions,
-          PageChatMessageSentEventTrigger.NoteChatInput,
-          {
-            focusEnd: true,
-            autoScroll: showPromptAndScroll,
-            showPrompt: showPromptAndScroll,
-            generationID: chatInputGenerationID
-          }
+        query,
+        mentions,
+        PageChatMessageSentEventTrigger.NoteChatInput,
+        {
+          focusEnd: true,
+          autoScroll: showPromptAndScroll,
+          showPrompt: showPromptAndScroll,
+          generationID: chatInputGenerationID
+        }
       )
     } catch (e) {
       log.error('Error doing magic', e)
@@ -1933,70 +1890,70 @@
     )
 
     // Remove the button insertion event listener
-    document.removeEventListener('insert-button-to-note', handleInsertButtonToNote as unknown as EventListener)
+    document.removeEventListener(
+      'insert-button-to-note',
+      handleInsertButtonToNote as unknown as EventListener
+    )
   })
 </script>
 
-<div
-  class="text-resource-wrapper text-gray-900 dark:text-gray-100"
->
+<div class="text-resource-wrapper text-gray-900 dark:text-gray-100">
   <div class="content">
-        <div
-          class="notes-editor-wrapper"
-          class:autocompleting={$autocompleting}
-          bind:this={editorWrapperElem}
-          on:keydown={handleEditorKeyDown}
+    <div
+      class="notes-editor-wrapper"
+      class:autocompleting={$autocompleting}
+      bind:this={editorWrapperElem}
+      on:keydown={handleEditorKeyDown}
+    >
+      <div class="editor-container">
+        <Editor
+          bind:this={editorElem}
+          bind:focus={focusEditor}
+          bind:content={$content}
+          bind:floatingMenuShown={$floatingMenuShown}
+          bind:focused={editorFocused}
+          bind:editorElement
+          placeholder={escapeFirstLineChat
+            ? 'Start writing a note…'
+            : `Ask Surf or start writing a note (esc) …`}
+          placeholderNewLine={$editorPlaceholder}
+          autocomplete={!($isFirstLine && escapeFirstLineChat)}
+          floatingMenu
+          readOnlyMentions={false}
+          bubbleMenu={$showBubbleMenu && !minimal}
+          bubbleMenuLoading={$bubbleMenuLoading}
+          autoSimilaritySearch={$userSettings.auto_note_similarity_search &&
+            !minimal &&
+            similaritySearch}
+          enableRewrite={$userSettings.experimental_note_inline_rewrite}
+          resourceComponentPreview={minimal}
+          showDragHandle={!minimal}
+          showSlashMenu={!minimal}
+          showSimilaritySearch={!minimal && similaritySearch}
+          parseMentions
+          enableCaretIndicator={origin !== 'homescreen'}
+          onCaretPositionUpdate={handleCaretPositionUpdate}
+          onLinkClick={handleLinkClick}
+          {slashItemsFetcher}
+          {mentionItemsFetcher}
+          {linkItemsFetcher}
+          on:blur={hidePopover}
+          on:click
+          on:dragstart
+          on:autocomplete={handleAutocomplete}
+          on:mention-click={handleMentionClick}
+          on:mention-insert={handleMentionInsert}
+          on:close-bubble-menu={handleCloseBubbleMenu}
+          on:open-bubble-menu={handleOpenBubbleMenu}
+          on:button-click={handleNoteButtonClick}
+          on:slash-command={handleSlashCommand}
+          on:floaty-input-state-update={handleFloatyInputStateUpdate}
+          on:last-line-visbility-changed={handleLastLineVisibilityChanged}
+          on:is-first-line-changed={handleIsFirstLineChanged}
+          on:web-search-completed={debouncedHandleWebSearchCompleted}
+          {autofocus}
         >
-          <div class="editor-container">
-            <Editor
-              bind:this={editorElem}
-              bind:focus={focusEditor}
-              bind:content={$content}
-              bind:floatingMenuShown={$floatingMenuShown}
-              bind:focused={editorFocused}
-              bind:editorElement
-              placeholder={escapeFirstLineChat
-                ? 'Start writing a note…'
-                : `Ask Surf or start writing a note (esc) …`}
-              placeholderNewLine={$editorPlaceholder}
-              autocomplete={!($isFirstLine && escapeFirstLineChat)}
-              floatingMenu
-              readOnlyMentions={false}
-              bubbleMenu={$showBubbleMenu &&
-                !minimal}
-              bubbleMenuLoading={$bubbleMenuLoading}
-              autoSimilaritySearch={$userSettings.auto_note_similarity_search &&
-                !minimal &&
-                similaritySearch}
-              enableRewrite={$userSettings.experimental_note_inline_rewrite}
-              resourceComponentPreview={minimal}
-              showDragHandle={!minimal}
-              showSlashMenu={!minimal}
-              showSimilaritySearch={!minimal && similaritySearch}
-              parseMentions
-              enableCaretIndicator={origin !== 'homescreen'}
-              onCaretPositionUpdate={handleCaretPositionUpdate}
-              onLinkClick={handleLinkClick}
-              {slashItemsFetcher}
-              {mentionItemsFetcher}
-              {linkItemsFetcher}
-              on:blur={hidePopover}
-              on:click
-              on:dragstart
-              on:autocomplete={handleAutocomplete}
-              on:mention-click={handleMentionClick}
-              on:mention-insert={handleMentionInsert}
-              on:close-bubble-menu={handleCloseBubbleMenu}
-              on:open-bubble-menu={handleOpenBubbleMenu}
-              on:button-click={handleNoteButtonClick}
-              on:slash-command={handleSlashCommand}
-              on:floaty-input-state-update={handleFloatyInputStateUpdate}
-              on:last-line-visbility-changed={handleLastLineVisibilityChanged}
-              on:is-first-line-changed={handleIsFirstLineChanged}
-              on:web-search-completed={debouncedHandleWebSearchCompleted}
-              {autofocus}
-            >
-              <!-- <div slot="floating-menu">
+          <!-- <div slot="floating-menu">
                 <FloatingMenu
                   bind:showPrompts={$showPrompts}
                   {prompts}
@@ -2005,19 +1962,19 @@
                   on:runPrompt={(e) => runPrompt(e.detail)}
                 />
               </div> -->
-              <div slot="caret-popover">
-                <!-- CaretPopover positioned absolutely over the editor -->
-                {#if showCaretPopover && caretPosition && !$isFirstLine}
-                  <CaretPopover
-                    visible={showCaretPopover}
-                    position={caretPosition}
-                    on:autocomplete={handleCaretPopoverAutocomplete}
-                  />
-                {/if}
-              </div>
-            </Editor>
+          <div slot="caret-popover">
+            <!-- CaretPopover positioned absolutely over the editor -->
+            {#if showCaretPopover && caretPosition && !$isFirstLine}
+              <CaretPopover
+                visible={showCaretPopover}
+                position={caretPosition}
+                on:autocomplete={handleCaretPopoverAutocomplete}
+              />
+            {/if}
           </div>
-        </div>
+        </Editor>
+      </div>
+    </div>
   </div>
 
   <!-- {#if !minimal}

@@ -118,14 +118,6 @@
         return
       }
 
-      // if (spaceId) {
-      //   await oasis.addResourcesToSpace(spaceId, [resource.id], SpaceEntryOrigin.ManuallyAdded)
-      //   await oasis.telemetry.trackAddResourceToSpace(
-      //     resource.type,
-      //     AddResourceToSpaceEventTrigger.Chat
-      //   )
-      // }
-
       if (!silent) {
         saveState.set('saved')
         toasts.success(spaceId ? 'Saved to Context!' : 'Saved to Stuff!')

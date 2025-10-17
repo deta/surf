@@ -2124,7 +2124,6 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
     })
 
     this.setExtractedResourceId(resource.id, !silent && !createdForChat)
-    this.resourceManager.telemetry.trackSurfAddResource(resource.type)
 
     return resource
   }
