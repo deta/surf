@@ -58,9 +58,7 @@ export class NotebookMentionProvider implements MentionProvider {
     try {
       const notebooks = Array.from(this.notebookManager.notebooks.values())
       return notebooks.filter((notebook) =>
-        (notebook.data.name || (notebook.data as any).folderName)
-          .toLowerCase()
-          .includes(query.toLowerCase())
+        notebook.nameValue.toLowerCase().includes(query.toLowerCase())
       )
     } catch (error) {
       this.log.error('Error fetching Google suggestions:', error)

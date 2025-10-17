@@ -82,7 +82,7 @@ export class Notebook {
   get nameValue() {
     // also handle legacy space name
     // Note pull new name first, as otherwise reactivity breaks
-    return this.data?.name || (this.data as any)?.folderName
+    return this.data?.name || (this.data as any)?.folderName || ''
   }
 
   async updateData(updates: Partial<NotebookData>) {
