@@ -281,8 +281,8 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
       (space) =>
         ({
           id: space.id,
-          name: space.data.name,
-          pinned: false,
+          name: space.nameValue,
+          pinned: space.data.pinned,
           linked: false
         }) as SpaceBasicData
     )
@@ -310,17 +310,11 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     }
   }
 
-  //// TODO: Maxu: nuke
-  //triggerStoreUpdate(space: Notebook) {
-  //// trigger Svelte reactivity
-  //  this.notebooks.update((spaces) => {
-  //    return spaces.map((s) => (s.id === space.id ? space : s))
-  //  })
-
-  //  // tick().then(() => {
-  //  //   this.updateMainProcessNotebooksList();
-  //  // });
-  //}
+  triggerUpdate() {
+    tick().then(() => {
+      this.updateMainProcessNotebooksList()
+    })
+  }
 
   async loadNotebooks() {
     this.log.debug('fetching spaces')
@@ -351,9 +345,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     this.notebooks.clear()
     spaces.forEach((space) => this.notebooks.set(space.id, space))
 
-    // tick().then(() => {
-    //   this.updateMainProcessNotebooksList();
-    // });
+    this.triggerUpdate()
 
     return spaces
   }
@@ -479,7 +471,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
     await space.updateData(updates)
     this.log.debug('updated space:', space)
 
-    //this.triggerStoreUpdate(space)
+    this.triggerUpdate()
 
     return space
   }

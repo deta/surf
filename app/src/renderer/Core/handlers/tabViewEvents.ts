@@ -52,6 +52,10 @@ export const setupTabViewEvents = (events: PreloadEvents) => {
     viewManager.updateViewBounds(viewId, bounds)
   })
 
+  events.onSaveLink((url, notebookId) => {
+    browser.saveLink(url, notebookId)
+  })
+
   /*
   events.onCreateNewTab(() => {
     tabsManager.openNewTabPage()

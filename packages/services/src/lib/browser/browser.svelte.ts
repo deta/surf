@@ -26,6 +26,7 @@ import {
   isDev,
   isOffline,
   parseStringIntoBrowserLocation,
+  parseStringIntoUrl,
   ResourceTag,
   SEARCH_ENGINES,
   SearchResourceTags,
@@ -34,6 +35,7 @@ import {
 import { useConfig } from '../config'
 import type { NewWindowRequest, OpenURL } from '../ipc/events'
 import { useAI } from '../ai'
+import { extractAndCreateWebResource } from '../mediaImporter'
 
 export class BrowserService {
   private readonly resourceManager = useResourceManager()
@@ -930,6 +932,29 @@ export class BrowserService {
     )
 
     return this.openView(newView, opts)
+  }
+
+  async saveLink(rawUrl: string, notebookId?: string) {
+    try {
+      const url = parseStringIntoUrl(rawUrl)
+      if (!url) {
+        this.log.error('Invalid URL', rawUrl)
+        return
+      }
+
+      const { resource } = await extractAndCreateWebResource(
+        this.resourceManager,
+        url.href,
+        undefined,
+        [ResourceTag.rightClickSave()]
+      )
+
+      if (notebookId) {
+        await this.notebookManager.addResourcesToNotebook(notebookId, [resource.id])
+      }
+    } catch (err) {
+      this.log.error('Failed to save link', err)
+    }
   }
 
   onDestroy() {

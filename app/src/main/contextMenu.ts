@@ -14,17 +14,12 @@ const createSpaceAction = (space: SpaceBasicData, handler: () => void) => {
 
 const createSpaceActions = (
   pinnedSpaces: SpaceBasicData[],
-  linkedSpaces: SpaceBasicData[],
   unpinnedSpaces: SpaceBasicData[],
   handler: (space: SpaceBasicData) => void
 ) => {
   return [
     ...pinnedSpaces.map((space) => createSpaceAction(space, () => handler(space))),
     ...conditionalArrayItem<Electron.MenuItemConstructorOptions>(pinnedSpaces.length > 0, {
-      type: 'separator'
-    }),
-    ...linkedSpaces.map((space) => createSpaceAction(space, () => handler(space))),
-    ...conditionalArrayItem<Electron.MenuItemConstructorOptions>(linkedSpaces.length > 0, {
       type: 'separator'
     }),
     {
@@ -48,40 +43,18 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
       const spaces = getCachedSpaces()
 
       let saveToSpaceItems: MenuItemConstructorOptions[] = []
-      let openInSpaceItems: MenuItemConstructorOptions[] = []
 
       const pinnedSpaces = spaces.filter((space) => space.pinned)
-      const linkedSpaces = spaces.filter((space) => space.linked)
       const unpinnedSpaces = spaces.filter((space) => !space.pinned && !space.linked)
 
-      if ([...pinnedSpaces, ...linkedSpaces].length > 0) {
-        saveToSpaceItems = createSpaceActions(
-          pinnedSpaces,
-          linkedSpaces,
-          unpinnedSpaces,
-          (space) => {
-            ipcSenders.saveLink(parameters.linkURL, space.id)
-          }
-        )
-
-        openInSpaceItems = createSpaceActions(
-          pinnedSpaces,
-          linkedSpaces,
-          unpinnedSpaces,
-          (space) => {
-            ipcSenders.openURL(parameters.linkURL, false, space.id)
-          }
-        )
+      if (pinnedSpaces.length > 0) {
+        saveToSpaceItems = createSpaceActions(pinnedSpaces, unpinnedSpaces, (space) => {
+          ipcSenders.saveLink(parameters.linkURL, space.id)
+        })
       } else {
         saveToSpaceItems = spaces.map((space) =>
           createSpaceAction(space, () => {
             ipcSenders.saveLink(parameters.linkURL, space.id)
-          })
-        )
-
-        openInSpaceItems = spaces.map((space) =>
-          createSpaceAction(space, () => {
-            ipcSenders.openURL(parameters.linkURL, false, space.id)
           })
         )
       }
@@ -95,7 +68,7 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
           }
         },
         {
-          label: 'Open in Mini Browser',
+          label: 'Open in Sidebar',
           visible: parameters.linkURL.length > 0,
           click: () => {
             const webContentsId = window.id
@@ -107,11 +80,6 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
             })
           }
         },
-        {
-          label: 'Open in Context',
-          visible: parameters.linkURL.length > 0,
-          submenu: openInSpaceItems
-        },
         defaultActions.separator(),
         {
           label: 'Save Link',
@@ -121,7 +89,7 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
           }
         },
         {
-          label: 'Save Link to Context',
+          label: 'Save Link to Notebook',
           visible: parameters.linkURL.length > 0,
           submenu: saveToSpaceItems
         },
