@@ -672,15 +672,6 @@
     overflow-y: auto;
     overscroll-behavior: auto;
 
-    @media (prefers-color-scheme: dark) {
-      color: var(--on-surface-muted-dark);
-    }
-
-    :global(.tiptap),
-    :global(.tiptap *) {
-      color: inherit;
-    }
-
     &::-webkit-scrollbar {
       width: 6px;
     }
