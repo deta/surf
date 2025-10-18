@@ -94,10 +94,6 @@ const api = {
     IPC_EVENTS_RENDERER.restartApp.send()
   },
 
-  getUserStats: () => {
-    return IPC_EVENTS_RENDERER.getUserStats.invoke()
-  },
-
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
   },

@@ -9,7 +9,6 @@ import type {
   DownloadUpdatedMessage,
   SFFSResource,
   SettingsWindowTab,
-  UserStats,
   BrowserType,
   WebContentsViewEvent,
   WebContentsViewManagerActionEvent,
@@ -59,11 +58,6 @@ export interface ShowOpenDialog extends IPCEvent {
 export interface GetUserConfig extends IPCEvent {
   payload: void
   output: UserConfig
-}
-
-export interface GetUserStats extends IPCEvent {
-  payload: void
-  output: UserStats
 }
 
 export interface StartDrag {
@@ -134,9 +128,7 @@ const IPC_EVENTS = ipcService.registerEvents({
     'store-user-config-settings'
   ),
   updateUserConfig: ipcService.addEvent<Partial<UserConfig>>('store-user-config'),
-  updateUserStats: ipcService.addEvent<Partial<UserStats>>('store-user-stats'),
   userConfigSettingsChange: ipcService.addEvent<UserSettings>('user-config-settings-change'),
-  userStatsChange: ipcService.addEvent<UserStats>('user-config-stats-change'),
   updateInitializedTabs: ipcService.addEvent<boolean>('update-initialized-tabs'),
   checkForUpdates: ipcService.addEvent<void>('check-for-updates'),
   useAsDefaultBrowser: ipcService.addEvent<void>('use-as-default-browser'),
@@ -192,7 +184,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),
   captureWebContents: ipcService.addEventWithReturn<CaptureWebContents>('capture-web-contents'),
   getUserConfig: ipcService.addEventWithReturn<GetUserConfig>('get-user-config'),
-  getUserStats: ipcService.addEventWithReturn<GetUserStats>('get-user-stats'),
   getAppInfo: ipcService.addEventWithReturn<GetAppInfo>('get-app-info'),
   interceptRequestHeaders: ipcService.addEventWithReturn<InterceptRequestHeaders>(
     'intercept-request-headers'
