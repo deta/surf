@@ -27,7 +27,6 @@ import {
   surfProtocolHandler,
   surfletProtocolHandler
 } from './surfProtocolHandlers'
-import { ElectronChromeExtensions } from 'electron-chrome-extensions'
 import { attachWCViewManager, WCViewManager } from './viewManager'
 import { useLogScope } from '@deta/utils'
 
@@ -327,7 +326,6 @@ export function createWindow() {
     webviewSession.protocol.handle('surflet', surfletProtocolHandler)
     mainWindowSession.protocol.handle('surf', surfProtocolHandler)
     mainWindowSession.protocol.handle('surf-internal', surfInternalProtocolHandler)
-    ElectronChromeExtensions.handleCRXProtocol(mainWindowSession)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)
   }

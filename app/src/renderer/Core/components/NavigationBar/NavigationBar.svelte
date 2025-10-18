@@ -11,7 +11,6 @@
   import { Resource, useResourceManager } from '@deta/services/resources'
   import { useViewManager, ViewType, type WebContentsView } from '@deta/services/views'
   import DownloadsIndicator from './DownloadsIndicator.svelte'
-  import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'
   import { useBrowser } from '@deta/services/browser'
   import NoteMenu from './NoteMenu.svelte'
   import { ResourceTypes } from '@deta/types'
@@ -160,7 +159,6 @@
     <BreadcrumbItems {view} />
     <LocationBar {view} readonly={readonlyLocation} bind:isEditingUrl />
     <DownloadsIndicator />
-    <ExtensionBrowserActions />
 
     {#if $activeViewType === ViewType.Page}
       {#key $extractedResourceId}

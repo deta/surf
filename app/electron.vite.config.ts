@@ -123,9 +123,6 @@ export default defineConfig({
         input: {
           core: resolve(__dirname, 'src/preload/core.ts'),
           webcontents: resolve(__dirname, 'src/preload/webcontents.ts'),
-          updates: resolve(__dirname, 'src/preload/updates.ts'),
-          announcements: resolve(__dirname, 'src/preload/announcements.ts'),
-          setup: resolve(__dirname, 'src/preload/setup.ts'),
           overlay: resolve(__dirname, 'src/preload/overlay.ts'),
           resource: resolve(__dirname, 'src/preload/resource.ts')
         }

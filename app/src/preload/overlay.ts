@@ -1,6 +1,5 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { injectBrowserAction } from 'electron-chrome-extensions/dist/browser-action'
 
 import path from 'path'
 import { mkdirSync } from 'fs'
@@ -101,8 +100,6 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.processArgs = parseArguments()
 }
-
-injectBrowserAction()
 
 export type API = typeof api
 export type PreloadEventHandlers = typeof eventHandlers
