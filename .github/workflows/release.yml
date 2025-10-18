@@ -1,4 +1,4 @@
-name: Build & Release
+name: Create an External Release
 
 permissions:
   id-token: write
@@ -7,46 +7,35 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      a_product_name:
+      product_name:
         type: string
         description: 'App Name'
         required: true
         default: 'Surf'
-      b_should_notarize:
-        type: boolean
-        description: 'Notarize (macOS)?'
-        default: true
-      c_sign_windows:
-        type: boolean
-        description: 'Sign Windows build?'
-        default: false
-      d_disable_all_obfuscation:
-        type: boolean
-        description: 'Disable All Obfuscation'
-        default: false
-      e_run_macos_arm:
+      app_version:
+        type: string
+        description: 'App Version'
+        required: true
+      run_macos_arm:
         type: boolean
         description: 'Run macOS ARM build'
         default: true
-      f_run_macos_x64:
+      run_macos_x64:
         type: boolean
         description: 'Run macOS x64 build'
         default: false
-      g_run_windows_x64:
+      run_windows_x64:
         type: boolean
         description: 'Run Windows x64 build'
         default: false
-      h_run_linux_arm:
+      run_linux_arm:
         type: boolean
         description: 'Run Linux ARM build'
         default: false
-      i_run_linux_x64:
+      run_linux_x64:
         type: boolean
         description: 'Run Linux x64 build'
         default: false
-
-env:
-  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
 
 jobs:
   determine_builds:
@@ -57,19 +46,19 @@ jobs:
       - id: set-matrix
         run: |
           matrix="{\"include\":["
-          if [[ "${{ inputs.e_run_macos_arm }}" == "true" ]]; then
+          if [[ "${{ inputs.d_run_macos_arm }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:arm\"},"
           fi
-          if [[ "${{ inputs.f_run_macos_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.e_run_macos_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"macos-13\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
           fi
-          if [[ "${{ inputs.g_run_windows_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.d_run_windows_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
           fi
-          if [[ "${{ inputs.h_run_linux_arm }}" == "true" ]]; then
+          if [[ "${{ inputs.e_run_linux_arm }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"linux-arm64-large\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:lin:arm\"},"
           fi
-          if [[ "${{ inputs.i_run_linux_x64 }}" == "true" ]]; then
+          if [[ "${{ inputs.f_run_linux_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"ubuntu-22.04\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
           fi
           matrix="${matrix%,}]}"
@@ -86,7 +75,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.19.0
+          node-version: 22.20.0
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -120,26 +109,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.architecture }}-turbo-
 
-      - name: Set up Windows Sign Tool
-        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
-        run: dotnet tool install --no-cache --global AzureSignTool --version 5.0.0
-
-      - name: Azure Login
-        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Azure Key Vault Access Token
-        if: matrix.os == 'windows-latest' && inputs.c_sign_windows == true
-        run: |
-          $az_token=$(az account get-access-token --scope https://vault.azure.net/.default --query accessToken -o tsv)
-          echo "::add-mask::$az_token"
-          echo "AZURE_KEYVAULT_ACCESS_TOKEN=$az_token" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           yarn config set network-timeout 300000
           yarn install --frozen-lockfile --network-timeout 300000
@@ -147,45 +117,19 @@ jobs:
       - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
         run: ${{ matrix.build_command }}
         env:
-          #M_VITE_APP_VERSION: ${{ env.APP_VERSION }}
-          #R_VITE_APP_VERSION: ${{ env.APP_VERSION }}
+          APP_VERSION: ${{ inputs.b_app_version }}
+          M_VITE_APP_VERSION: ${{ inputs.b_app_version }}
+          P_VITE_APP_VERSION: ${{ inputs.b_app_version }}
+          R_VITE_APP_VERSION: ${{ inputs.b_app_version }}
 
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
-          SHOULD_NOTARIZE: ${{ inputs.b_should_notarize }}
-          DISABLE_ALL_OBFUSCATION: ${{ inputs.d_disable_all_obfuscation }}
 
           PRODUCT_NAME: ${{ inputs.a_product_name }}
           M_VITE_PRODUCT_NAME: 'Surf'
           BUILD_RESOURCES_DIR: build/resources/prod
 
-          APPLE_ID: ${{ secrets.APPLE_ID_NEW }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID_NEW }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD_NEW }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD_NEW }}
-          CSC_LINK: ${{ secrets.CSC_LINK_NEW }}
-
-          # R_VITE_CHEATSHEET_URL: ${{ secrets.CHEATSHEET_URL_BASE }}/${{ inputs.APP_VERSION }}
-          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL_BETA }}
-          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
-          R_VITE_CHEAT_SHEET_URL: ${{ secrets.CHEAT_SHEET_URL }}
-          R_VITE_SHORTCUTS_PAGE_URL: ${{ secrets.SHORTCUTS_PAGE_URL }}
           R_VITE_MAIN_ONBOARDING_VIDEO_URL: ${{ secrets.MAIN_ONBOARDING_VIDEO_URL }}/${{ inputs.b_app_version }}
-          P_VITE_API_BASE: ${{ secrets.API_BASE }}
-          M_VITE_API_BASE: ${{ secrets.API_BASE }}
-          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}
-
-          M_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_DEV }}
-          R_VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_SURF_DEV }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-          # windows code signing configuration
-          SIGN_WINDOWS: ${{ inputs.c_sign_windows }}
-          AZURE_KEYVAULT_CERTIFICATE_NAME: ${{ secrets.AZURE_KEYVAULT_CERTIFICATE_NAME }}
-          AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_KEYVAULT_ACCESS_TOKEN: ${{ env.AZURE_KEYVAULT_ACCESS_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -208,13 +152,13 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           draft: false
-          prerelease: true
-          tag_name: release-${{ github.sha }}
+          prerelease: false
+          tag_name: ${{ inputs.b_app_version }}
           files: |
             build/**/*.dmg
             build/**/*.exe
             build/**/*.AppImage
             build/**/*.tar.gz
-            build/**/surf-*.yaml
+            build/**/surf-*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
