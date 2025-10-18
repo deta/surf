@@ -1,8 +1,7 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { v4 as uuidv4 } from 'uuid'
-import { type UserConfig, type UserStats } from '@deta/types'
+import { type UserConfig } from '@deta/types'
 import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@deta/types/src/ai.types'
 import { useLogScope } from '@deta/utils'
 
@@ -23,7 +22,6 @@ export type PermissionCache = {
 }
 
 const USER_CONFIG_NAME = 'user.json'
-const USER_STATS_NAME = 'user_stats.json'
 const PERMISSION_CONFIG_NAME = 'permissions.json'
 const SEEN_ANNOUNCEMENTS_STATE = 'seen_announcements.json'
 
@@ -70,17 +68,9 @@ export const setAnnouncementsState = (state: any) => {
 }
 
 let userConfig: UserConfig | null = null
-let userStats: UserStats | null = null
 
 export const getUserConfig = (path?: string) => {
   const storedConfig = getConfig<UserConfig>(path ?? app.getPath('userData'), USER_CONFIG_NAME)
-
-  if (!storedConfig.user_id) {
-    storedConfig.user_id = uuidv4()
-    storedConfig.defaultBrowser = false
-    storedConfig.show_changelog = false
-    setUserConfig(storedConfig as UserConfig)
-  }
 
   /*
     --- Default settings values for new users ---
@@ -107,7 +97,6 @@ export const getUserConfig = (path?: string) => {
         completed_chat: false,
         completed_stuff: false
       },
-      personas: [],
       selected_model: DEFAULT_AI_MODEL,
       model_settings: [],
       vision_image_tagging: false,
@@ -144,11 +133,6 @@ export const getUserConfig = (path?: string) => {
   */
   if (storedConfig.settings.app_style === undefined) {
     storedConfig.settings.app_style = 'light'
-    changedConfig = true
-  }
-
-  if (storedConfig.settings.personas === undefined) {
-    storedConfig.settings.personas = []
     changedConfig = true
   }
 
@@ -375,57 +359,6 @@ export const updateUserConfig = (config: Partial<UserConfig>) => {
   const newConfig = { ...currentConfig, ...config }
   setUserConfig(newConfig)
   return newConfig
-}
-
-export const getUserStats = (path?: string) => {
-  const storedConfig = getConfig<UserStats>(path ?? app.getPath('userData'), USER_STATS_NAME)
-
-  const value: UserStats = {
-    sessions: [],
-
-    timestamp_last_prompt_set_default_browser: 9999999999999,
-    dont_show_prompt_set_default_browser: false,
-
-    timestamp_last_prompt_book_call: 9999999999999,
-    dont_show_prompt_book_call: false,
-
-    // Grooves
-    global_n_context_switches: 0,
-    global_n_contexts_created: 0,
-
-    global_n_saves_to_oasis: 0,
-    global_n_open_resource: 0,
-
-    global_n_chat_message_sent: 0,
-    global_n_chatted_with_space: 0,
-
-    global_n_use_inline_tools: 0,
-    global_n_create_annotation: 0,
-    global_n_open_homescreen: 0,
-    global_n_update_homescreen: 0,
-
-    ...storedConfig
-  }
-
-  // Store if deep different
-  if (JSON.stringify(value) !== JSON.stringify(storedConfig)) {
-    setUserStats(value, path)
-  }
-
-  userStats = value
-  return userStats
-}
-
-export const setUserStats = (stats: UserStats, path?: string) => {
-  userStats = stats
-  setConfig(path ?? app.getPath('userData'), stats, USER_STATS_NAME)
-}
-
-export const updateUserStats = (stats: Partial<UserStats>) => {
-  const current = getUserStats()
-  const newStats = { ...current, ...stats }
-  setUserStats(newStats as UserStats)
-  return newStats
 }
 
 let inMemoryPermissionConfig: PermissionCache | null = null

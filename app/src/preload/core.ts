@@ -16,7 +16,6 @@ import {
   type SFFSResource,
   type DownloadPathResponseMessage,
   SettingsWindowTab,
-  UserStats,
   BrowserType,
   WebContentsViewAction,
   WebContentsViewEvent,
@@ -660,10 +659,6 @@ const api = {
 
   getUserConfig: () => userConfig,
 
-  getUserStats: () => {
-    return IPC_EVENTS_RENDERER.getUserStats.invoke()
-  },
-
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })
   },
@@ -672,10 +667,6 @@ const api = {
 
   updateUserConfigSettings: async (settings: Partial<UserSettings>) => {
     IPC_EVENTS_RENDERER.updateUserConfigSettings.send(settings)
-  },
-
-  updateUserStats: async (stats: Partial<UserStats>) => {
-    IPC_EVENTS_RENDERER.updateUserStats.send(stats)
   },
 
   openURL: (url: string, active: boolean, scopeId?: string) => {

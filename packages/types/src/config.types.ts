@@ -73,39 +73,5 @@ export type UserSettings = {
   experimental_mode?: boolean
 }
 
-export interface UserSession {
-  startedAt: number
-  endedAt?: number
-  duration?: number
-  events: unknown[]
-}
-export type UserStats = {
-  // General App usage
-  sessions: UserSession[]
-
-  // Prompt default browser
-  timestamp_last_prompt_set_default_browser: number
-  dont_show_prompt_set_default_browser: boolean
-
-  // Prompt book call
-  timestamp_last_prompt_book_call: number
-  dont_show_prompt_book_call: boolean
-
-  // Grooves
-  global_n_context_switches: number
-  global_n_contexts_created: number
-
-  global_n_saves_to_oasis: number
-  global_n_open_resource: number
-
-  global_n_chat_message_sent: number
-  global_n_chatted_with_space: number
-
-  global_n_use_inline_tools: number
-  global_n_create_annotation: number
-  global_n_open_homescreen: number
-  global_n_update_homescreen: number
-}
-
 export const EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_EXISTING_USERS = 1
 export const EXPERIMENTAL_NOTES_CHAT_SIDEBAR_PROBABILITY_NEW_USERS = 0.5
