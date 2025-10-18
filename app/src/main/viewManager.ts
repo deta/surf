@@ -14,7 +14,6 @@ import path from 'path'
 import { isDev } from '@deta/utils/system'
 import { checkIfSurfProtocolUrl, PDFViewerEntryPoint } from './utils'
 import { MessageChannelMain } from 'electron/main'
-import { ExtensionsManager } from './extensions'
 import { getUserConfig } from './config'
 
 const log = useLogScope('ViewManager')
@@ -128,7 +127,6 @@ export class WCView {
     const currentBounds = this.wcv.getBounds()
     const currentNavigationHistory = this.wcv.webContents.navigationHistory.getAllEntries()
     const currentNavigationHistoryIndex = this.wcv.webContents.navigationHistory.getActiveIndex()
-    const extensionsManager = ExtensionsManager.getInstance()
 
     this.eventListeners.forEach((unsub) => unsub())
     this.wcv.webContents.removeAllListeners()
@@ -170,12 +168,6 @@ export class WCView {
         index: currentNavigationHistoryIndex,
         entries: currentNavigationHistory
       })
-    }
-
-    try {
-      extensionsManager.addTab(this.wcv.webContents.id)
-    } catch (e) {
-      log.warn('[main] Could not transfer extension tabs to new WebContentsView', e)
     }
     this.manager.recreatedWCV(this)
   }

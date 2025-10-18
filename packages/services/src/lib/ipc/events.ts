@@ -9,7 +9,6 @@ import type {
   DownloadUpdatedMessage,
   SFFSResource,
   SettingsWindowTab,
-  Announcement,
   UserStats,
   BrowserType,
   WebContentsViewEvent,
@@ -67,36 +66,6 @@ export interface GetUserStats extends IPCEvent {
   output: UserStats
 }
 
-export interface GetExtensionsEnabled extends IPCEvent {
-  payload: void
-  output: boolean
-}
-
-export interface BrowserExtension {
-  // Docs: https://electronjs.org/docs/api/structures/extension
-
-  id: string
-  /**
-   * Copy of the extension's manifest data.
-   */
-  manifest: any
-  name: string
-  /**
-   * The extension's file path.
-   */
-  path: string
-  /**
-   * The extension's `chrome-extension://` URL.
-   */
-  url: string
-  version: string
-}
-
-export interface ListExtensions extends IPCEvent {
-  payload: void
-  output: BrowserExtension[]
-}
-
 export interface StartDrag {
   resourceId: string
   filePath: string
@@ -124,20 +93,6 @@ export interface ScreenshotPage extends IPCEvent {
   output: string
 }
 
-export interface SetExtensionMode extends IPCEvent {
-  payload: 'horizontal' | 'vertical'
-  output: void
-}
-
-export interface GetExtensionMode extends IPCEvent {
-  payload: void
-  output: 'horizontal' | 'vertical'
-}
-
-export interface ExtensionModeChange {
-  mode: 'horizontal' | 'vertical'
-}
-
 export interface WebviewReadResourceData extends IPCEvent {
   payload: { token: string; resourceId: string }
   output: Uint8Array
@@ -151,11 +106,6 @@ export interface TokenCreate extends IPCEvent {
 export interface DefaultBrowserCheck extends IPCEvent {
   payload: void
   output: boolean
-}
-
-export interface GetAnnouncements extends IPCEvent {
-  payload: void
-  output: Announcement[]
 }
 
 export type SpaceBasicData = {
@@ -233,9 +183,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   closeTabWebContentsId: ipcService.addEvent<number>('close-tab-webcontents-id'),
   saveLink: ipcService.addEvent<{ url: string; spaceId?: string }>('save-link'),
   updateSpacesList: ipcService.addEvent<SpaceBasicData[]>('update-spaces-list'),
-  setExtensionMode: ipcService.addEvent<'horizontal' | 'vertical'>('set-extension-mode'),
-  extensionModeChange: ipcService.addEvent<ExtensionModeChange>('extension-mode-change'),
-  removeExtension: ipcService.addEvent<string>('remove-extension'),
   setupVerificationCode: ipcService.addEvent<string>('setup-verification-code'),
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
   focusMainRenderer: ipcService.addEvent<void>('focus-main-renderer'),
@@ -251,16 +198,11 @@ const IPC_EVENTS = ipcService.registerEvents({
     'intercept-request-headers'
   ),
   screenshotPage: ipcService.addEventWithReturn<ScreenshotPage>('screenshot-page'),
-  getExtensionMode: ipcService.addEventWithReturn<GetExtensionMode>('get-extension-mode'),
   tokenCreate: ipcService.addEventWithReturn<TokenCreate>('token-create'),
   webviewReadResourceData: ipcService.addEventWithReturn<WebviewReadResourceData>(
     'webview-read-resource-data'
   ),
   isDefaultBrowser: ipcService.addEventWithReturn<DefaultBrowserCheck>('is-default-browser'),
-  getAnnouncements: ipcService.addEventWithReturn<GetAnnouncements>('get-announcements'),
-  getExtensionsEnabled:
-    ipcService.addEventWithReturn<GetExtensionsEnabled>('get-extensions-enabled'),
-  listExtensions: ipcService.addEventWithReturn<ListExtensions>('list-extensions'),
   showOpenDialog: ipcService.addEventWithReturn<ShowOpenDialog>('show-open-dialog'),
 
   // WebContentsView events

@@ -54,7 +54,12 @@
 
   import { isDev, wait } from '@deta/utils'
   import { copyStyles } from '@deta/utils/src/dom/copy-styles.svelte'
-  import { type Overlay, type OverlayManager, useOverlayManager, useViewManager } from '@deta/services/views'
+  import {
+    type Overlay,
+    type OverlayManager,
+    useOverlayManager,
+    useViewManager
+  } from '@deta/services/views'
   import ContextMenu from './ContextMenu.svelte'
 
   const contextMenuOpen = writable(false)
@@ -77,39 +82,35 @@
     if (setupComplete) return
     if (useOverlay) overlayManager = useOverlayManager()
 
-    const prevent = (e: Event) => (!isDev && e.preventDefault())
+    const prevent = (e: Event) => !isDev && e.preventDefault()
     const cbk = async (e: Event) => {
-        let target = e.target as HTMLElement | null
-        // for browesr-action-list for extensions
-        if (target?.tagName.toLowerCase() === 'browser-action-list') {
-          return prevent(e)
-        }
+      let target = e.target as HTMLElement | null
 
-        // Find closest element which has contextMenuHint property set
-        while (target && !target.contextMenuItems) {
-          target = target.parentElement
-        }
+      // Find closest element which has contextMenuHint property set
+      while (target && !target.contextMenuItems) {
+        target = target.parentElement
+      }
 
-        if (target === null) return prevent(e)
-        e.preventDefault()
-        e.stopImmediatePropagation()
+      if (target === null) return prevent(e)
+      e.preventDefault()
+      e.stopImmediatePropagation()
 
-        let items: CtxItem[]
-        if (Array.isArray(target.contextMenuItems)) {
-          items = target.contextMenuItems
-        } else {
-          items = await target.contextMenuItems!()
-        }
+      let items: CtxItem[]
+      if (Array.isArray(target.contextMenuItems)) {
+        items = target.contextMenuItems
+      } else {
+        items = await target.contextMenuItems!()
+      }
 
-        // TODO: give target ref
-        openContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          targetEl: target,
-          items,
-          key: target.contextMenuKey,
-          useOverlay: useOverlay
-        })
+      // TODO: give target ref
+      openContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        targetEl: target,
+        items,
+        key: target.contextMenuKey,
+        useOverlay: useOverlay
+      })
     }
 
     window.addEventListener('contextmenu', cbk, { capture: true })
@@ -147,7 +148,7 @@
           height: 600
         }
       })
-      
+
       // Copy styles including color-scheme to overlay window
       if (overlay?.window) {
         styleCleanup = copyStyles(overlay.window)
@@ -157,7 +158,7 @@
     // await wait(50)
 
     ctxMenuCmp = mount(ContextMenu, {
-      target: props.useOverlay ? overlay.wrapperElement ?? document.body : document.body,
+      target: props.useOverlay ? (overlay.wrapperElement ?? document.body) : document.body,
       props: {
         targetX: props.x,
         targetY: props.y,
@@ -166,7 +167,7 @@
         overlay: props.useOverlay ? overlay : null
       }
     })
-    
+
     document.body.setAttribute('data-context-menu', 'true')
   }
   export function closeContextMenu() {
@@ -193,27 +194,30 @@
   // NOTE: We allow undefined for more easy items construction (ternary)
   export function contextMenu(props: CtxMenuProps): Attachment {
     return (node: HTMLElement) => {
-        node.contextMenuKey = props?.key ?? null
-        if (Array.isArray(props.items)) {
-          node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
-        } else {
-          node.contextMenuItems = props.items
-        }
+      node.contextMenuKey = props?.key ?? null
+      if (Array.isArray(props.items)) {
+        node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
+      } else {
+        node.contextMenuItems = props.items
+      }
 
-        if (props.canOpen === false) {
-          node.contextMenuItems = undefined
-          node.contextMenuKey = undefined
-        }
+      if (props.canOpen === false) {
+        node.contextMenuItems = undefined
+        node.contextMenuKey = undefined
+      }
 
-        return () => {
-          node.contextMenuItems = undefined
-          node.contextMenuKey = undefined
-        }
+      return () => {
+        node.contextMenuItems = undefined
+        node.contextMenuKey = undefined
+      }
     }
   }
-  /** @deprecated DONT USE 
-  */
-  export function contextMenuSvelte4(node: HTMLElement, props: CtxMenuProps): ActionReturn<any, any> {
+  /** @deprecated DONT USE
+   */
+  export function contextMenuSvelte4(
+    node: HTMLElement,
+    props: CtxMenuProps
+  ): ActionReturn<any, any> {
     node.contextMenuKey = props?.key
     if (Array.isArray(props.items)) {
       node.contextMenuItems = props.items.filter((item, i) => item !== undefined)
@@ -311,7 +315,7 @@
 
       // overlay?.saveBounds({
       //   width: Math.round(bounds.width + 20),
-      //   height: Math.round(bounds.height + 20) 
+      //   height: Math.round(bounds.height + 20)
       // })
 
       // overlay?.focus()
@@ -350,12 +354,12 @@
   })
 </script>
 
-<svelte:window 
+<svelte:window
   on:contextmenu={(e) => {
     closeContextMenu()
   }}
   on:keydown={(e) => {
-          // TODO: FIX: Need to focus overlay automatically to make this work with WCVs
+    // TODO: FIX: Need to focus overlay automatically to make this work with WCVs
     if (e.key === 'Escape') {
       closeContextMenu()
     }

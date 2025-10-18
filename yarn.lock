@@ -2244,14 +2244,6 @@
     "@types/node" "*"
     "@types/responselike" "^1.0.0"
 
-"@types/chrome@^0.0.287":
-  version "0.0.287"
-  resolved "https://registry.npmjs.org/@types/chrome/-/chrome-0.0.287.tgz"
-  integrity sha512-wWhBNPNXZHwycHKNYnexUcpSbrihVZu++0rdp6GEk5ZgAglenLx+RwdEouh6FrHS0XQiOxSd62yaujM1OoQlZQ==
-  dependencies:
-    "@types/filesystem" "*"
-    "@types/har-format" "*"
-
 "@types/cookie@^0.6.0":
   version "0.6.0"
   resolved "https://registry.npmjs.org/@types/cookie/-/cookie-0.6.0.tgz"
@@ -2291,29 +2283,12 @@
   resolved "https://registry.npmjs.org/@types/estree/-/estree-1.0.6.tgz"
   integrity sha512-AYnb1nQyY49te+VRAVgmzfcgjYS91mY5P0TKUDCLEM+gNnA+3T6rWITXRLYCpahpqSQbN5cE+gHpnPyXjHWxcw==
 
-"@types/filesystem@*":
-  version "0.0.36"
-  resolved "https://registry.npmjs.org/@types/filesystem/-/filesystem-0.0.36.tgz"
-  integrity sha512-vPDXOZuannb9FZdxgHnqSwAG/jvdGM8Wq+6N4D/d80z+D4HWH+bItqsZaVRQykAn6WEVeEkLm2oQigyHtgb0RA==
-  dependencies:
-    "@types/filewriter" "*"
-
-"@types/filewriter@*":
-  version "0.0.33"
-  resolved "https://registry.npmjs.org/@types/filewriter/-/filewriter-0.0.33.tgz"
-  integrity sha512-xFU8ZXTw4gd358lb2jw25nxY9QAgqn2+bKKjKOYfNCzN4DKCFetK7sPtrlpg66Ywe3vWY9FNxprZawAh9wfJ3g==
-
 "@types/fs-extra@9.0.13", "@types/fs-extra@^9.0.11":
   version "9.0.13"
   resolved "https://registry.npmjs.org/@types/fs-extra/-/fs-extra-9.0.13.tgz"
   integrity sha512-nEnwB++1u5lVDM2UI4c1+5R+FYaKfaAzS4OococimjVm3nQw3TuzH5UNsocrcTBbhnerblyHj4A49qXbIiZdpA==
   dependencies:
     "@types/node" "*"
-
-"@types/har-format@*":
-  version "1.2.16"
-  resolved "https://registry.npmjs.org/@types/har-format/-/har-format-1.2.16.tgz"
-  integrity sha512-fluxdy7ryD3MV6h8pTfTYpy/xQzCFC7m89nOH9y94cNqJ1mDIDPut7MnRHI3F6qRmh/cT2fUjG1MLdCNb4hE9A==
 
 "@types/hast@^3.0.0":
   version "3.0.4"
@@ -2802,11 +2777,6 @@ acorn@^8.12.1, acorn@^8.14.1, acorn@^8.15.0, acorn@^8.7.0, acorn@^8.8.2, acorn@^
   version "8.15.0"
   resolved "https://registry.npmjs.org/acorn/-/acorn-8.15.0.tgz"
   integrity sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==
-
-adm-zip@^0.5.16:
-  version "0.5.16"
-  resolved "https://registry.npmjs.org/adm-zip/-/adm-zip-0.5.16.tgz"
-  integrity sha512-TGw5yVi4saajsSEgz25grObGHEUaDrniwvA2qwSC060KfqGPdglhvPMA2lPIoxs3PQIItj2iag35fONcQqgUaQ==
 
 agent-base@6:
   version "6.0.2"
@@ -4193,23 +4163,6 @@ electron-builder@^24.13.3:
     read-config-file "6.3.2"
     simple-update-notifier "2.0.0"
     yargs "^17.6.2"
-
-electron-chrome-extensions@4.8.0:
-  version "4.8.0"
-  resolved "https://registry.npmjs.org/electron-chrome-extensions/-/electron-chrome-extensions-4.8.0.tgz"
-  integrity sha512-/WydiLHHdRZHSLBbX6OfiqICoKW+ElRDU2cEAFozgTnvtJoFPJZ+qLT0tgfDWyPAlvhwP3yaAYk25fXyRSqx7Q==
-  dependencies:
-    debug "^4.3.1"
-
-electron-chrome-web-store@0.12.0:
-  version "0.12.0"
-  resolved "https://registry.npmjs.org/electron-chrome-web-store/-/electron-chrome-web-store-0.12.0.tgz"
-  integrity sha512-CPAd1GOPClZ7IJwWmC0YmpIZhlUU29WpuIicrnu2wllDkaZ2fib4KrWwMIaFE4n5ILsJR12bV8WUxIaltK8BEA==
-  dependencies:
-    "@types/chrome" "^0.0.287"
-    adm-zip "^0.5.16"
-    debug "^4.3.7"
-    pbf "^4.0.1"
 
 electron-context-menu@^3.6.1:
   version "3.6.1"
@@ -7954,13 +7907,6 @@ pathe@^2.0.1, pathe@^2.0.3:
   resolved "https://registry.yarnpkg.com/pathe/-/pathe-2.0.3.tgz#3ecbec55421685b70a9da872b2cff3e1cbed1716"
   integrity sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==
 
-pbf@^4.0.1:
-  version "4.0.1"
-  resolved "https://registry.npmjs.org/pbf/-/pbf-4.0.1.tgz"
-  integrity sha512-SuLdBvS42z33m8ejRbInMapQe8n0D3vN/Xd5fmWM3tufNgRQFBpaW2YVJxQZV4iPNqb0vEFvssMEo5w9c6BTIA==
-  dependencies:
-    resolve-protobuf-schema "^2.1.0"
-
 pdfjs-dist@^5.2.133:
   version "5.4.54"
   resolved "https://registry.yarnpkg.com/pdfjs-dist/-/pdfjs-dist-5.4.54.tgz#a2a605cd65d401f988c1e8e79454f2eca9d385bd"
@@ -8414,11 +8360,6 @@ prosemirror-view@^1.0.0, prosemirror-view@^1.1.0, prosemirror-view@^1.13.3, pros
     prosemirror-state "^1.0.0"
     prosemirror-transform "^1.1.0"
 
-protocol-buffers-schema@^3.3.1:
-  version "3.6.0"
-  resolved "https://registry.npmjs.org/protocol-buffers-schema/-/protocol-buffers-schema-3.6.0.tgz"
-  integrity sha512-TdDRD+/QNdrCGCE7v8340QyuXd4kIWIgapsE2+n/SaGiSSbomYl4TjHlvIoCWRpE7wFt02EpB35VVA2ImcBVqw==
-
 publint@^0.1.9:
   version "0.1.16"
   resolved "https://registry.npmjs.org/publint/-/publint-0.1.16.tgz"
@@ -8747,13 +8688,6 @@ resolve-pkg-maps@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/resolve-pkg-maps/-/resolve-pkg-maps-1.0.0.tgz"
   integrity sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==
-
-resolve-protobuf-schema@^2.1.0:
-  version "2.1.0"
-  resolved "https://registry.npmjs.org/resolve-protobuf-schema/-/resolve-protobuf-schema-2.1.0.tgz"
-  integrity sha512-kI5ffTiZWmJaS/huM8wZfEMer1eRd7oJQhDuxeCLe3t7N7mX3z94CN0xPxBQxFYQTSNz9T0i+v6inKqSdK8xrQ==
-  dependencies:
-    protocol-buffers-schema "^3.3.1"
 
 resolve.exports@^2.0.0:
   version "2.0.2"

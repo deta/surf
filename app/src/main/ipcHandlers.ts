@@ -20,16 +20,12 @@ import {
   UserStats
 } from '@deta/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
-import { checkForUpdates, getAnnouncements } from './appUpdates'
-import { getAnnouncementsWindow } from './announcementsWindow'
 import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
-import { getSetupWindow } from './setupWindow'
 import { openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
-import { ExtensionsManager } from './extensions'
 
 import fs from 'fs/promises'
 import tokenManager from './token'
@@ -49,8 +45,6 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   const validIDs: number[] = []
   const mainWindow = getMainWindow()
   const settingsWindow = getSettingsWindow()
-  const setupWindow = getSetupWindow()
-  const announcementsWindow = getAnnouncementsWindow()
 
   if (!mainWindow) {
     log.warn('Main window not found')
@@ -62,14 +56,6 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
 
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     validIDs.push(settingsWindow.webContents.id)
-  }
-
-  if (setupWindow && !setupWindow.isDestroyed()) {
-    validIDs.push(setupWindow.webContents.id)
-  }
-
-  if (announcementsWindow && !announcementsWindow.isDestroyed()) {
-    validIDs.push(announcementsWindow.webContents.id)
   }
 
   if (
@@ -213,20 +199,6 @@ function setupIpcHandlers(backendRootPath: string) {
     return image.toDataURL()
   })
 
-  IPC_EVENTS_MAIN.setExtensionMode.on((event, mode) => {
-    if (!validateIPCSender(event)) return
-
-    const extensionsManager = ExtensionsManager.getInstance()
-    extensionsManager.setExtensionMode(mode)
-  })
-
-  IPC_EVENTS_MAIN.getExtensionMode.handle((event) => {
-    if (!validateIPCSender(event)) return null
-
-    const extensionsManager = ExtensionsManager.getInstance()
-    return extensionsManager.getExtensionMode()
-  })
-
   IPC_EVENTS_MAIN.getUserConfig.handle(async (event) => {
     if (!validateIPCSender(event)) return null
 
@@ -237,32 +209,6 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return null
 
     return getUserStats()
-  })
-
-  IPC_EVENTS_MAIN.getExtensionsEnabled.handle(async (event) => {
-    const url = event.senderFrame?.url
-    if (!url || !url.startsWith('https://chromewebstore.google.com/')) {
-      return null
-    }
-    return true
-    /*
-    const userConfig = getUserConfig()
-    return userConfig.settings.extensions
-    */
-  })
-
-  IPC_EVENTS_MAIN.listExtensions.handle((event) => {
-    if (!validateIPCSender(event)) return null
-
-    const extensionsManager = ExtensionsManager.getInstance()
-    return extensionsManager.listExtensions() ?? []
-  })
-
-  IPC_EVENTS_MAIN.removeExtension.on((event, id) => {
-    if (!validateIPCSender(event)) return
-
-    const extensionsManager = ExtensionsManager.getInstance()
-    extensionsManager.removeExtension(id)
   })
 
   IPC_EVENTS_MAIN.startDrag.on(async (event, { resourceId, filePath, fileType }) => {
@@ -347,12 +293,6 @@ function setupIpcHandlers(backendRootPath: string) {
     })
   })
 
-  IPC_EVENTS_MAIN.checkForUpdates.on((event) => {
-    if (!validateIPCSender(event)) return
-
-    checkForUpdates()
-  })
-
   IPC_EVENTS_MAIN.useAsDefaultBrowser.on((event) => {
     if (!validateIPCSender(event)) return
 
@@ -420,25 +360,6 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     ipcSenders.resetBackgroundImage()
-  })
-
-  IPC_EVENTS_MAIN.getAnnouncements.handle((event) => {
-    if (!validateIPCSender(event)) return []
-    return getAnnouncements()
-  })
-
-  IPC_EVENTS_MAIN.setActiveTabWebContentsId.on((event, webContentsId) => {
-    if (!validateIPCSender(event)) return
-    const extensionsManager = ExtensionsManager.getInstance()
-    if (!extensionsManager) return
-    extensionsManager.setActiveTab(webContentsId)
-  })
-
-  IPC_EVENTS_MAIN.closeTabWebContentsId.on((event, webContentsId) => {
-    if (!validateIPCSender(event)) return
-    const extensionsManager = ExtensionsManager.getInstance()
-    if (!extensionsManager) return
-    extensionsManager.closeTab(webContentsId)
   })
 
   IPC_EVENTS_MAIN.updateSpacesList.on((event, data) => {

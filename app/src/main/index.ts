@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, session } from 'electron'
+import { app, BrowserWindow, protocol } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { readdir, unlink, stat } from 'fs/promises'
 import { join, dirname } from 'path'
@@ -14,7 +14,6 @@ import { ipcSenders, setupIpc } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
-import { ExtensionsManager } from './extensions'
 import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 import { useLogScope } from '@deta/utils'
@@ -106,12 +105,6 @@ const registerProtocols = () => {
 
 const handleOpenUrl = (url: string) => {
   try {
-    const u = new URL(url)
-    if (u.protocol === 'surf:') {
-      surfProtocolExternalURLHandler(u)
-      return
-    }
-
     if (!isAppSetup) {
       log.warn('App not setup yet, cannot handle open URL')
       return
@@ -245,14 +238,6 @@ const initializeApp = async () => {
   if (mainWindow) {
     const crashHandler = CrashHandler.getInstance()
     crashHandler.initialize(mainWindow)
-
-    const webviewsSession = session.fromPartition('persist:horizon')
-    const extensionsManager = ExtensionsManager.getInstance()
-    try {
-      await extensionsManager.initialize(mainWindow, webviewsSession, handleOpenUrl)
-    } catch (error) {
-      log.error('Error initializing extensions:', error)
-    }
   }
 }
 

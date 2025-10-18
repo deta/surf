@@ -706,11 +706,3 @@ window.addEventListener('fullscreenchange', (e: Event) => {
     fullscreen: document.fullscreenElement != undefined
   })
 })
-
-if (location.href.startsWith('https://chromewebstore.google.com/')) {
-  try {
-    setupChromeWebStoreApi()
-  } catch (error) {
-    console.error('Error setting up Chrome Web Store API:', error)
-  }
-}

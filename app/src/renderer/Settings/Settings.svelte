@@ -20,7 +20,6 @@
   import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
   import { openDialog, prepareContextMenu } from '@deta/ui'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
-  import ExtensionsManager from './components/ExtensionsManager.svelte'
   import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@deta/utils/system'
   import LayoutPicker from '../components/LayoutPicker.svelte'
 
@@ -89,13 +88,6 @@
   const handleSettingsUpdate = async () => {
     // @ts-ignore
     await window.api.updateUserConfigSettings(userConfigSettings)
-
-    // we need to restart the app if the extensions setting has changed
-    // this is done so that all the attached handlers, preloads etc are removed
-    if (currentNotesSidebarValue !== userConfigSettings.experimental_notes_chat_sidebar) {
-      currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
-      setTimeout(() => window.api.restartApp(), 800)
-    }
   }
 
   const handleDarkModeToggle = (e: CustomEvent<boolean>) => {
@@ -303,16 +295,6 @@
     </div>
 
     -->
-    <div
-      on:click={() => activeTab.set('extensions')}
-      role="tab"
-      tabindex="0"
-      class="tab no-drag"
-      class:active={$activeTab === 'extensions'}
-    >
-      <Icon name="puzzle" size="24" />
-      <h1>Extensions</h1>
-    </div>
   </div>
 
   <div class="content-wrapper">
@@ -513,8 +495,6 @@
           />
         {/if}
       </article> -->
-    {:else if $activeTab === 'extensions'}
-      <ExtensionsManager />
     {/if}
   </div>
 </main>

@@ -34,8 +34,6 @@
     "cross-fetch": "^4.0.0",
     "d3-drag": "^3.0.0",
     "d3-selection": "^3.0.0",
-    "electron-chrome-extensions": "4.8.0",
-    "electron-chrome-web-store": "0.12.0",
     "electron-drag-click": "^1.0.5",
     "electron-updater": "^6.1.7",
     "iconify-icon": "^2.1.0",
@@ -45,7 +43,6 @@
     "svelte-portal": "^2.2.1"
   },
   "devDependencies": {
-    "debug": "^4.4.3",
     "7zip-min": "^1.4.4",
     "@babel/plugin-transform-arrow-functions": "^7.25.9",
     "@deta/editor": "*",
@@ -65,6 +62,7 @@
     "@types/node": "^18.17.5",
     "autoprefixer": "^10.4.19",
     "bits-ui": "^2.9.3",
+    "debug": "^4.4.3",
     "electron": "38.3.0",
     "electron-builder": "^24.13.3",
     "electron-context-menu": "^3.6.1",

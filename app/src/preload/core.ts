@@ -552,22 +552,6 @@ const api = {
     return IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)
   },
 
-  setExtensionMode: (mode: 'horizontal' | 'vertical') => {
-    IPC_EVENTS_RENDERER.setExtensionMode.send(mode)
-  },
-
-  getExtensionMode: () => {
-    return IPC_EVENTS_RENDERER.getExtensionMode.invoke()
-  },
-
-  listExtensions: () => {
-    return IPC_EVENTS_RENDERER.listExtensions.invoke()
-  },
-
-  removeExtension: (extensionId: string) => {
-    return IPC_EVENTS_RENDERER.removeExtension.send(extensionId)
-  },
-
   getAdblockerState: (partition: string) => {
     return IPC_EVENTS_RENDERER.getAdblockerState.invoke(partition)
   },

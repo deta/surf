@@ -3,7 +3,6 @@ import { isPathSafe, getContentType } from './utils'
 import path, { join } from 'path'
 import { stat, mkdir } from 'fs/promises'
 import { Worker } from 'worker_threads'
-import { createSetupWindow, getSetupWindow } from './setupWindow'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { pathToFileURL } from 'url'
 import { useLogScope } from '@deta/utils'
@@ -462,46 +461,4 @@ export const checkSurfProtocolRequest = (url: string) => {
   } catch {
     return false
   }
-}
-
-// url will be of the form surf://activation.app/activation_code
-const extractActivationCodeAndEmail = (
-  url: URL
-): {
-  activationCode?: string
-  email?: string
-} => {
-  if (url.protocol !== 'surf:') {
-    return {}
-  }
-  if (url.hostname !== 'activation.app') {
-    return {}
-  }
-  const parts = url.pathname.split('/')
-  if (parts.length != 2) {
-    return {}
-  }
-  return {
-    activationCode: parts[1],
-    email: url.searchParams.get('email') || ''
-  }
-}
-
-export const surfProtocolExternalURLHandler = async (url: URL) => {
-  // only activations are supported for now
-  const { activationCode, email } = extractActivationCodeAndEmail(url)
-  if (!activationCode) {
-    // TODO: handle ux
-    return
-  }
-  let setupWindow = getSetupWindow()
-  if (!setupWindow) {
-    createSetupWindow({
-      presetInviteCode: activationCode,
-      presetEmail: email
-    })
-    return
-  }
-  setupWindow.focus()
-  IPC_EVENTS_MAIN.setupVerificationCode.sendToWebContents(setupWindow.webContents, activationCode)
 }

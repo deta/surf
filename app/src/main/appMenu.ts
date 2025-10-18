@@ -1,6 +1,5 @@
 import { app, Menu, shell } from 'electron'
 import { isMac, isWindows, isLinux } from '@deta/utils/system'
-import { checkUpdatesMenuClickHandler } from './appUpdates'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
 import { join } from 'path'
@@ -132,10 +131,6 @@ class AppMenu {
       {
         label: 'Use as Default Browser',
         click: useAsDefaultBrowser
-      },
-      {
-        label: 'Check for Updates',
-        click: checkUpdatesMenuClickHandler
       },
       // {
       //   label: 'Invite Friends',
