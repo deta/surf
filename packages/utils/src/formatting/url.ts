@@ -461,9 +461,7 @@ export function isInternalRendererURL(url: string | URL): URL | null {
     const devPartialPaths = [
       '/Resource/resource.html',
       '/Overlay/overlay.html',
-      '/Announcements/announcements.html',
       '/PDF/pdf.html',
-      '/Updates/updates.html',
       '/Settings/settings.html',
       '/Setup/setup.html',
       '/Core/core.html'

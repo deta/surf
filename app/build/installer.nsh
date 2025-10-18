@@ -1,12 +1,12 @@
-!define APP_PROGID "ea.browser.deta.surf"
+!define APP_PROGID "surf.deta"
 !define VS_REDIST_EXE "vc_redist.x64.exe"
 !define VS_REDIST_URL "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 !define VS_REDIST_VERSION "14.40.33816.00"
 
-# Include the required plugins
 !include "LogicLib.nsh"
 !include "x64.nsh"
 
+; Check and install Visual C++ Redistributable if needed
 Function CheckVCRedist
     ClearErrors
 
@@ -49,6 +49,7 @@ Section -Prerequisites
     Call CheckVCRedist
 SectionEnd
 
+; Register as default browser / protocol handler
 !macro customInstall
     DetailPrint "Register app as a possible handler for HTTP and HTTPS protocols"
 

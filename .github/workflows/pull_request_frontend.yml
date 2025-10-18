@@ -4,8 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
-      - grooves-base
-      - surf-greenfield
+      - main
     paths:
       - 'package.json'
       - 'tsconfig.json'
@@ -13,13 +12,9 @@ on:
       - 'yarn.lock'
       - 'packages/**'
       - 'app/src/**'
-      - '!packages/trackpad/**'
       - '!packages/backend/**'
       - '!packages/backend-server/**'
   workflow_dispatch:
-
-env:
-  TIPTAP_REGISTRY_TOKEN: ${{ secrets.TIPTAP_REGISTRY_TOKEN }}
 
 jobs:
   build:
@@ -64,15 +59,8 @@ jobs:
         env:
           HUSKY: 0
           NODE_OPTIONS: --max_old_space_size=8192
-          DISABLE_ALL_OBFUSCATION: 'false'
 
           PRODUCT_NAME: 'Surf'
           M_VITE_PRODUCT_NAME: 'Surf'
           BUILD_RESOURCES_DIR: build/resources/dev
           TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-
-          R_VITE_TELEMETRY_PROXY_URL: ${{ secrets.TELEMETRY_PROXY_URL }}
-          R_VITE_FEEDBACK_URL: ${{ secrets.FEEDBACK_PAGE_URL }}
-          P_VITE_API_BASE: ${{ secrets.API_BASE }}
-          M_VITE_API_BASE: ${{ secrets.API_BASE }}
-          M_VITE_ANNOUNCEMENTS_URL: ${{ secrets.ANNOUNCEMENTS_URL }}

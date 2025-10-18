@@ -4,8 +4,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
-      - grooves-base
-      - surf-greenfield
+      - main
     paths:
       - 'packages/backend/**'
       - 'packages/backend-server/**'
