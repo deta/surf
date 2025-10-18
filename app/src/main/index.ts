@@ -14,7 +14,6 @@ import { ipcSenders, setupIpc } from './ipcHandlers'
 import { getUserConfig, updateUserConfig } from './config'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
-import { AppUpdater, silentCheckForUpdates } from './appUpdates'
 import { ExtensionsManager } from './extensions'
 import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
@@ -215,16 +214,6 @@ const initializeApp = async () => {
 
   createWindow()
 
-  AppUpdater.initialize({
-    authToken: userConfig.api_key || '',
-    proxyUrl: CONFIG.appUpdatesProxyUrl || '',
-    channel: CONFIG.appUpdatesChannel,
-    announcementsUrl: CONFIG.announcementsUrl,
-    currentAppVersion: CONFIG.appVersion || ''
-    // Uncomment to see test announcements
-    // showTestAnnouncements: true
-  })
-
   try {
     await setupBackendServer(appPath, backendRootPath, userConfig)
   } catch (err) {
@@ -245,9 +234,6 @@ const initializeApp = async () => {
     const isHealthy = surfBackendManager?.isHealthy
     if (webContents && isHealthy)
       IPC_EVENTS_MAIN.setSurfBackendHealth.sendToWebContents(webContents, isHealthy)
-
-    silentCheckForUpdates()
-    setInterval(silentCheckForUpdates, 1000 * 60 * 30) // 30 minutes
 
     if (userConfig.show_changelog) {
       ipcSenders.openChangelog()
