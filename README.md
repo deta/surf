@@ -1,79 +1,108 @@
-# Horizon
+<div align="center">
 
-Monorepo containing the Horizon desktop app, a future web version and all related UI components and logic.
+<a href="https://deta.surf" target="_blank">
+    <img src="./app/build/resources/prod/icon.png" width="80">
+</a>
+
+# Deta Surf
+
+Notebooks for the internet – now in open beta!
+
+</div>
+
+## What is Surf?
+
+[Surf](https://deta.surf) is a tool for thought — like a personal notebook — but for a multi-media world that includes websites, YouTube videos, PDFs, photos, files & more. Surf helps you manage it all in one place, and generate notes to think on top of it.
+
+Learn more on [why we are building Surf](https://deta.surf/motivation).
 
 ## Installation
 
-To use a non-notarized version on MacOS:
+Checkout the [GitHub releases](https://github.com/deta/surf/releases) for the latest stable version of Surf for MacOS, Windows and Linux.
 
-- download a suitable `dmg` from [releases](https://github.com/deta/horizon/releases)
-- move it to your `Applications` folder
-- run `xattr -cr /Applications/{release_name}.app` in your Terminal, replace {release_name} with the actual release name
-- start the app
+You can also download Surf with some managed & additional features (e.g. AI) from the Deta website. That version is subject to the [Deta Terms](https://deta.surf/terms).
 
-## Setup
+For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-### Install rust and cargo
+## Philosophy
 
-Run the following command:
+Surf is designed to give end users as much agency possible. We think tools for thinking are too important & too personal to be overly centralized and closed.
 
-```sh
-curl https://sh.rustup.rs -sSf | sh
-```
+**Personal**
 
-### Install js dependencies
+The user’s thought process should be at the center of the experience. This means local first data storage, but should also reflect in the user experience.
 
-Run the following command:
+**Open**
 
-```sh
-yarn install
-```
+Users should be able to operate _multi_-media, all in one place. They should have agency over their data, source code, and external service providers.
 
-## What's inside?
+**Intelligent**
 
-This monorepo includes the following packages/apps:
+Many of the experiences in Surf are designed to use AI, but Surf is intended to augment human intelligence, not automate it.
 
-### Apps and Packages
+## Features
 
-- `desktop`: a Electron app
-- `web`: a svelte app (just a placeholder for now)
-- `@deta/backend`: a Rust backend that's compiled to a Node.js module
-- `@deta/backend-server`: a Rust backend that's compiled to a standalone server, responsible for compute intensive AI tasks (embeddings)
-- `@horizon/core`: Horizon specific components and logic shared by both `desktop` and `web` applications
-- `@deta/types`: a general Svelte component library shared by both `desktop` and `web` applications
-- `@horizon/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@horizon/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Generative Notes
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/) or Rust.
+Generate & edit notes that weave your photos, websites, PDFs, YouTube videos & more directly together.
 
-### Utilities
+<SMART NOTES IMG>
 
-This monorepo uses Yarn Workspaces and Turborepo among other tools:
+**Citations**
 
-- [Yarn Workspaces](https://classic.yarnpkg.com/lang/en/docs/workspaces/)
-- [Turborepo](https://turbo.build/)
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+Notes deeply link back to specific sections of PDFs, webpages, or YouTube videos from which they were generated.
 
-### Build
+**@ mentions**
 
-To build all apps and packages, run the following command:
+@ mention anything in your library to add something to context and use it to generate notes out of.
 
-```
-yarn build
-```
+### Universal Navigation
 
-### Develop
+Open a note, PDF, image, file, website or YouTube video in a tab or a split, with the same navigation affordances, regardless of media type.
 
-To run the app and required packages in development mode, run the following command:
+<IMG>
 
-```
-yarn dev:horizon
-```
+### Multi-media memory
 
-To develop all apps and packages, run the following command (not needed most of the time):
+<MEMORY IMG>
 
-```
-yarn dev
-```
+You can add many different “objects” to Surf’s memory. Each object lives on your device in local and open data formats: a database entry, a file, and a vector embedding.
+
+Special support has been created for:
+
+- Files
+  - Photos
+  - PDFs
+- Web Resources
+  - Blog Articles
+  - Wikipedia Pages
+  - YouTube Videos (automatic transcript recognition)
+  - Tweets
+  - Notion Documents
+- Native Media
+  - Surflets
+  - Smart Notes
+
+### Notebooks
+
+Organize your information into multi-media notebooks for specific topics that interest you.
+
+<NOTEBOOKs IMG>
+
+### Surflets
+
+Surf can code interactive applets to help you visualize, understand or explore.
+
+<SURFLETS IMG>
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on contributing to the project and an overview of the codebase.
+
+## Code of Conduct
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for details on our code of conduct.
+
+## License
+
+This project is licensed under the Apache 2.0 license. See [LICENSE](LICENSE) for more details.
