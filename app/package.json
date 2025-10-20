@@ -67,7 +67,7 @@
     "autoprefixer": "^10.4.19",
     "bits-ui": "^2.9.3",
     "electron": "38.3.0",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.0.12",
     "electron-context-menu": "^3.6.1",
     "electron-vite": "^4.0.0",
     "eslint": "^8.47.0",
