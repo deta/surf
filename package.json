@@ -51,6 +51,7 @@
     ]
   },
   "resolutions": {
-    "cookie": "^0.7.0"
+    "cookie": "^0.7.0",
+    "brace-expansion": "^2.0.2"
   }
 }
