@@ -59,7 +59,10 @@
       store,
       thumbs,
       options: {
-        scaleValue: 'auto'
+        scaleValue: 'auto',
+        getDocumentParams: {
+          isEvalSupported: false
+        }
       }
     })
 
