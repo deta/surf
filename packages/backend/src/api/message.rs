@@ -17,7 +17,6 @@ pub struct TunnelMessage(
 
 #[derive(Debug)]
 pub enum ProcessorMessage {
-    SetVisionTaggingFlag(bool),
     // Box to avoid large enum size due to CompositeResource
     ProcessResource(PostProcessingJob, Box<CompositeResource>),
 }
@@ -220,8 +219,6 @@ pub enum MiscMessage {
     GetYoutubeTranscript(String),
     RunMigration,
     SendEventBusMessage(EventBusMessage),
-    GetQuotas,
-    SetVisionTaggingFlag(bool),
     SetSurfBackendHealth(bool),
     SearchChatResources {
         query: String,

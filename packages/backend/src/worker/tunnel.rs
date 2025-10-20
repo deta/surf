@@ -18,7 +18,7 @@ use std::panic;
 
 const NUM_WORKER_THREADS: usize = 12;
 const NUM_PROCESSOR_THREADS: usize = 12;
-use std::sync::{atomic::AtomicBool, Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 
 #[derive(Clone)]
 pub struct WorkerTunnel {
@@ -72,8 +72,6 @@ impl Clone for SurfBackendHealth {
 pub struct TunnelConfig {
     pub backend_root_path: String,
     pub app_path: String,
-    pub api_base: String,
-    pub api_key: String,
     pub local_ai_mode: bool,
     pub language_setting: String,
     pub num_worker_threads: Option<usize>,
@@ -159,11 +157,8 @@ impl WorkerTunnel {
             let _run_migrations = run_migrations > 0;
             run_migrations = run_migrations.saturating_sub(1);
 
-            // Clone config values needed for WorkerConfig
             let app_path = config.app_path.clone();
             let backend_root_path = config.backend_root_path.clone();
-            let api_base = config.api_base.clone();
-            let api_key = config.api_key.clone();
             let local_ai_mode = config.local_ai_mode;
             let language_setting = config.language_setting.clone();
 
@@ -177,8 +172,6 @@ impl WorkerTunnel {
                     );
 
                     let ai_config = AIConfig::new(
-                        api_base.clone(),
-                        api_key.clone(),
                         local_ai_mode,
                     );
 
@@ -220,20 +213,15 @@ impl WorkerTunnel {
             let config = config.clone();
             let language = language.clone();
             let thread_name = format!("P{n}");
-            let vision_tagging_flag = Arc::new(AtomicBool::new(false));
 
             std::thread::Builder::new()
                 .name(thread_name.clone())
                 .spawn(move || loop {
-                    let vision_tagging_flag = vision_tagging_flag.clone();
                     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
                         processor_thread_entry_point(
                             tunnel.clone(),
                             config.app_path.clone(),
                             language.clone(),
-                            config.api_key.clone(),
-                            config.api_base.clone(),
-                            vision_tagging_flag,
                         )
                     }));
 

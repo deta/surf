@@ -922,12 +922,6 @@ export class AIChat {
 
       this.error.set(parsedError)
 
-      if (!this.errorValue?.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
-        setTimeout(() => {
-          this.error.set(null)
-        }, 10000)
-      }
-
       // Clean up the generation tracking even in case of error
       this.activeGenerations.delete(options.generationID)
       this.generationPromiseResolvers.delete(options.generationID)

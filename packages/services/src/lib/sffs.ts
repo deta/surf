@@ -45,12 +45,10 @@ import type {
   NoteMessageOptions,
   CreateAppOptions,
   QueryResourcesOptions,
-  Quota,
-  QuotasResponse,
   Message,
   CreateChatCompletionOptions
 } from '@deta/backend/types'
-import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
+import { APIKeyMissingError, BadRequestError, TooManyRequestsError } from '@deta/backend/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
@@ -966,16 +964,8 @@ export class SFFS {
         if (message.includes('LLM Bad Request error')) {
           throw new BadRequestError()
         }
-        if (message.includes('LLM Quota Depleted error')) {
-          const jsonStr = message.substring(message.indexOf('{'))
-
-          const resp = this.parseData<QuotasResponse>(jsonStr)
-          if (!resp) {
-            throw new Error('failed to parse quota depleted error')
-          }
-
-          this.log.debug('quota error', resp)
-          throw new QuotaDepletedError(resp.quotas)
+        if (message.includes('LLM API Key Missing error')) {
+          throw new APIKeyMissingError()
         }
         if (message.includes('LLM Too Many Requests error')) {
           throw new TooManyRequestsError()
@@ -1196,19 +1186,8 @@ export class SFFS {
     )
   }
 
-  async getQuotas(): Promise<Quota[]> {
-    this.log.debug('getting quotas')
-    const raw = await this.backend.js__ai_get_quotas()
-    const parsed = this.parseData<Quota[]>(raw)
-    return parsed ?? []
-  }
-
   registerEventBustHandler(handler: (event: EventBusMessage) => void) {
     return this.backend.js__backend_event_bus_register(handler) as () => void
-  }
-
-  setVisionTaggingFlag(flag: boolean) {
-    return this.backend.js__backend_set_vision_tagging_flag(flag)
   }
 
   // TODO: use the App interface here?

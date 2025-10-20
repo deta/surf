@@ -13,8 +13,8 @@ import { codeLanguageToMimeType, markdownToHtml, useLogScope } from '@deta/utils
 import { WebParser } from '@deta/web-parser'
 import { PromptIDs, getPrompt } from './prompts'
 import type { AIService } from './aiClean'
-import { BadRequestError, QuotaDepletedError, TooManyRequestsError } from '@deta/backend/types'
-import { ModelTiers, type ChatError } from '@deta/types/src/ai.types'
+import { APIKeyMissingError, BadRequestError, TooManyRequestsError } from '@deta/backend/types'
+import { type ChatError } from '@deta/types/src/ai.types'
 import { ResourceManager } from '@deta/services/resources'
 import { ResourceTag } from '@deta/utils/formatting'
 
@@ -271,68 +271,21 @@ export const handleInlineAI = async (
   return transformation
 }
 
-export const handleQuotaDepletedError = (e: QuotaDepletedError) => {
-  let error = PageChatMessageSentEventError.Other
-  let content = ''
-  let exceededTiers: ModelTiers[] = []
-
-  const premiumQuotas = e.quotas.filter((quota) => quota.tier === ModelTiers.Premium)
-  const standardQuotas = e.quotas.filter((quota) => quota.tier === ModelTiers.Standard)
-
-  const premiumMonthlyUsed = premiumQuotas.find((quota) => quota.usage_type.startsWith('monthly'))
-  const standardMonthlyUsed = standardQuotas.find((quota) => quota.usage_type.startsWith('monthly'))
-
-  const premiumCycleString = premiumMonthlyUsed ? 'monthly' : 'daily'
-  const standardCycleString = standardMonthlyUsed ? 'monthly' : 'daily'
-  const bothCyleString = premiumMonthlyUsed && standardMonthlyUsed ? 'monthly' : 'daily'
-
-  if (standardQuotas.length > 0) {
-    if (premiumQuotas.length > 0) {
-      error = PageChatMessageSentEventError.QuotaExceeded
-      content = `All your ${bothCyleString} quotas are depleted. Please try again at a later time or setup your own models in the settings.`
-    } else {
-      error = PageChatMessageSentEventError.QuotaExceededStandard
-      content = `Your ${standardCycleString} quota for the standard models is depleted, you can still chat with the premium models like GPT-4o and Claude Sonnet.`
-    }
-  } else if (premiumQuotas.length > 0) {
-    error = PageChatMessageSentEventError.QuotaExceededPremium
-    content = `Your ${premiumCycleString} quota for the premium models is depleted, you can still chat with the standard models like GPT-4o Mini and Claude Haiku.`
-  } else {
-    error = PageChatMessageSentEventError.QuotaExceeded
-    content = 'Quota depleted. Please try again later.'
-  }
-
-  if (premiumQuotas.length > 0) {
-    exceededTiers.push(ModelTiers.Premium)
-  }
-
-  if (standardQuotas.length > 0) {
-    exceededTiers.push(ModelTiers.Standard)
-  }
-
-  return {
-    exceededTiers,
-    error,
-    content
-  }
-}
-
 export const parseAIError = (e: any) => {
-  let content = 'Failed to generate response.'
+  let content = ''
   let error = PageChatMessageSentEventError.Other
 
   if (e instanceof TooManyRequestsError) {
     error = PageChatMessageSentEventError.TooManyRequests
     content = 'Too many requests. Please try again later.'
-  } else if (e instanceof QuotaDepletedError) {
-    const res = handleQuotaDepletedError(e)
-    error = res.error
-    content = res.content
+  } else if (e instanceof APIKeyMissingError) {
+    error = PageChatMessageSentEventError.APIKeyMissing
+    content = 'API key is missing. Configure an API key in your Settings to continue.'
   } else if (e instanceof BadRequestError) {
     error = PageChatMessageSentEventError.BadRequest
-    content = 'The query failed our content policy checks. Please try again with a different query.'
+    content = 'The AI server sent a bad request error. You can try again with a different query.'
   } else {
-    content = 'Failed to generate response.'
+    content = 'Encountered an unexpected error: ' + e?.message || String(e)
   }
   if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
     content = 'The content is too long to process. Please try a more specific question.'

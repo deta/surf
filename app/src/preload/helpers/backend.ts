@@ -49,9 +49,6 @@ const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
 const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
 const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
 
-const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
-const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
-
 export type SFFSOptions = {
   num_worker_threads?: number
   num_processor_threads?: number
@@ -129,18 +126,10 @@ export const initSFFS = (opts?: SFFSOptions) => {
     return { js__backend_event_bus_register, js__backend_event_bus_callback }
   })()
 
-  const init = (
-    root_path: string,
-    api_base: string,
-    api_key: string,
-    local_ai_mode: boolean = false,
-    language_setting: string
-  ) => {
+  const init = (root_path: string, local_ai_mode: boolean = false, language_setting: string) => {
     handle = sffs.js__backend_tunnel_init(
       root_path,
       APP_PATH,
-      api_base,
-      api_key,
       local_ai_mode,
       language_setting,
       num_worker_threads,
@@ -291,7 +280,7 @@ export const initSFFS = (opts?: SFFSOptions) => {
     }
   }
 
-  return init(BACKEND_ROOT_PATH, API_BASE || '', API_KEY || '', false, LANGUAGE_SETTING)
+  return init(BACKEND_ROOT_PATH, false, LANGUAGE_SETTING)
 }
 
 export class ResourceHandle {

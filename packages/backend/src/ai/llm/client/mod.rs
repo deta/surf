@@ -8,20 +8,9 @@ use std::{
 };
 
 use crate::{
-    ai::{
-        llm::models::{
-            Message, MessageContent, MessageRole, Quota, QuotaResponse, QuotasDepletedResponse,
-        },
-        _AI_API_ENDPOINT,
-    },
+    ai::llm::models::{Message, MessageContent, MessageRole},
     BackendError, BackendResult,
 };
-
-#[derive(Debug, Clone)]
-pub struct ProxyConfig {
-    pub api_base: String,
-    pub api_key: String,
-}
 
 pub struct ChatCompletionStream {
     reader: BufReader<Response>,
@@ -33,7 +22,6 @@ pub struct ChatCompletionStream {
 
 pub struct LLMClient {
     client: reqwest::blocking::Client,
-    proxy: ProxyConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -260,15 +248,6 @@ impl Provider {
         }
     }
 
-    fn as_str(&self) -> &str {
-        match self {
-            Self::OpenAI => "openai",
-            Self::Anthropic => "anthropic",
-            Self::Google => "google",
-            Self::Custom(_) => "custom",
-        }
-    }
-
     fn get_headers(&self, api_key: Option<String>) -> Vec<(String, String)> {
         let mut headers = vec![("Content-Type".to_string(), "application/json".to_string())];
 
@@ -293,24 +272,15 @@ impl Provider {
 impl Provider {
     fn get_request_params(
         &self,
-        proxy: &ProxyConfig,
         custom_key: Option<String>,
-    ) -> (String, Vec<(String, String)>) {
+    ) -> BackendResult<(String, Vec<(String, String)>)> {
         let (completions_url, api_key) = match (self, custom_key) {
             (Self::Custom(_), api_key) => (self.get_completion_url(None), api_key),
             (_, Some(api_key)) => (self.get_completion_url(None), Some(api_key)),
-            (_, None) => (
-                self.get_completion_url(Some(format!(
-                    "{}/{}/{}",
-                    proxy.api_base,
-                    _AI_API_ENDPOINT,
-                    self.as_str()
-                ))),
-                Some(proxy.api_key.clone()),
-            ),
+            (_, None) => return Err(BackendError::LLMClientErrorAPIKeyMissing),
         };
 
-        (completions_url, self.get_headers(api_key))
+        Ok((completions_url, self.get_headers(api_key)))
     }
 
     fn prepare_completion_request(
@@ -457,14 +427,6 @@ impl Provider {
 impl Provider {
     fn parse_potential_error(&self, data: &str) -> BackendResult<()> {
         use response_types::*;
-
-        if let Ok(error) = serde_json::from_str::<QuotasDepletedResponse>(data) {
-            return Err(BackendError::LLMClientErrorQuotasDepleted {
-                quotas: serde_json::to_value(error).map_err(|e| {
-                    BackendError::GenericError(format!("failed to serialize quotas: {e}"))
-                })?,
-            });
-        }
 
         if let Ok(error) = serde_json::from_str::<ChatCompletionChunkErrorResponse>(data) {
             return Err(BackendError::LLMClientError {
@@ -638,12 +600,11 @@ impl Iterator for ChatCompletionStream {
 }
 
 impl LLMClient {
-    pub fn new(api_base: String, api_key: String) -> BackendResult<Self> {
+    pub fn new() -> BackendResult<Self> {
         Ok(Self {
             client: reqwest::blocking::Client::builder()
                 .timeout(std::time::Duration::from_secs(300))
                 .build()?,
-            proxy: ProxyConfig { api_base, api_key },
         })
     }
 
@@ -686,23 +647,6 @@ impl LLMClient {
         self.handle_streaming_response(response, model.provider())
     }
 
-    // TODO: provider based quotas handling
-    pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
-        let url = format!("{}/{}/quotas", self.proxy.api_base, _AI_API_ENDPOINT);
-        let response = self
-            .client
-            .get(&url)
-            .header("x-api-key", &self.proxy.api_key)
-            .send()?;
-        match response.error_for_status_ref() {
-            Ok(_) => {
-                let body = response.json::<QuotaResponse>()?;
-                Ok(body.quotas)
-            }
-            Err(err) => Err(BackendError::ReqwestError(err)),
-        }
-    }
-
     fn send_completion_request(
         &self,
         messages: Vec<Message>,
@@ -713,7 +657,7 @@ impl LLMClient {
     ) -> BackendResult<Response> {
         let messages = truncate_messages(filter_unsupported_content(messages, model), model);
         let provider = model.provider();
-        let (url, headers) = provider.get_request_params(&self.proxy, custom_key);
+        let (url, headers) = provider.get_request_params(custom_key)?;
         let body = provider.prepare_completion_request(
             &model.as_str(),
             stream,

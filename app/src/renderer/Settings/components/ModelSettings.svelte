@@ -33,17 +33,12 @@
   import { appendURLPath, generateID } from '@deta/utils'
   import { createEventDispatcher, onMount } from 'svelte'
   import { contextMenu, type CtxItem } from '@deta/ui'
-  import { SFFS } from '@deta/services'
-  import type { Quota } from '@deta/backend/types'
-  import TierQuota from '../components/TierQuota.svelte'
 
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
 
   const AI_MODEL_DOCS =
     'https://deta.notion.site/Using-different-AI-models-in-Surf-199a5244a71780e196fbd02db590e8f4'
-
-  const sffs = new SFFS()
 
   const dispatch = createEventDispatcher<{
     'select-model': string
@@ -55,8 +50,6 @@
   const modelSelectorOpen = writable(false)
   const providerSelectorOpen = writable(false)
   const showProviderSettings = writable(false)
-  const quotas = writable<Quota[]>([])
-  const fetchingQuotas = writable(false)
   const selectedProvider = writable<ModelProvider | null>(null)
 
   let customProviderName = ''
@@ -167,41 +160,6 @@
     })
   })
 
-  const premiumTierQuotas = derived([quotas], ([$quotas]) => {
-    const filtered = $quotas.filter((quota) => quota.tier === ModelTiers.Premium)
-
-    return {
-      daily: {
-        input: filtered.find((quota) => quota.usage_type === 'daily_input_tokens'),
-        output: filtered.find((quota) => quota.usage_type === 'daily_output_tokens')
-      },
-      monthly: {
-        input: filtered.find((quota) => quota.usage_type === 'monthly_input_tokens'),
-        output: filtered.find((quota) => quota.usage_type === 'monthly_output_tokens')
-      }
-    }
-  })
-
-  const standardTierQuotas = derived([quotas], ([$quotas]) => {
-    const filtered = $quotas.filter((quota) => quota.tier === ModelTiers.Standard)
-
-    return {
-      daily: {
-        input: filtered.find((quota) => quota.usage_type === 'daily_input_tokens'),
-        output: filtered.find((quota) => quota.usage_type === 'daily_output_tokens')
-      },
-      monthly: {
-        input: filtered.find((quota) => quota.usage_type === 'monthly_input_tokens'),
-        output: filtered.find((quota) => quota.usage_type === 'monthly_output_tokens')
-      }
-    }
-  })
-
-  const visionRequestQuoata = derived([quotas], ([$quotas]) => {
-    const filtered = $quotas.find((quota) => quota.tier === ModelTiers.PremiumVision)
-    return filtered
-  })
-
   const updateModel = (id: string, updates: Partial<Model>) => {
     dispatch('update-model', { id, updates })
   }
@@ -255,12 +213,6 @@
 
     if (model) {
       selectModel(model.id)
-
-      // if (model.provider === Provider.Custom) {
-      //   selectedProvider.set(model.label)
-      // } else {
-      //   selectedProvider.set(model.provider)
-      // }
     } else {
       modelSelectorOpen.set(false)
     }
@@ -319,21 +271,7 @@
     ] as CtxItem[]
   }
 
-  const loadQuotas = async () => {
-    try {
-      fetchingQuotas.set(true)
-      const fetchedQuotas = await sffs.getQuotas()
-      quotas.set(fetchedQuotas)
-    } catch (error) {
-      console.error('error fetching quotas', error)
-    } finally {
-      fetchingQuotas.set(false)
-    }
-  }
-
   onMount(() => {
-    loadQuotas()
-
     if ($selectedModel) {
       const provider = modelToProvider($selectedModel)
       selectedProvider.set(provider)
@@ -375,8 +313,6 @@
     })
   })
 </script>
-
-<svelte:window on:focus={() => loadQuotas()} />
 
 <div class="wrapper">
   <div class="dev-wrapper">
@@ -433,12 +369,6 @@
         </p>
 
         <p>Surf may switch to more efficient models from the same provider for certain features.</p>
-
-        <!--
-        <p>
-          <b>Tip:</b> The model can also be changed from the chat sidebar, vision tool, and within notes.
-        </p>
-        -->
       </div>
     </div>
   </div>
@@ -516,7 +446,7 @@
       {#if $selectedProvider?.type === Provider.Custom}
         <div class="provider-config">
           <p>
-            Here you can onfigure your own custom model and provider. Checkout the
+            Here you can configure your own custom model and provider. Checkout the
             <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how to configure it.
           </p>
 
@@ -581,8 +511,8 @@
       {:else if $selectedProvider}
         <div class="provider-config">
           <p>
-            Set your own API key for {$selectedProvider.label} to skip our services and quota limits
-            and let Surf talk with {$selectedProvider.label}'s API directly. More details in the
+            Set your own API key for {$selectedProvider.label} to skip our services and let Surf talk
+            with {$selectedProvider.label}'s API directly. More details in the
             <a href={AI_MODEL_DOCS} target="_blank">manual</a>.
           </p>
 
@@ -598,52 +528,6 @@
       {/if}
     </Expandable>
   </div>
-
-  {#if $quotas.length > 0}
-    <div class="dev-wrapper">
-      <div class="explainer">
-        <div class="quota-header">
-          <h2 class="text-xl font-medium">Quotas</h2>
-          <button on:click={() => loadQuotas()}>
-            {#if $fetchingQuotas}
-              <Icon name="spinner" />
-            {:else}
-              <Icon name="reload" />
-            {/if}
-            Refresh
-          </button>
-        </div>
-
-        <p>
-          You have monthly credits for premium (more intelligent but costlier) and standard (cheaper
-          and faster but less intelligent) tier of AI models. If you reach the limit of the premium
-          tier, you will be switched to the standard tier automatically.
-        </p>
-
-        <p>
-          Using a custom model or providing your own API key does not count towards your quotas.
-        </p>
-      </div>
-
-      <div class="tiers-wrapper">
-        <TierQuota name="Premium Tier" parsedQuota={$premiumTierQuotas} />
-
-        <TierQuota name="Standard Tier" parsedQuota={$standardTierQuotas} />
-
-        <!--
-        <QuotaWrapper name="Image Tagging">
-          <QuotaItem label="Monthly Requests" quota={$visionRequestQuoata} />
-        </QuotaWrapper>
-        -->
-      </div>
-
-      <p>
-        If you need more tokens or have any questions <a href="mailto:hello@deta.surf"
-          >reach out to us</a
-        >.
-      </p>
-    </div>
-  {/if}
 </div>
 
 <style lang="scss">
@@ -714,47 +598,6 @@
     }
   }
 
-  .quota-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    button {
-      opacity: 0.5;
-      transition: opacity 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      &:hover {
-        opacity: 1;
-      }
-    }
-  }
-
-  .explainer {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-
-    h2 {
-      color: light-dark(#1f2937, #cbd5f5);
-    }
-
-    p {
-      color: light-dark(#374151, #94a3b8);
-      line-height: 1.6;
-    }
-
-    a {
-      color: light-dark(#0284c7, #38bdf8);
-
-      &:hover {
-        color: light-dark(#0369a1, #0ea5e9);
-      }
-    }
-  }
-
   .details-text {
     display: flex;
     flex-direction: column;
@@ -772,12 +615,6 @@
         color: light-dark(#0369a1, #0ea5e9);
       }
     }
-  }
-
-  .tiers-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
   }
 
   .provider-config {
