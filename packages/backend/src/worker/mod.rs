@@ -68,18 +68,12 @@ impl PathConfig {
 }
 
 pub struct AIConfig {
-    pub api_base: String,
-    pub api_key: String,
     pub local_ai_mode: bool,
 }
 
 impl AIConfig {
-    pub fn new(api_base: String, api_key: String, local_ai_mode: bool) -> Self {
-        Self {
-            api_base,
-            api_key,
-            local_ai_mode,
-        }
+    pub fn new(local_ai_mode: bool) -> Self {
+        Self { local_ai_mode }
     }
 }
 
@@ -126,11 +120,7 @@ impl Worker {
         Ok(Self {
             db: Database::new(&db_path, config.run_migrations)?,
             kv: KeyValueStore::new(&kv_db_path)?,
-            ai: AI::new(
-                config.ai_config.api_base,
-                config.ai_config.api_key,
-                local_ai_socket_path,
-            )?,
+            ai: AI::new(local_ai_socket_path)?,
             channel: config.channel_config.channel,
             event_bus_rx: config.channel_config.event_bus_rx,
             tqueue_tx: config.channel_config.tqueue_tx,

@@ -77,39 +77,6 @@ export interface CreateAppOptions {
   inline_images?: string[]
 }
 
-export type QuotaUsageType =
-  | 'daily_input_tokens'
-  | 'daily_output_tokens'
-  | 'monthly_input_tokens'
-  | 'monthly_output_tokens'
-  | 'monthly_vision_requests'
-
-export type QuotaTier = 'premium' | 'premium_vision' | 'standard'
-
-export interface Quota {
-  tier: QuotaTier
-  usage_type: QuotaUsageType
-  used: number
-  total: number
-  updated_at: string // ISO 8601 datetime string
-  resets_at: string // ISO 8601 datetime string
-}
-
-export interface QuotasResponse {
-  quotas: Quota[]
-}
-
-export class QuotaDepletedError extends Error {
-  constructor(public quotas: Quota[]) {
-    super('LLM Quota Depleted')
-    this.name = 'QuotaDepletedError'
-    // Maintains proper stack trace for where error was thrown (only available on V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, QuotaDepletedError)
-    }
-  }
-}
-
 export class TooManyRequestsError extends Error {
   constructor() {
     super('Too many requests')
@@ -117,6 +84,16 @@ export class TooManyRequestsError extends Error {
     // Maintains proper stack trace for where error was thrown (only available on V8)
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, TooManyRequestsError)
+    }
+  }
+}
+
+export class APIKeyMissingError extends Error {
+  constructor() {
+    super('API key missing')
+    this.name = 'APIKeyMissingError'
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, APIKeyMissingError)
     }
   }
 }

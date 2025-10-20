@@ -21,6 +21,8 @@ pub enum BackendError {
     KeyValueStoreError(#[from] crate::store::kv::KeyValueStoreError),
     #[error("LLM Error: {r#type}: {message}")]
     LLMClientError { r#type: String, message: String },
+    #[error("LLM API Key Missing error")]
+    LLMClientErrorAPIKeyMissing,
     #[error("LLM Bad Request error")]
     LLMClientErrorBadRequest,
     #[error("LLM Too Many Requests error")]

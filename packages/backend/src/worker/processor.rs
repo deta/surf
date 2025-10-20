@@ -1,11 +1,8 @@
-use std::{
-    collections::HashMap,
-    sync::{atomic::AtomicBool, Arc},
-};
+use std::collections::HashMap;
 
 use super::tunnel::WorkerTunnel;
 use crate::{
-    ai::{embeddings::chunking::ContentChunker, vision::Vision},
+    ai::embeddings::chunking::ContentChunker,
     api::message::*,
     store::models::{
         CompositeResource, ResourceProcessingState, ResourceTextContentMetadata,
@@ -20,40 +17,25 @@ use serde::{Deserialize, Serialize};
 
 pub struct Processor {
     tunnel: WorkerTunnel,
-    vision: Vision,
     ocr_engine: Option<OcrEngine>,
     language: Option<String>,
-    vision_tagging_flag: Arc<AtomicBool>,
 }
 
 impl Processor {
-    pub fn new(
-        tunnel: WorkerTunnel,
-        app_path: String,
-        language: Option<String>,
-        api_key: String,
-        api_base: String,
-        vision_tagging_flag: Arc<AtomicBool>,
-    ) -> Self {
-        let vision = Vision::new(api_key, api_base);
+    pub fn new(tunnel: WorkerTunnel, app_path: String, language: Option<String>) -> Self {
         let ocr_engine = create_ocr_engine(&app_path)
             .map_err(|e| tracing::error!("failed to create the OCR engine: {e}"))
             .ok();
         Self {
             tunnel,
-            vision,
             ocr_engine,
             language,
-            vision_tagging_flag,
         }
     }
 
     pub fn run(&self) {
         while let Ok(message) = self.tunnel.tqueue_rx.recv() {
             match message {
-                ProcessorMessage::SetVisionTaggingFlag(flag) => self
-                    .vision_tagging_flag
-                    .store(flag, std::sync::atomic::Ordering::Relaxed),
                 ProcessorMessage::ProcessResource(job, resource) => {
                     let resource_id = resource.resource.id.clone();
                     self.set_processing_state(
@@ -136,29 +118,6 @@ impl Processor {
                         ),
                     );
                 }
-
-                if self
-                    .vision_tagging_flag
-                    .load(std::sync::atomic::Ordering::Relaxed)
-                {
-                    match self.process_vision_message(&resource) {
-                        Ok(ai_results) => {
-                            for (content_type, content) in ai_results {
-                                let content_len = content.len();
-                                let metadata = vec![
-                                    ResourceTextContentMetadata {
-                                        timestamp: None,
-                                        url: None,
-                                        page: None
-                                    };
-                                    content_len
-                                ];
-                                result.insert(content_type, (content, metadata));
-                            }
-                        }
-                        Err(e) => tracing::error!("error processing image with AI: {:?}", e),
-                    }
-                }
             }
             "application/pdf" => {
                 let (contents, metadatas): (Vec<String>, Vec<ResourceTextContentMetadata>) =
@@ -229,59 +188,14 @@ impl Processor {
 
         Ok(())
     }
-
-    pub fn process_vision_message(
-        &self,
-        composite_resource: &CompositeResource,
-    ) -> BackendResult<Vec<(ResourceTextContentType, Vec<String>)>> {
-        let image = std::fs::read(&composite_resource.resource.resource_path)
-            .map_err(|e| BackendError::GenericError(format!("failed to read image: {}", e)))?;
-        let output = self
-            .vision
-            .describe_image(image)
-            .map_err(|e| BackendError::GenericError(format!("failed to describe image: {}", e)))?;
-
-        let tags: Vec<String> = output
-            .tags_result
-            .values
-            .iter()
-            .map(|tag| tag.name.clone())
-            .collect();
-        let captions: Vec<String> = output
-            .dense_captions_result
-            .values
-            .iter()
-            .map(|caption| caption.text.clone())
-            .collect();
-
-        let mut result = Vec::new();
-        if !tags.is_empty() {
-            result.push((ResourceTextContentType::ImageTags, tags));
-        }
-        if !captions.is_empty() {
-            result.push((ResourceTextContentType::ImageCaptions, captions));
-        }
-
-        Ok(result)
-    }
 }
 
 pub fn processor_thread_entry_point(
     tunnel: WorkerTunnel,
     app_path: String,
     language: Option<String>,
-    api_key: String,
-    api_base: String,
-    vision_tagging_flag: Arc<AtomicBool>,
 ) {
-    let processor = Processor::new(
-        tunnel,
-        app_path,
-        language,
-        api_key,
-        api_base,
-        vision_tagging_flag,
-    );
+    let processor = Processor::new(tunnel, app_path, language);
     processor.run();
 }
 

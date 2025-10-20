@@ -15,7 +15,6 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_get_chat_data_source", js_get_ai_chat_data_source)?;
     cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
     cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
-    cx.export_function("js__ai_get_quotas", js_get_quotas)?;
     cx.export_function("js__ai_search_chat_resources", js_search_chat_resources)?;
     Ok(())
 }
@@ -284,15 +283,6 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         }),
         deferred,
     );
-
-    Ok(promise)
-}
-
-fn js_get_quotas(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(WorkerMessage::MiscMessage(MiscMessage::GetQuotas), deferred);
 
     Ok(promise)
 }

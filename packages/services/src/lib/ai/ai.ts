@@ -3,13 +3,7 @@ import type { ConfigService } from '../config'
 import { ResourceManager } from '../resources'
 import type { SFFS } from '../sffs'
 
-import {
-  QuotaDepletedError,
-  type App,
-  type Message,
-  type Model as ModelBackend,
-  type Quota
-} from '@deta/backend/types'
+import { type App, type Message, type Model as ModelBackend } from '@deta/backend/types'
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { appendURLPath, generateHash, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import {
@@ -24,7 +18,7 @@ import {
   OPEN_AI_PATH_SUFFIX,
   type Model
 } from '@deta/types/src/ai.types'
-import { handleQuotaDepletedError, parseAIError } from './helpers'
+import { parseAIError } from './helpers'
 import { useTabs, type TabsService } from '../tabs'
 import { AIChat, type ChatCompletionResponse, type ChatPrompt } from './chat'
 import { type ContextItem, ContextManager, ContextService } from './contextManager'
@@ -496,25 +490,6 @@ export class AIService {
         error: null
       } as ChatCompletionResponse
     } catch (e) {
-      if (e instanceof QuotaDepletedError) {
-        const res = handleQuotaDepletedError(e)
-        this.log.error('Quota depleted', res)
-        if (
-          options?.quotaErrorRetry === true &&
-          res.exceededTiers.length === 1 &&
-          res.exceededTiers.includes(options.tier)
-        ) {
-          const tier =
-            options.tier === ModelTiers.Standard ? ModelTiers.Premium : ModelTiers.Standard
-          this.log.debug('Retrying with different model tier', tier)
-          return this.createChatCompletion(userPrompt, systemPrompt, {
-            ...options,
-            tier: tier,
-            quotaErrorRetry: false
-          })
-        }
-      }
-
       const parsedError = parseAIError(e)
       this.log.error('Parsed chat completion error', parsedError)
 
@@ -589,20 +564,6 @@ export class AIService {
       })
     } catch (e) {
       this.log.error('Error getting resources via prompt', e)
-      if (e instanceof QuotaDepletedError) {
-        const res = handleQuotaDepletedError(e)
-        this.log.error('Quota depleted', res)
-        if (
-          !isRetry &&
-          tier === ModelTiers.Premium &&
-          res.exceededTiers.length === 1 &&
-          res.exceededTiers.includes(ModelTiers.Premium)
-        ) {
-          this.log.debug('Retrying with standard model')
-          return this.getResourcesViaPrompt(prompt, { ...opts, tier: ModelTiers.Standard }, true)
-        }
-      }
-
       throw e
     }
   }
@@ -815,13 +776,6 @@ export class AIService {
     this.log.debug('Cleaned up title completion', completion)
 
     return completion
-  }
-
-  async getQuotas(): Promise<Quota[]> {
-    this.log.debug('getting quotas')
-    const quotas = await this.sffs.getQuotas()
-    this.log.debug('got quotas', quotas)
-    return quotas
   }
 
   onDestroy() {

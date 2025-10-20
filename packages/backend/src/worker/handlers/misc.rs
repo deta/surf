@@ -2,12 +2,12 @@ use crate::{
     ai::{
         llm::{
             client::Model,
-            models::{Message, MessageContent, Quota},
+            models::{Message, MessageContent},
         },
         youtube::YoutubeTranscript,
         {ChatInput, ChatResult, DocsSimilarity},
     },
-    api::message::{MiscMessage, ProcessorMessage, TunnelOneshot},
+    api::message::{MiscMessage, TunnelOneshot},
     store::{
         db::Database,
         models::{
@@ -570,10 +570,6 @@ impl Worker {
         self.db.get_resource_text_content(&source_id)
     }
 
-    pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
-        self.ai.get_quotas()
-    }
-
     pub fn search_chat_resources(
         &mut self,
         query: String,
@@ -853,17 +849,6 @@ pub fn handle_misc_message(
             // TODO: implement migration handling
         }
         MiscMessage::SendEventBusMessage(message) => worker.send_event_bus_message(message),
-        MiscMessage::GetQuotas => {
-            let result = worker.get_quotas();
-            send_worker_response(&mut worker.channel, oneshot, result)
-        }
-        MiscMessage::SetVisionTaggingFlag(bool) => {
-            let result = worker
-                .tqueue_tx
-                .try_send(ProcessorMessage::SetVisionTaggingFlag(bool))
-                .map_err(|err| BackendError::GenericError(format!("{err}")));
-            send_worker_response(&mut worker.channel, oneshot, result)
-        }
         MiscMessage::SetSurfBackendHealth(state) => {
             worker.surf_backend_health.set_health(state);
             send_worker_response(&mut worker.channel, oneshot, Ok(()));

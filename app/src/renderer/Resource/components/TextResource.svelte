@@ -1592,9 +1592,7 @@
       if (response.error) {
         log.error('Error generating AI output', response.error)
 
-        if (response.error.type.startsWith(PageChatMessageSentEventError.QuotaExceeded)) {
-          toasts.error(response.error.message)
-        } else if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
+        if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
           toasts.error('Too many requests, please try again later')
         } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
           toasts.error(

@@ -11,8 +11,6 @@ import { ContextItemBase } from './base'
 import { ModelTiers } from '@deta/types/src/ai.types'
 import type { ChatPrompt } from '../chat'
 import { WebParser, type ResourceContent } from '@deta/web-parser'
-import { QuotaDepletedError } from '@deta/backend/types'
-import { handleQuotaDepletedError } from '../helpers'
 import { isGeneratedResource } from '@deta/services/resources'
 import { TabItem } from '../../tabs'
 
@@ -299,23 +297,6 @@ export class ContextItemResource extends ContextItemBase {
         resolve(prompts)
       } catch (e) {
         this.log.error('Error generating prompts', e)
-        if (e instanceof QuotaDepletedError) {
-          const res = handleQuotaDepletedError(e)
-          this.log.error('Quota depleted', res)
-          if (
-            !isRetry &&
-            res.exceededTiers.length === 1 &&
-            res.exceededTiers.includes(ModelTiers.Standard)
-          ) {
-            this.log.debug('Retrying with premium model')
-            const newTry = await this.generatePrompts(ModelTiers.Premium, true)
-            resolve(newTry)
-            return
-          }
-        } else {
-          this.log.error('Error generating prompts', e)
-        }
-
         resolve([])
       } finally {
         this.generatingPrompts.set(false)

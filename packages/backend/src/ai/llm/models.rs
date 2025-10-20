@@ -153,45 +153,6 @@ pub struct ChatCompletionMessage {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum QuotaUsageType {
-    DailyInputTokens,
-    DailyOutputTokens,
-    MonthlyInputTokens,
-    MonthlyOutputTokens,
-    MonthlyVisionRequests,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum QuotaTier {
-    Premium,
-    PremiumVision,
-    Standard,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Quota {
-    pub tier: QuotaTier,
-    pub usage_type: QuotaUsageType,
-    pub used: u64,
-    pub total: u64,
-    pub updated_at: String,
-    pub resets_at: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct QuotaResponse {
-    pub quotas: Vec<Quota>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct QuotasDepletedResponse {
-    pub detail: String,
-    pub quotas: Vec<Quota>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct BadRequestResponse {
     pub detail: String,
 }

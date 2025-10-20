@@ -1,6 +1,5 @@
 pub mod embeddings;
 pub mod llm;
-pub mod vision;
 pub mod youtube;
 
 #[cfg(feature = "wip")]
@@ -17,7 +16,7 @@ use std::str::FromStr;
 use crate::ai::embeddings::chunking::ContentChunker;
 use crate::ai::llm::client;
 use crate::ai::llm::client::{ChatCompletionStream, Model};
-use crate::ai::llm::models::{ContextMessage, Message, MessageContent, MessageRole, Quota};
+use crate::ai::llm::models::{ContextMessage, Message, MessageContent, MessageRole};
 use crate::ai::local::client::{
     DocsSimilarityRequest, FilteredSearchRequest, LocalAIClient, UpsertEmbeddingsRequest,
 };
@@ -97,13 +96,9 @@ fn human_readable_current_time() -> String {
 }
 
 impl AI {
-    pub fn new(
-        api_base: String,
-        api_key: String,
-        local_ai_socket_path: String,
-    ) -> BackendResult<Self> {
+    pub fn new(local_ai_socket_path: String) -> BackendResult<Self> {
         Ok(Self {
-            client: client::LLMClient::new(api_base, api_key)?,
+            client: client::LLMClient::new()?,
             chunker: ContentChunker::new(2000, 1),
             local_ai_client: LocalAIClient::new(local_ai_socket_path),
         })
@@ -509,9 +504,5 @@ impl AI {
         }
         self.client
             .create_streaming_chat_completion(messages, model, custom_key, None)
-    }
-
-    pub fn get_quotas(&self) -> BackendResult<Vec<Quota>> {
-        self.client.get_quotas()
     }
 }
