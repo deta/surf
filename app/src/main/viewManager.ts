@@ -425,6 +425,7 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
     const config = getUserConfig()
     const initialColorScheme = config.settings?.app_style || 'light'
+    // Set nativeTheme to allow websites to detect dark mode preference via prefers-color-scheme
     nativeTheme.themeSource = initialColorScheme
 
     this.window.on('close', () => {
@@ -448,9 +449,13 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
   }
 
   applyColorSchemeToView(view: WCView, colorScheme: 'light' | 'dark') {
-    if (view.wcv && !view.wcv.webContents.isDestroyed()) {
-      // Wait for dom-ready before injecting color scheme
-      const injectColorScheme = () => {
+    // This method is now only used for overlay views
+    // Regular views get color scheme injection via attachViewIPCEvents dom-ready handler
+    if (view.wcv && !view.wcv.webContents.isDestroyed() && view.isOverlay) {
+      const url = view.wcv.webContents.getURL()
+      const isSurfUrl = checkIfSurfProtocolUrl(url) || url.startsWith('surf-internal://')
+
+      if (isSurfUrl) {
         view.wcv.webContents
           .executeJavaScript(
             `
@@ -461,44 +466,38 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         `
           )
           .catch((err) => {
-            log.warn('[main] Failed to inject color scheme into view:', view.id, err)
+            log.warn('[main] Failed to inject color scheme into overlay view:', view.id, err)
           })
       }
-
-      // Try to inject immediately if already loaded
-      if (!view.wcv.webContents.isLoading()) {
-        injectColorScheme()
-      }
-
-      // Also inject on dom-ready to ensure it's applied
-      // Note: attachEventListener automatically manages cleanup via view.eventListeners
-      view.attachEventListener('dom-ready', () => {
-        injectColorScheme()
-      })
     }
   }
 
   updateAllViewsColorScheme(colorScheme: 'light' | 'dark') {
     log.log('[main] Updating all WebContentsView color schemes to:', colorScheme)
 
-    // Update nativeTheme for Electron's internal handling
+    // Set nativeTheme to allow websites to detect dark mode preference via prefers-color-scheme
     nativeTheme.themeSource = colorScheme
 
-    // Inject color scheme into all existing views
+    // Inject color scheme into all existing views (only for internal surf:// URLs)
     this.views.forEach((view) => {
       if (view.wcv && !view.wcv.webContents.isDestroyed()) {
-        view.wcv.webContents
-          .executeJavaScript(
-            `
-          if (document.documentElement) {
-            document.documentElement.dataset.colorScheme = '${colorScheme}';
-            document.documentElement.style.colorScheme = '${colorScheme}';
-          }
-        `
-          )
-          .catch((err) => {
-            log.warn('[main] Failed to inject color scheme into view:', view.id, err)
-          })
+        const url = view.wcv.webContents.getURL()
+        const isSurfUrl = checkIfSurfProtocolUrl(url) || url.startsWith('surf-internal://')
+
+        if (isSurfUrl) {
+          view.wcv.webContents
+            .executeJavaScript(
+              `
+            if (document.documentElement) {
+              document.documentElement.dataset.colorScheme = '${colorScheme}';
+              document.documentElement.style.colorScheme = '${colorScheme}';
+            }
+          `
+            )
+            .catch((err) => {
+              log.warn('[main] Failed to inject color scheme into view:', view.id, err)
+            })
+        }
       }
     })
   }
@@ -957,21 +956,28 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
 
       this.setupMessagePort(view)
 
-      // Inject color scheme into newly created view
-      const config = getUserConfig()
-      const colorScheme = config.settings?.app_style || 'light'
-      view.wcv.webContents
-        .executeJavaScript(
-          `
-        if (document.documentElement) {
-          document.documentElement.dataset.colorScheme = '${colorScheme}';
-          document.documentElement.style.colorScheme = '${colorScheme}';
-        }
-      `
-        )
-        .catch((err) => {
-          log.warn('[main] Failed to inject initial color scheme into view:', view.id, err)
-        })
+      // Inject color scheme into newly created view (only for internal surf:// URLs)
+      // This is the ONLY place where we inject color scheme for regular views
+      const url = view.wcv.webContents.getURL()
+      const isSurfUrl = checkIfSurfProtocolUrl(url) || url.startsWith('surf-internal://')
+
+      if (isSurfUrl) {
+        const config = getUserConfig()
+        const colorScheme = config.settings?.app_style || 'light'
+
+        view.wcv.webContents
+          .executeJavaScript(
+            `
+          if (document.documentElement) {
+            document.documentElement.dataset.colorScheme = '${colorScheme}';
+            document.documentElement.style.colorScheme = '${colorScheme}';
+          }
+        `
+          )
+          .catch((err) => {
+            log.warn('[main] Failed to inject color scheme into view:', view.id, err)
+          })
+      }
     })
 
     view.attachEventListener(
