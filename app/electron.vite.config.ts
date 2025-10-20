@@ -66,7 +66,8 @@ export default defineConfig({
       }),
       replace({
         'doc.documentElement.style': '{}'
-      })
+      }),
+      createLicensePlugin('preload')
     ],
     build: {
       rollupOptions: {
