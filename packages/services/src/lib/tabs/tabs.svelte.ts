@@ -845,6 +845,11 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
     return tab
   }
 
+  findTabByURL(url: string): TabItem | null {
+    const tab = this.tabs.find((t) => t.view.urlValue === url) || null
+    return tab
+  }
+
   onDestroy() {
     this.log.debug('Destroying TabsService')
     this.unsubs.forEach((unsub) => unsub())

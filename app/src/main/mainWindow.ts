@@ -240,7 +240,18 @@ export function createWindow() {
       if (params.page) searchParams.set('page', params.page.toString())
       if (params.filename) searchParams.set('filename', params.filename)
 
-      details.webContents?.loadURL(`${PDFViewerEntryPoint}?${searchParams}`)
+      if (!details.webContentsId) {
+        log.error('No webContentsId for PDF viewer load request')
+        return
+      }
+
+      const url = `${PDFViewerEntryPoint}?${searchParams}`
+      const view = viewManager?.getViewByWebContentsId(details.webContentsId)
+      if (view) {
+        view.loadURL(url)
+      } else {
+        details.webContents?.loadURL(url)
+      }
     }
 
     const contentTypeHeader = getHeaderValue('content-type')

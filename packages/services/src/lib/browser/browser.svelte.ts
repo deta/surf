@@ -195,18 +195,31 @@ export class BrowserService {
       if (resourceSource?.resourceId) {
         resourceId = resourceSource.resourceId
       }
+
       if (resourceSource?.source?.metadata?.url) {
         url = resourceSource.source.metadata.url
       }
+
       if (data.preview === 'auto') {
         data.preview = await this.getViewOpenTarget(viewId)
       }
+
       this.log.debug('Determined citation open target:', data.preview)
 
       if (resourceId) {
         const resource = await this.resourceManager.getResource(resourceId)
         if (resource?.type === ResourceTypes.PDF) {
-          url = `surf://surf/resource/${resource.id}?raw`
+          const pdfUrl = `surf://surf/resource/${resource.id}?raw`
+          if (resource.url) {
+            const tab = this.tabsManager.findTabByURL(resource.url)
+            if (tab) {
+              url = resource.url
+            } else {
+              url = pdfUrl
+            }
+          } else {
+            url = pdfUrl
+          }
         } else if (resource?.url) {
           url = resource.url
         } else if (resource) {

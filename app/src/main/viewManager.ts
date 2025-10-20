@@ -187,8 +187,8 @@ export class WCView {
       return
     }
 
-    const newIsSurfUrl = checkIfSurfProtocolUrl(newUrl)
-    const oldIsSurfUrl = checkIfSurfProtocolUrl(oldUrl)
+    const newIsSurfUrl = checkIfSurfProtocolUrl(newUrl) && !newUrl.startsWith(PDFViewerEntryPoint)
+    const oldIsSurfUrl = checkIfSurfProtocolUrl(oldUrl) && !oldUrl.startsWith(PDFViewerEntryPoint)
 
     // if we load a surf:// URL, we need to re-create the WebContentsView with a different preload
     if (newIsSurfUrl && !oldIsSurfUrl) {
@@ -900,6 +900,15 @@ export class WCViewManager extends EventEmitterBase<WCViewManagerEvents> {
         payload: { title: view.contentData.title, explicitSet: false }
       })
     }
+  }
+
+  getViewByWebContentsId(webContentsId: number): WCView | null {
+    for (const view of this.views.values()) {
+      if (view.wcv.webContents.id === webContentsId) {
+        return view
+      }
+    }
+    return null
   }
 
   attachViewIPCEvents(view: WCView) {
