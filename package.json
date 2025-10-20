@@ -49,5 +49,8 @@
       "electron-builder",
       "electron-vite"
     ]
+  },
+  "resolutions": {
+    "cookie": "^0.7.0"
   }
 }
