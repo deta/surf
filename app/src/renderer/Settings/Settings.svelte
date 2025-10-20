@@ -20,7 +20,6 @@
   import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
   import { openDialog, prepareContextMenu } from '@deta/ui'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
-  import { CHANGELOG_URL, SHORTCUTS_PAGE_URL } from '@deta/utils/system'
   import LayoutPicker from '../components/LayoutPicker.svelte'
 
   // let error = ''
