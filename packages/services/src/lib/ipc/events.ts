@@ -130,7 +130,6 @@ const IPC_EVENTS = ipcService.registerEvents({
   updateUserConfig: ipcService.addEvent<Partial<UserConfig>>('store-user-config'),
   userConfigSettingsChange: ipcService.addEvent<UserSettings>('user-config-settings-change'),
   updateInitializedTabs: ipcService.addEvent<boolean>('update-initialized-tabs'),
-  checkForUpdates: ipcService.addEvent<void>('check-for-updates'),
   useAsDefaultBrowser: ipcService.addEvent<void>('use-as-default-browser'),
   setPrompts: ipcService.addEvent<EditablePrompt[]>('set-prompts'),
   requestPrompts: ipcService.addEvent<void>('request-prompts'),
