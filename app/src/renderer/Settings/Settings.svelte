@@ -56,11 +56,6 @@
     version = info.version
   }
 
-  const checkForUpdates = async () => {
-    // @ts-ignore
-    await window.api.checkForUpdates()
-  }
-
   const useAsDefaultBrowser = async () => {
     // @ts-ignore
     await window.api.useAsDefaultBrowser()
@@ -305,10 +300,6 @@
           <h1>Surf</h1>
 
           <span class="version-pill">{version}</span>
-        </div>
-
-        <div class="links-wrapper">
-          <button on:click={checkForUpdates}>Check for Updates</button>
         </div>
 
         {#if !$isDefaultBrowser}

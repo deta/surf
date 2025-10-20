@@ -690,10 +690,6 @@ const api = {
     return new Promise((_, reject) => reject())
   },
 
-  checkForUpdates: () => {
-    IPC_EVENTS_RENDERER.checkForUpdates.send()
-  },
-
   useAsDefaultBrowser: () => {
     IPC_EVENTS_RENDERER.useAsDefaultBrowser.send()
   },
