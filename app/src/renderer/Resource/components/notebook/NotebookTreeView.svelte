@@ -93,13 +93,14 @@
           type: 'action',
           text: 'Open',
           icon: 'eye',
-          action: () => openNotebook('drafts', { target: 'auto' })
+          action: () => openNotebook('drafts', { target: 'auto', from_notebook_tree_sidebar: true })
         },
         {
           type: 'action',
           text: 'Open in Background',
           icon: 'arrow.up.right',
-          action: () => openNotebook('drafts', { target: 'background_tab' })
+          action: () =>
+            openNotebook('drafts', { target: 'background_tab', from_notebook_tree_sidebar: true })
         }
       ]
     }
@@ -111,13 +112,15 @@
         type: 'action',
         text: 'Open',
         icon: 'eye',
-        action: () => openNotebook(notebook.id, { target: 'auto' })
+        action: () =>
+          openNotebook(notebook.id, { target: 'auto', from_notebook_tree_sidebar: true })
       },
       {
         type: 'action',
         text: 'Open in Background',
         icon: 'arrow.up.right',
-        action: () => openNotebook(notebook.id, { target: 'background_tab' })
+        action: () =>
+          openNotebook(notebook.id, { target: 'background_tab', from_notebook_tree_sidebar: true })
       },
       {
         type: 'action',
@@ -158,10 +161,15 @@
     return getResourceCtxItems({
       resource,
       sortedNotebooks: notebookManager.sortedNotebooks,
-      onOpen: (target: OpenTarget) => openResource(entryId, { target, offline: false }),
+      onOpen: (target: OpenTarget) =>
+        openResource(entryId, { target, offline: false, from_notebook_tree_sidebar: true }),
       onAddToNotebook: (notebookId) => handleAddToNotebook(notebookId, resource.id),
       onOpenOffline: (resourceId: string) =>
-        openResource(resourceId, { offline: true, target: 'tab' }),
+        openResource(resourceId, {
+          offline: true,
+          target: 'tab',
+          from_notebook_tree_sidebar: true
+        }),
       onDeleteResource: () => handleDeleteResource(resource),
       onRemove:
         notebook?.id && notebook.id !== 'drafts'

@@ -9,6 +9,7 @@
   export let value: string | number | boolean
   export let placeholder: string = ''
   export let infoText: string | undefined = undefined
+  export let infoLink: string | undefined = undefined
   export let type: 'text' | 'number' | 'password' | 'checkbox' = 'text'
 
   const dispatch = createEventDispatcher<{ change: string; save: string | boolean }>()
@@ -36,7 +37,15 @@
   <div class="form-label">
     <label>{label}</label>
 
-    {#if infoText}
+    {#if infoLink}
+      <a href={infoLink} target="_blank" rel="noopener noreferrer" class="info">
+        {#if infoText}
+          <div>{infoText}</div>
+        {/if}
+
+        <Icon name="link.external" size="16px" />
+      </a>
+    {:else if infoText}
       <div class="info" use:tooltip={{ text: infoText }}>
         <Icon name="info" size="16px" />
       </div>
@@ -72,6 +81,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 0.25rem;
 
       transition: opacity 0.2s ease-in-out;
       opacity: 0.75;

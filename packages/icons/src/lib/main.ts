@@ -147,6 +147,10 @@ import NotebookSaved from './Icons/NotebookSaved.svelte'
 import Heart from './Icons/Heart.svelte'
 import HeartOff from './Icons/HeartOff.svelte'
 import Book from './Icons/Book.svelte'
+import LinkExternal from './Icons/LinkExternal.svelte'
+import Ollama from './Icons/Ollama.svelte'
+import OpenRouter from './Icons/OpenRouter.svelte'
+import HuggingFace from './Icons/HuggingFace.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -181,6 +185,7 @@ export const icons = {
   h3: H2,
   'help.circle': HelpCircle,
   link: Link,
+  'link.external': LinkExternal,
   paragraph: Paragraph,
   list: List,
   'list-numbered': ListNumbered,
@@ -301,7 +306,10 @@ export const icons = {
   'notebook.saved': NotebookSaved,
   heart: Heart,
   'heart.off': HeartOff,
-  book: Book
+  book: Book,
+  ollama: Ollama,
+  openrouter: OpenRouter,
+  huggingface: HuggingFace
 }
 
 export type Icons = keyof typeof icons
@@ -458,5 +466,9 @@ export {
   NotebookSaved,
   Heart,
   HeartOff,
-  Book
+  Book,
+  LinkExternal,
+  Ollama,
+  OpenRouter,
+  HuggingFace
 }

@@ -12,7 +12,10 @@
         disabled = false,
         side = 'bottom',
         align = 'start',
-        children
+        subSide = 'right',
+        subAlign = 'start',
+        children,
+        open = $bindable(false)
     }: {
         triggerText?: string,
         triggerIcon?: string,
@@ -20,7 +23,10 @@
         disabled?: boolean,
         side?: 'top' | 'right' | 'bottom' | 'left',
         align?: 'start' | 'center' | 'end',
+        subSide?: 'top' | 'right' | 'bottom' | 'left',
+        subAlign?: 'start' | 'center' | 'end',
         children?: Snippet
+        open?: boolean
     } = $props()
 
     const handleItemClick = (item: DropdownItemAction) => {
@@ -61,7 +67,7 @@
               <DynamicIcon name="chevron.right" size="12px" />
           </div>
       </DropdownMenu.SubTrigger>
-      <DropdownMenu.SubContent class="tools-dropdown" side="right" align="start" sideOffset={5}>
+      <DropdownMenu.SubContent class="tools-dropdown" side={subSide} align={subAlign} sideOffset={5}>
         {#each item.subItems as subItem (subItem.id)}
           {@render DropdownItem(subItem)}
         {/each}
@@ -116,7 +122,7 @@
   {/if}
 {/snippet}
 
-  <DropdownMenu.Root>
+  <DropdownMenu.Root bind:open={open}>
     <DropdownMenu.Trigger {disabled}>
         {#if children}
             {@render children()}
@@ -129,7 +135,7 @@
             </div>
         {/if}
     </DropdownMenu.Trigger>
-    <DropdownMenu.Content class="tools-dropdown" side={side} align={align} sideOffset={5}>
+    <DropdownMenu.Content class="tools-dropdown" side={side} align={align} sideOffset={5} zI>
       {#each items as item, idx (item?.id || `${item.type}-${idx}`)}
         {@render DropdownItem(item)}
       {/each}
@@ -175,6 +181,7 @@
       light-dark(var(--shadow-soft, rgba(0, 0, 0, 0.1)), var(--shadow-soft-dark, rgba(15, 23, 42, 0.45)));
     max-width: 300px;
     outline: none;
+    z-index: 1000;
 
     &:focus, &:active {
       outline: none;

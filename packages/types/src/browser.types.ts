@@ -93,6 +93,7 @@ export type OpenResourceOptions = {
   resourceId: string
   target?: OpenTarget
   offline?: boolean
+  from_notebook_tree_sidebar?: boolean
 }
 
 export type OpenNotebookOptions = {

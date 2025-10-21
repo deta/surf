@@ -59,7 +59,16 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
   })
 
   settingsWindow.webContents.setWindowOpenHandler((details) => {
-    const ALLOWED_DOMAINS = ['https://deta.surf', 'https://deta.notion.site']
+    const ALLOWED_DOMAINS = [
+      'https://deta.surf',
+      'https://deta.notion.site',
+      'https://github.com',
+      'https://ollama.com',
+      'https://openrouter.ai',
+      'https://platform.openai.com',
+      'https://console.anthropic.com',
+      'https://aistudio.google.com'
+    ]
 
     let isAllowedUrl = ALLOWED_DOMAINS.some((domain) => details.url.startsWith(domain))
     if (isAllowedUrl) {

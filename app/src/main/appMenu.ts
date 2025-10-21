@@ -3,7 +3,6 @@ import { isMac, isWindows, isLinux } from '@deta/utils/system'
 import { ipcSenders } from './ipcHandlers'
 import { toggleAdblocker } from './adblocker'
 import { join } from 'path'
-import { isAppSetup, isDefaultBrowser } from './utils'
 import { createSettingsWindow } from './settingsWindow'
 import { updateUserConfig, getUserConfig } from './config'
 import { execFile } from 'child_process'
@@ -128,10 +127,6 @@ class AppMenu {
       },
       { type: 'separator' },
       this.createDataLocationMenuItem(),
-      {
-        label: 'Use as Default Browser',
-        click: useAsDefaultBrowser
-      },
       // {
       //   label: 'Invite Friends',
       //   click: () => ipcSenders.openInvitePage()
@@ -392,45 +387,4 @@ const checkForChangeWithTimeout = async (
       }
     }, interval)
   })
-}
-
-const setAsDefaultBrowserWindows = async (): Promise<boolean> => {
-  try {
-    const command = 'start ms-settings:defaultapps?registeredAppMachine=Surf'
-    await execFileAsync('cmd', ['/c', command])
-    return await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)
-  } catch (error) {
-    log.error('Error setting as default browser on Windows:', error)
-    return false
-  }
-}
-
-const setAsDefaultBrowserMac = async (): Promise<boolean> => {
-  try {
-    app.setAsDefaultProtocolClient('http')
-    app.setAsDefaultProtocolClient('https')
-    return await checkForChangeWithTimeout(isDefaultBrowser, 1000, 10000)
-  } catch (error) {
-    log.error('Error setting as default browser on macOS:', error)
-    return false
-  }
-}
-
-export const useAsDefaultBrowser = async (): Promise<void> => {
-  if (!isAppSetup) {
-    log.warn('App is not setup, not setting as default browser')
-    return
-  }
-
-  let isSet = false
-
-  if (isWindows()) {
-    isSet = await setAsDefaultBrowserWindows()
-  } else if (isMac()) {
-    isSet = await setAsDefaultBrowserMac()
-  } else if (isLinux()) {
-    isSet = false
-  }
-
-  updateUserConfig({ defaultBrowser: isSet })
 }

@@ -13,7 +13,7 @@ import {
   UserSettings
 } from '@deta/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
-import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
+import { updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
@@ -269,12 +269,6 @@ function setupIpcHandlers(backendRootPath: string) {
         reject(new Error('Request interception timed out'))
       }, 20000)
     })
-  })
-
-  IPC_EVENTS_MAIN.useAsDefaultBrowser.on((event) => {
-    if (!validateIPCSender(event)) return
-
-    return useAsDefaultBrowser()
   })
 
   IPC_EVENTS_MAIN.isDefaultBrowser.handle((event) => {

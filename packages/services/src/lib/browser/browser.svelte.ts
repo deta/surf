@@ -76,13 +76,17 @@ export class BrowserService {
         this.handleActiveTabChange(tab)
       }),
 
-      this.messagePort.openResource.on(async ({ resourceId, target, offline }, viewId) => {
-        if (target === 'auto') {
-          target = await this.getViewOpenTarget(viewId, { rerouteOnboarding: true })
+      this.messagePort.openResource.on(
+        async ({ resourceId, target, offline, from_notebook_tree_sidebar }, viewId) => {
+          if (target === 'auto') {
+            target = await this.getViewOpenTarget(viewId, {
+              rerouteOnboarding: true,
+              from_notebook_tree_sidebar
+            })
+          }
+          this.openResource(resourceId, { target, offline })
         }
-
-        this.openResource(resourceId, { target, offline })
-      }),
+      ),
 
       this.messagePort.openNotebook.on(
         async ({ notebookId, target, from_notebook_tree_sidebar }, viewId) => {
@@ -886,6 +890,10 @@ export class BrowserService {
         }
         return 'tab'
       } else if (viewLocation === 'tab') {
+        if (opts.from_notebook_tree_sidebar) {
+          return 'active_tab'
+        }
+
         // when you click a resource link in the onboarding note we want to open it in the same tab
         if (opts.rerouteOnboarding) {
           const resource = await this.resourceManager.getResource(viewTypeData.id || '')
@@ -894,9 +902,6 @@ export class BrowserService {
           ) {
             return 'active_tab'
           }
-        }
-        if (opts.from_notebook_tree_sidebar) {
-          return 'active_tab'
         }
 
         return 'sidebar'

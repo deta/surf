@@ -16,6 +16,9 @@
   import { derived, writable, type Writable } from 'svelte/store'
   import {
     BUILT_IN_MODELS,
+    BUILT_IN_PROVIDER_DEFINITIONS,
+    CUSTOM_MODEL_DEFINITIONS,
+    CUSTOM_MODELS,
     ModelTiers,
     OPEN_AI_PATH_SUFFIX,
     Provider,
@@ -30,15 +33,17 @@
     type SelectItem
   } from '@deta/ui/legacy'
   import { Icon } from '@deta/icons'
-  import { appendURLPath, generateID } from '@deta/utils'
+  import { appendURLPath, conditionalArrayItem, generateID, truncate } from '@deta/utils'
   import { createEventDispatcher, onMount } from 'svelte'
-  import { contextMenu, type CtxItem } from '@deta/ui'
+  import { Button, Dropdown, type DropdownItem, openDialog } from '@deta/ui'
+  import { SFFS } from '@deta/services'
+  import type { Quota } from '@deta/backend/types'
+  import TierQuota from '../components/TierQuota.svelte'
 
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
 
   const AI_MODEL_DOCS = 'https://github.com/deta/surf/blob/main/docs/AI_MODELS.md'
-
   const dispatch = createEventDispatcher<{
     'select-model': string
     'update-model': ModelUpdate
@@ -131,7 +136,7 @@
       )
     )
 
-    return items.map((item) => {
+    const parsedItems = items.map((item) => {
       const matchingModel = allModels.find((model) => {
         const hasSiblings = allModels.filter((m) => m.provider === item).length > 1
 
@@ -154,9 +159,51 @@
         id: provider.id,
         label: provider.label,
         icon: provider.icon,
-        data: provider
-      } as SelectItem
+        data: provider,
+        action: () => {
+          handleSelectedProviderChange(provider.id)
+        }
+      } satisfies DropdownItem
     })
+
+    const builtInItems = parsedItems.filter((item) => item.data.type === 'built-in')
+    const customItems = parsedItems.filter((item) => item.data.type === 'custom')
+
+    return [
+      { type: 'title', label: 'Built-In' },
+      ...builtInItems,
+
+      ...conditionalArrayItem<DropdownItem>(customItems.length > 0, [
+        { type: 'title', label: 'Custom' },
+        ...customItems
+      ]),
+      { type: 'separator' },
+      {
+        id: 'add-provider',
+        label: 'New Provider',
+        icon: 'add',
+        subItems: [
+          ...Object.values(CUSTOM_MODEL_DEFINITIONS).map<DropdownItem>((def) => ({
+            id: def.id,
+            label: def.label,
+            icon: def.icon,
+            action: () => {
+              modelSelectorOpen.set(false)
+              handleCreateNewModel(def.id)
+            }
+          })),
+          {
+            id: 'custom',
+            label: 'Custom',
+            icon: 'sparkles',
+            action: () => {
+              modelSelectorOpen.set(false)
+              handleCreateNewModel('custom')
+            }
+          }
+        ]
+      }
+    ] satisfies DropdownItem[]
   })
 
   const updateModel = (id: string, updates: Partial<Model>) => {
@@ -168,21 +215,36 @@
     dispatch('select-model', id)
   }
 
-  const handleCreateNewModel = async () => {
-    const newCustomModel = {
+  const handleCreateNewModel = async (type: 'custom' | CUSTOM_MODELS) => {
+    let newCustomModel = {
       id: generateID(),
       provider: Provider.Custom,
       tier: ModelTiers.Premium,
-      label: 'Custom',
-      icon: 'sparkles',
-      custom_model_name: '',
       custom_key: '',
       max_tokens: 128_000,
       vision: false,
       supports_json_format: false,
-      provider_url: '',
       skip_append_open_ai_suffix: true
     } as Model
+
+    if (type === 'custom') {
+      newCustomModel = {
+        ...newCustomModel,
+        label: 'Custom',
+        icon: 'sparkles',
+        custom_model_name: '',
+        provider_url: ''
+      }
+    } else {
+      const matchingConfig = CUSTOM_MODEL_DEFINITIONS[type]
+      newCustomModel = {
+        ...newCustomModel,
+        label: matchingConfig.label,
+        icon: matchingConfig.icon,
+        custom_model_name: matchingConfig.model_name,
+        provider_url: matchingConfig.provider_url
+      }
+    }
 
     const provider = modelToProvider(newCustomModel)
     selectedProvider.set(provider)
@@ -191,14 +253,8 @@
     dispatch('created-model', newCustomModel)
   }
 
-  const handleSelectedProviderChange = (event: CustomEvent<string>) => {
-    if (event.detail === 'configure') {
-      modelSelectorOpen.set(false)
-      handleCreateNewModel()
-      return
-    }
-
-    const providerItem = $providerItems.find((item) => item.id === event.detail)
+  const handleSelectedProviderChange = (id: string) => {
+    const providerItem = $providerItems.find((item) => item.id === id)
     if (providerItem) {
       selectedProvider.set(providerItem.data)
     }
@@ -228,46 +284,29 @@
     updateModel(model.id, changes)
   }
 
-  const getProviderItemContextMenu = (item: SelectItem) => {
-    if (!item) return []
+  const handleDeleteModel = async () => {
+    const model = $selectedProvider.model
+    if (!model) return
 
-    const model = providerToModel(item.id)
-    if (!model) return []
+    const { closeType: confirmed } = await openDialog({
+      icon: 'trash',
+      title: `Delete <i>${truncate(model.label, 26)}</i>`,
+      message: `This can't be undone.`,
+      actions: [
+        { title: 'Cancel', type: 'reset' },
+        { title: 'Delete', type: 'submit', kind: 'danger' }
+      ]
+    })
+    if (!confirmed) return
 
-    return [
-      {
-        text: 'Delete',
-        type: 'action',
-        icon: 'trash',
-        disabled: model?.provider !== Provider.Custom,
-        action: () => {
-          if ($selectedProvider.model.id === model.id) {
-            selectedProvider.set(null)
-            showProviderSettings.set(false)
-          }
+    if ($selectedModel?.id === model.id) {
+      selectedModelId.set(null)
+    }
 
-          dispatch('delete-model', model.id)
-        }
-      }
-    ] as CtxItem[]
-  }
+    selectedProvider.set(null)
+    showProviderSettings.set(false)
 
-  const getModelItemContextMenu = (item: SelectItem) => {
-    if (!item) return []
-
-    const model = $allModels.find((m) => m.id === item.id)
-
-    return [
-      {
-        text: 'Delete',
-        type: 'action',
-        icon: 'trash',
-        disabled: model?.provider !== Provider.Custom,
-        action: () => {
-          dispatch('delete-model', model.id)
-        }
-      }
-    ] as CtxItem[]
+    dispatch('delete-model', model.id)
   }
 
   onMount(() => {
@@ -347,14 +386,7 @@
               {/if}
             </button>
 
-            <div
-              slot="item"
-              class="w-full"
-              let:item
-              use:contextMenu={{
-                items: getModelItemContextMenu(item)
-              }}
-            >
+            <div slot="item" class="w-full" let:item>
               <SelectDropdownItem {item} />
             </div>
           </SelectDropdown>
@@ -392,26 +424,21 @@
       title={$selectedProvider?.type === Provider.Custom
         ? 'Configure Custom Model'
         : 'Configure Built-In Provider'}
-      expanded={!!($showProviderSettings && $selectedProvider)}
+      expanded={$showProviderSettings && $selectedProvider}
     >
       <div slot="header" class="flex items-center gap-2">
-        <button
-          on:click={handleCreateNewModel}
+        <!-- <button
+          on:click={() => handleCreateNewModel('custom')}
           class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 hover:bg-gray-700/10 dark:hover:bg-gray-700/80 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
         >
           <Icon name="add" />
-        </button>
+        </button> -->
 
-        <SelectDropdown
-          items={providerItems}
-          search="disabled"
-          selected={$selectedProvider ? $selectedProvider.id : null}
-          open={providerSelectorOpen}
-          footerItem={selectConfigureItem}
-          side="bottom"
-          closeOnMouseLeave={false}
-          keepHeightWhileSearching
-          on:select={handleSelectedProviderChange}
+        <Dropdown
+          items={$providerItems}
+          bind:open={$providerSelectorOpen}
+          align="end"
+          subAlign="start"
         >
           <button
             class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
@@ -428,26 +455,59 @@
               <Icon name="chevron.down" className="opacity-60" />
             {/if}
           </button>
-
-          <div
-            slot="item"
-            class="w-full"
-            let:item
-            use:contextMenu={{
-              items: getProviderItemContextMenu(item)
-            }}
-          >
-            <SelectDropdownItem {item} />
-          </div>
-        </SelectDropdown>
+        </Dropdown>
       </div>
 
       {#if $selectedProvider?.type === Provider.Custom}
+        {@const modelDefinition = Object.values(CUSTOM_MODEL_DEFINITIONS).find(
+          (def) => def.label === $selectedProvider.label
+        )}
+
         <div class="provider-config">
-          <p>
-            Here you can configure your own custom model and provider. Checkout the
-            <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how to configure it.
-          </p>
+          {#if $selectedProvider.label === CUSTOM_MODELS.Ollama}
+            <p>
+              Make sure you have the <a href="https://ollama.com/download" target="_blank"
+                >Ollama app</a
+              >
+              installed and its running locally. Checkout our
+              <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how to configure
+              it.
+            </p>
+          {:else if $selectedProvider.label === CUSTOM_MODELS.OpenRouter}
+            <p>
+              To use models hosted by <a href="https://openrouter.ai/" target="_blank">OpenRouter</a
+              >
+              first create an account, then generate an API key from their
+              <a href="https://openrouter.ai/settings/keys" target="_blank">settings page</a>.
+            </p>
+            <p>
+              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
+              to configure it.
+            </p>
+          {:else if $selectedProvider.label === CUSTOM_MODELS.HuggingFaceTogether}
+            <p>
+              To use text generation models from <a href="https://huggingface.co/" target="_blank"
+                >Hugging Face</a
+              >
+              you can use their routing service with one of their supported
+              <a href="https://huggingface.co/blog/inference-providers" target="_blank"
+                >Inference Providers</a
+              >
+              like <a href="https://together.ai" target="_blank">Together AI</a>.
+            </p>
+            <p>
+              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
+              to configure it.
+            </p>
+          {:else}
+            <p>Here you can configure your own custom model and provider.</p>
+            <p>
+              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
+              to configure it.
+            </p>
+          {/if}
+
+          <div style="margin-top: 0.25rem;"></div>
 
           <FormField
             label="Model Label"
@@ -457,29 +517,43 @@
             on:save={() => handleModelChange({ label: customProviderName })}
           />
 
+          {#if !!modelDefinition}
+            <FormField
+              label="Model ID"
+              placeholder="llama3.2"
+              infoText="View List"
+              infoLink={modelDefinition?.model_page}
+              bind:value={customModelName}
+              on:save={() => handleModelChange({ custom_model_name: customModelName })}
+            />
+          {:else}
+            <FormField
+              label="Provider Model ID"
+              placeholder="llama3.2"
+              infoText="The ID of the model from the provider's API"
+              bind:value={customModelName}
+              on:save={() => handleModelChange({ custom_model_name: customModelName })}
+            />
+          {/if}
+
           <FormField
-            label="Provider Model ID"
-            placeholder="llama3.2"
-            infoText="The ID of the model from the provider's API"
-            bind:value={customModelName}
-            on:save={() => handleModelChange({ custom_model_name: customModelName })}
+            label="API Key {modelDefinition && !modelDefinition?.api_key_page ? '(optional)' : ''}"
+            placeholder="{modelDefinition && !modelDefinition?.api_key_page
+              ? 'optional '
+              : ''}API key"
+            infoText="Get Key"
+            infoLink={modelDefinition?.api_key_page}
+            type="password"
+            bind:value={customApiKey}
+            on:save={() => handleModelChange({ custom_key: customApiKey })}
           />
 
           <FormField
-            label="Provider API Endpoint"
+            label="API Endpoint"
             placeholder="https://<hostname>/v1/chat/completions"
             infoText="Full URL of the model provider's OpenAI compatible API endpoint"
             bind:value={customProviderUrl}
             on:save={() => handleModelChange({ provider_url: customProviderUrl })}
-          />
-
-          <FormField
-            label="Provider API Key (optional)"
-            placeholder="optional API key"
-            infoText="API key for the provider's Open AI compatible API"
-            type="password"
-            bind:value={customApiKey}
-            on:save={() => handleModelChange({ custom_key: customApiKey })}
           />
 
           <FormField
@@ -506,6 +580,10 @@
             bind:value={customSupportsJsonFormat}
             on:save={() => handleModelChange({ supports_json_format: customSupportsJsonFormat })}
           />
+
+          <Button size="md" onclick={handleDeleteModel} class="delete-model-button">
+            Delete Model
+          </Button>
         </div>
       {:else if $selectedProvider}
         <div class="provider-config">
@@ -516,9 +594,10 @@
           </p>
 
           <FormField
-            label="Provider API Key"
+            label="{$selectedProvider?.label} API Key"
             placeholder="your API key"
-            infoText="Specify your own API key to use with the built-in provider"
+            infoLink={BUILT_IN_PROVIDER_DEFINITIONS[$selectedProvider.id]?.api_key_page}
+            infoText="Get Key"
             type="password"
             bind:value={customApiKey}
             on:save={() => handleModelChange({ custom_key: customApiKey })}
@@ -633,6 +712,16 @@
       &:hover {
         color: light-dark(#0369a1, #0ea5e9);
       }
+    }
+  }
+
+  :global(.delete-model-button[data-button-root]) {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    margin-top: 0.5rem;
+
+    &:hover {
+      background-color: #fecaca;
     }
   }
 </style>
