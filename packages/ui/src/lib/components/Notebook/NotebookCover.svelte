@@ -15,6 +15,7 @@
     title,
     placeholder = 'Untitled Notebook',
     color,
+    textured = true,
 
     height = '19ch',
     fontSize = '1rem',
@@ -38,6 +39,7 @@
     title?: string;
     placeholder?: string;
     color?: NotebookCoverColor;
+    textured?: boolean,
 
     height?: string;
     fontSize?: string;
@@ -151,6 +153,7 @@
   {...restProps}
   >
   <div class="cover"
+    class:textured
     bind:clientWidth={coverWidth}
     bind:clientHeight={coverHeight}
     style:--leather-overlay={`url('${LeatherOverlay}')`}
@@ -450,7 +453,7 @@
       background: linear-gradient(to right, rgba(0, 0, 0, 0.0) 0%, rgba(255, 255, 255, 0.22) 98%, rgba(0, 0, 0, 0.0) 100%);
     }
 
-    &::before {
+    &.textured::before {
       pointer-events: none;
       content-visibility: auto;
       mix-blend-mode: multiply;
@@ -462,6 +465,7 @@
       background-size: 85%;
       opacity: 0.15;
     }
+
   }
 }
 </style>

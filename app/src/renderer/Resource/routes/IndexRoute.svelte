@@ -101,7 +101,7 @@
 
     isCreatingNotebook = false
     newNotebookName = undefined
-    notebookManager.loadNotebooks()
+    // Note: loadNotebooks() is already called by createNotebook()
 
     onopensidebar?.()
   }
@@ -179,7 +179,7 @@
 
   onMount(() => {
     document.title = 'Surf'
-    notebookManager.loadNotebooks()
+    // notebookManager.loadNotebooks()
 
     if (shouldMentionActiveTab()) {
       // NOTE: we still need a timeout here to let the tty component init
@@ -294,48 +294,6 @@
     }
   }
 
-  .empty {
-    width: 100%;
-    border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
-    padding: 0.5rem 0.75rem;
-    border-radius: 10px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
-
-    p {
-      max-width: 40ch;
-      text-align: center;
-      text-wrap: pretty;
-    }
-  }
-
-  .notebook-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-
-    display: flex;
-    flex-wrap: wrap;
-    //justify-content: space-between;
-    justify-items: center;
-  }
-  .notebook-wrapper {
-    opacity: 1;
-
-    transform: translateY(0px);
-    transition:
-      opacity 223ms ease-out,
-      transform 123ms ease-out,
-      box-shadow 123ms ease-out;
-    transition-delay: var(--delay, 0ms);
-    @starting-style {
-      transform: translateY(2px);
-      opacity: 0;
-    }
-  }
-
   .tty-wrapper {
     width: 100%;
 
@@ -345,6 +303,48 @@
       font-family: 'Gambarino';
       text-align: center;
       color: light-dark(var(--on-surface, #374151), var(--on-surface-dark, #cbd5f5));
+    }
+
+    .empty {
+      width: 100%;
+      border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
+
+      p {
+        max-width: 40ch;
+        text-align: center;
+        text-wrap: pretty;
+      }
+    }
+
+    .notebook-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+
+      display: flex;
+      flex-wrap: wrap;
+      //justify-content: space-between;
+      justify-items: center;
+    }
+    .notebook-wrapper {
+      opacity: 1;
+
+      transform: translateY(0px);
+      transition:
+        opacity 223ms ease-out,
+        transform 123ms ease-out,
+        box-shadow 123ms ease-out;
+      transition-delay: var(--delay, 0ms);
+      @starting-style {
+        transform: translateY(2px);
+        opacity: 0;
+      }
     }
   }
 

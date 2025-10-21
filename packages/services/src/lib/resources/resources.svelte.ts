@@ -323,7 +323,7 @@ export class Resource extends EventEmitterBase<ResourceEventHandlers> {
   deleted: boolean
   dummy: boolean
 
-  metadata?: SFFSResourceMetadata
+  metadata = $state<SFFSResourceMetadata>()
   tags?: SFFSResourceTag[]
   annotations?: ResourceAnnotation[]
 
@@ -1280,7 +1280,18 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     return this.sffs.searchHistoryEntriesByUrlAndTitle(query, since)
   }
 
-  async reloadResource(id: string) {
+  async reloadResource(id: string, external = false) {
+    if (external) {
+      const resource = this.resources.get(id)
+      if (resource) {
+        const freshResourceData = await this.sffs.readResource(id)
+        if (freshResourceData?.metadata) {
+          resource.metadata = freshResourceData.metadata
+        }
+      }
+      return resource
+    }
+
     const resourceItem = await this.sffs.readResource(id)
     if (!resourceItem) {
       return null
@@ -1361,6 +1372,9 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     await this.sffs.updateResourceMetadata(id, fullMetadata)
 
     resource.updateMetadata(updates)
+
+    // Emit ResourceManagerEvents.Updated to notify listeners (like NotebookManager)
+    this.emit(ResourceManagerEvents.Updated, resource)
 
     if (
       updates.name &&

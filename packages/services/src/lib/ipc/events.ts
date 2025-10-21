@@ -145,6 +145,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   browserFocusChange: ipcService.addEvent<BrowserFocusChange>('browser-focus-change'),
   adBlockerStateChange: ipcService.addEvent<AdblockerStateChange>('adblocker-state-change'),
   toggleSidebar: ipcService.addEvent<boolean | undefined>('toggle-sidebar'),
+  toggleNotebookSidebar: ipcService.addEvent<{ open: boolean }>('toggle-notebook-sidebar'),
   toggleTabsPosition: ipcService.addEvent<void>('toggle-tabs-position'),
   toggleTheme: ipcService.addEvent<void>('toggle-theme'),
   copyActiveTabUrl: ipcService.addEvent<void>('copy-active-tab-url'),

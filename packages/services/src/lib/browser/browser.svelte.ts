@@ -78,19 +78,21 @@ export class BrowserService {
 
       this.messagePort.openResource.on(async ({ resourceId, target, offline }, viewId) => {
         if (target === 'auto') {
-          target = await this.getViewOpenTarget(viewId, true)
+          target = await this.getViewOpenTarget(viewId, { rerouteOnboarding: true })
         }
 
         this.openResource(resourceId, { target, offline })
       }),
 
-      this.messagePort.openNotebook.on(async ({ notebookId, target }, viewId) => {
-        if (target === 'auto') {
-          target = await this.getViewOpenTarget(viewId)
-        }
+      this.messagePort.openNotebook.on(
+        async ({ notebookId, target, from_notebook_tree_sidebar }, viewId) => {
+          if (target === 'auto') {
+            target = await this.getViewOpenTarget(viewId, { from_notebook_tree_sidebar })
+          }
 
-        this.navigateToUrl(`surf://surf/notebook/${notebookId}`, { target })
-      }),
+          this.navigateToUrl(`surf://surf/notebook/${notebookId}`, { target })
+        }
+      ),
 
       this.messagePort.navigateURL.on(async ({ url, target }, viewId) => {
         this.handleTeletypeNavigateURL(url, target, viewId)
@@ -864,7 +866,13 @@ export class BrowserService {
     }
   }
 
-  async getViewOpenTarget(viewId: string, rerouteOnboarding = false) {
+  async getViewOpenTarget(
+    viewId: string,
+    opts: { rerouteOnboarding: boolean; from_notebook_tree_sidebar: boolean } = {
+      rerouteOnboarding: false,
+      from_notebook_tree_sidebar: false
+    }
+  ) {
     const view = this.viewManager.getViewById(viewId)
     const viewTypeData = view?.typeDataValue
     const viewLocation = this.getViewLocation(viewId) ?? 'tab'
@@ -873,16 +881,22 @@ export class BrowserService {
 
     if (viewTypeData?.type === ViewType.Resource) {
       if (viewLocation === 'sidebar') {
+        if (opts.from_notebook_tree_sidebar) {
+          return 'sidebar'
+        }
         return 'tab'
       } else if (viewLocation === 'tab') {
         // when you click a resource link in the onboarding note we want to open it in the same tab
-        if (rerouteOnboarding) {
+        if (opts.rerouteOnboarding) {
           const resource = await this.resourceManager.getResource(viewTypeData.id || '')
           if (
             (resource?.tags ?? []).find((tag) => tag.name === ResourceTagsBuiltInKeys.ONBOARDING)
           ) {
             return 'active_tab'
           }
+        }
+        if (opts.from_notebook_tree_sidebar) {
+          return 'active_tab'
         }
 
         return 'sidebar'

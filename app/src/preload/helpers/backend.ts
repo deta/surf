@@ -349,7 +349,6 @@ export class ResourceHandle {
         updated_at: resource.resource.updated_at
       }
 
-      console.log(`Updating resource data`, data)
       await sffs.js__store_update_resource(JSON.stringify(data))
     } catch (renameError) {
       // If rename fails (e.g. newFilePath already exists), continue using the legacy path
@@ -388,11 +387,6 @@ export class ResourceHandle {
   ): Promise<ResourceHandle> {
     const extension = getResourceFileExtension(resourceType)
 
-    console.log(
-      `Opening resource ${resourceId} of type ${resourceType} with extension ${extension}`,
-      resourcePath
-    )
-
     // Try to open the file at the provided resourcePath first
     // but only if it ends with the correct extension
     if (
@@ -425,7 +419,6 @@ export class ResourceHandle {
     }
 
     // Try to open the file at the new path first
-    console.log('Trying to open resource at new path:', newFilePath)
     fd = await ResourceHandle.tryOpeningFile(newFilePath, flags)
     if (fd) {
       if (resourcePath && resourcePath !== newFilePath) {
@@ -439,7 +432,6 @@ export class ResourceHandle {
     }
 
     // If that fails, try the legacy path
-    console.log('Trying to open resource at legacy path:', legacyFilePath)
     fd = await ResourceHandle.tryOpeningFile(legacyFilePath, flags)
 
     // If we opened the legacy path, we need to migrate it to the new path

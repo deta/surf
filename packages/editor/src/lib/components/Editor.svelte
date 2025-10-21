@@ -73,6 +73,7 @@
 
   let editorWrapperEl: HTMLElement
   let editor: Readable<Editor>
+
   let editorWidth: number = 350
   let resizeObserver: ResizeObserver | null = null
   let isFirstLine = true
@@ -515,26 +516,26 @@
 
   onMount(() => {
     // Set up resize observer to update caret position when editor resizes
-    if (enableCaretIndicator) {
-      resizeObserver = new ResizeObserver(() => {
-        // Use the throttled update function to limit the frequency of updates
-        throttledUpdateCaretPosition()
-      })
-    }
+    //if (enableCaretIndicator) {
+    //  resizeObserver = new ResizeObserver(() => {
+    //    // Use the throttled update function to limit the frequency of updates
+    //    throttledUpdateCaretPosition()
+    //  })
+    //}
 
     editor = createEditor({
       extensions: extensions,
       content: content,
       editable: !readOnly,
       autofocus: !autofocus || readOnly ? false : 'start',
-      onSelectionUpdate: ({ editor }) => {
-        if (enableCaretIndicator && editor.storage.caretIndicator) {
-          const extension = editor.storage.caretIndicator
-          if (extension.caretPosition) {
-            handleCaretPositionUpdate(extension.caretPosition)
-          }
-        }
-      },
+      //onSelectionUpdate: ({ editor }) => {
+      //  if (enableCaretIndicator && editor.storage.caretIndicator) {
+      //    const extension = editor.storage.caretIndicator
+      //    if (extension.caretPosition) {
+      //      handleCaretPositionUpdate(extension.caretPosition)
+      //    }
+      //  }
+      //},
       editorProps: {
         handleDOMEvents: {
           drop: (view, e) => {
@@ -611,6 +612,30 @@
       }
     }
   })
+  onMount(() => {
+    let prevEnabled = !readOnly
+    const disable = (e) => {
+      if (e.from === null) return
+      prevEnabled = $editor.isEditable
+      $editor.setEditable(false)
+    }
+    const enable = (e) => {
+      if (e.from === null) return
+      $editor.setEditable(prevEnabled)
+    }
+
+    // @ts-ignore shutup >:(
+    window.Dragcula.on('dragstart', disable)
+    // @ts-ignore shutup >:(
+    window.Dragcula.on('dragend', enable)
+
+    return () => {
+      // @ts-ignore shutup >:(
+      window.Dragcula.off('dragstart', disable)
+      // @ts-ignore shutup >:(
+      window.Dragcula.off('dragend', enable)
+    }
+  })
 
   onDestroy(() => {
     if (resizeObserver) {
@@ -662,7 +687,7 @@
     {/if}
     <EditorContent editor={$editor} />
 
-    <slot name="caret-popover"></slot>
+    <!--<slot name="caret-popover"></slot>-->
   </div>
 </div>
 

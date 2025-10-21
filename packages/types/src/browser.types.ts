@@ -98,6 +98,7 @@ export type OpenResourceOptions = {
 export type OpenNotebookOptions = {
   notebookId: string
   target?: OpenTarget
+  from_notebook_tree_sidebar?: boolean
 }
 
 export type NavigateURLOptions = {

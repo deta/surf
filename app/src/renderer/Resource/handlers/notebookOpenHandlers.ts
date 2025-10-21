@@ -5,11 +5,13 @@ import type { OpenNotebookOptions, OpenResourceOptions, OpenTarget } from '@deta
 export const openResource = (resourceId: string, opts?: Partial<OpenResourceOptions>) => {
   const messagePort = useMessagePortClient()
 
-  messagePort.openResource.send({
-    resourceId: resourceId,
-    target: 'tab',
-    ...opts
-  })
+  try {
+    const result = messagePort.openResource.send({
+      resourceId: resourceId,
+      target: 'tab',
+      ...opts
+    })
+  } catch (error) {}
 }
 
 export const openNotebook = (notebookId: string, opts?: Partial<OpenNotebookOptions>) => {

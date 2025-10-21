@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
-  import { Button, ResourceLoader, SearchInput } from '@deta/ui'
+  import { Button, ResourceLoader } from '@deta/ui'
   import BreadcrumbItems from './BreadcrumbItems.svelte'
   import { writable } from 'svelte/store'
   import LocationBar from './LocationBar.svelte'
@@ -26,6 +26,7 @@
     centeredBreadcrumbs = false,
     hideNavigationControls = false,
     hideSearch = false,
+    hideNotebookSidebar = false,
     onsearchinput,
 
     roundLeftCorner,
@@ -37,6 +38,7 @@
     view: WebContentsView
     tab?: TabItem
     centeredBreadcrumbs?: boolean
+    hideNotebookSidebar?: boolean
     readonlyLocation?: boolean
     locationInputDisabled?: boolean
     hideNavigationControls?: boolean
@@ -59,6 +61,26 @@
 
   const activeViewType = $derived(view.type ?? writable(''))
   const activeViewTypeData = $derived(view.typeData ?? writable({}))
+
+  let notebookSidebarOpen = $state(
+    localStorage.getItem('notebook_treeSidebarOpen')
+      ? localStorage.getItem('notebook_treeSidebarOpen') === 'true'
+      : true
+  )
+
+  function toggleNotebookSidebar() {
+    notebookSidebarOpen = !notebookSidebarOpen
+    localStorage.setItem('notebook_treeSidebarOpen', notebookSidebarOpen.toString())
+
+    if (window.api?.webContentsViewAction) {
+      window.api
+        .webContentsViewAction(view.id, 'send', {
+          channel: 'toggle-notebook-sidebar',
+          args: [{ open: notebookSidebarOpen }]
+        })
+        .catch(console.error)
+    }
+  }
 
   const activeLocation = $derived(view.url ?? writable(''))
   const navigationHistory = $derived(view.navigationHistory)
@@ -133,6 +155,26 @@
   class:roundRightCorner
 >
   {@render leftChildren?.()}
+
+  {#if !hideNotebookSidebar && [ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}
+    <NavigationBarGroup slim>
+      <Button size="md" square onclick={toggleNotebookSidebar}>
+        <Icon name={notebookSidebarOpen ? 'sidebar.left' : 'sidebar.left'} size="1.2em" />
+      </Button>
+    </NavigationBarGroup>
+  {:else if !hideNotebookSidebar && $activeViewType === ViewType.Resource}
+    <ResourceLoader resource={$activeViewTypeData?.id} lazy={false}>
+      {#snippet children(resource: Resource)}
+        {#if resource.type !== ResourceTypes.PDF}
+          <NavigationBarGroup slim>
+            <Button size="md" square onclick={toggleNotebookSidebar}>
+              <Icon name={notebookSidebarOpen ? 'sidebar.left' : 'sidebar.left'} size="1.2em" />
+            </Button>
+          </NavigationBarGroup>
+        {/if}
+      {/snippet}
+    </ResourceLoader>
+  {/if}
 
   {#if !hideNavigationControls}
     <NavigationBarGroup>

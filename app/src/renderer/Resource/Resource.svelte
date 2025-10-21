@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import * as router from '@mateothegreat/svelte5-router'
   import { Router, type RouteConfig } from '@mateothegreat/svelte5-router'
 
@@ -14,6 +14,10 @@
   import NotebookDetailRoute from './routes/NotebookDetailRoute.svelte'
   import DraftsRoute from './routes/DraftsRoute.svelte'
   import Resource from './routes/ResourceRoute.svelte'
+  import NotebookTreeView from './components/notebook/NotebookTreeView.svelte'
+  import { ViewLocation } from '@deta/types'
+  import NotebookEditor from './components/notebook/NotebookEditor/NotebookEditor.svelte'
+  import { Notebook } from '@deta/services/notebooks'
 
   const notebookId = window.location.pathname.slice(1) || null
 
@@ -24,12 +28,88 @@
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teletypeService = createTeletypeService()
 
+  let isCustomizingNotebook = $state(undefined) as Notebook | undefined | null
+
   let resourcesPanelOpen = $state(
     false /*
     localStorage.getItem('notebook_resourcePanelOpen')
       ? localStorage.getItem('notebook_resourcePanelOpen') === 'true'
       : false*/
   )
+
+  let treeSidebarOpen = $state(
+    localStorage.getItem('notebook_treeSidebarOpen')
+      ? localStorage.getItem('notebook_treeSidebarOpen') === 'true'
+      : true
+  )
+
+  const MIN_SIDEBAR_WIDTH = 200
+  const MAX_SIDEBAR_WIDTH = 350
+  const DEFAULT_SIDEBAR_WIDTH = 250
+
+  const stored = parseInt(
+    localStorage.getItem('notebook_sidebarWidth') || String(DEFAULT_SIDEBAR_WIDTH)
+  )
+  // Clamp stored value to current MIN/MAX range
+  let sidebarWidth = $state(Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, stored)))
+
+  let isResizing = $state(false)
+  let rafId: number | null = null
+  let saveWidthTimeout: number | null = null
+
+  const toggleTreeSidebar = () => {
+    treeSidebarOpen = !treeSidebarOpen
+  }
+
+  const startResize = (e: MouseEvent) => {
+    e.preventDefault()
+    isResizing = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+
+  const handleResize = (e: MouseEvent) => {
+    if (!isResizing) return
+
+    // Use RAF for smooth 60fps UI updates
+    if (rafId) cancelAnimationFrame(rafId)
+
+    rafId = requestAnimationFrame(() => {
+      const newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, e.clientX))
+      sidebarWidth = newWidth
+
+      // Debounce localStorage update (only save after resize stops)
+      if (saveWidthTimeout) clearTimeout(saveWidthTimeout)
+      saveWidthTimeout = setTimeout(() => {
+        localStorage.setItem('notebook_sidebarWidth', String(sidebarWidth))
+      }, 500) as unknown as number
+    })
+  }
+
+  const stopResize = () => {
+    if (!isResizing) return
+
+    isResizing = false
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+
+    // Force final save on mouseup
+    if (saveWidthTimeout) clearTimeout(saveWidthTimeout)
+    localStorage.setItem('notebook_sidebarWidth', String(sidebarWidth))
+  }
+
+  onMount(() => {
+    document.addEventListener('mousemove', handleResize)
+    document.addEventListener('mouseup', stopResize)
+  })
+
+  onDestroy(() => {
+    document.removeEventListener('mousemove', handleResize)
+    document.removeEventListener('mouseup', stopResize)
+
+    if (rafId) cancelAnimationFrame(rafId)
+    if (saveWidthTimeout) clearTimeout(saveWidthTimeout)
+  })
 
   let title = $derived(
     notebookId === 'drafts'
@@ -42,9 +122,15 @@
   )
 
   $effect(() => localStorage.setItem('notebook_resourcePanelOpen', resourcesPanelOpen.toString()))
+  $effect(() => localStorage.setItem('notebook_treeSidebarOpen', treeSidebarOpen.toString()))
 
   onMount(prepareContextMenu)
   onMount(() => {
+    // Listen for toggle requests from Core renderer via IPC
+    const handleToggleRequest = (data: { open: boolean }) => {
+      treeSidebarOpen = data.open
+    }
+
     const unsubs = [
       messagePort.navigateURL.handle(({ url }) => {
         try {
@@ -56,10 +142,13 @@
 
       messagePort.viewMounted.handle(({ location }) => {
         try {
+          if (location === ViewLocation.Sidebar) treeSidebarOpen = false
         } catch (error) {
           console.error('Error handling viewMounted message:', error)
         }
-      })
+      }),
+
+      window.api?.onToggleNotebookSidebar?.(handleToggleRequest)
     ]
 
     return () => {
@@ -97,9 +186,34 @@
       component: Resource
     }
   ]
+
+  const onCustomizeNotebook = (notebook: Notebook) => {
+    isCustomizingNotebook = notebook
+  }
 </script>
 
-<Router {routes} />
+<div class="resource-container">
+  {#if isCustomizingNotebook}
+    <NotebookEditor bind:notebook={isCustomizingNotebook} />
+  {/if}
+
+  {#if treeSidebarOpen}
+    <aside class="left-tree-sidebar" style="width: {sidebarWidth}px;">
+      <NotebookTreeView bind:isVisible={treeSidebarOpen} {onCustomizeNotebook} />
+      <div
+        class="resize-handle"
+        class:resizing={isResizing}
+        onmousedown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+      ></div>
+    </aside>
+  {/if}
+  <div class="router-content">
+    <Router {routes} />
+  </div>
+</div>
 
 <style lang="scss">
   :root {
@@ -181,5 +295,192 @@
     background-repeat: no-repeat;
     background-size: cover;
     background-position: 50% 30%;
+  }
+
+  .resource-container {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .left-tree-sidebar {
+    position: relative;
+    left: 0;
+    top: 0;
+    z-index: 1000000;
+    flex-shrink: 0;
+    padding-top: 1rem;
+    border-right: 0.5px solid
+      light-dark(var(--border-color, rgba(0, 0, 0, 0.1)), rgba(71, 85, 105, 0.3));
+    border-top: 0.5px solid
+      light-dark(var(--border-color, rgba(0, 0, 0, 0.1)), rgba(71, 85, 105, 0.3));
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+    padding-bottom: 0;
+
+    // it should be fixed if the screen size is above 800px wide
+    @media (max-width: 1440px) {
+      position: relative;
+    }
+  }
+
+  .resize-handle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    z-index: 101;
+    transition: background-color 0.15s ease;
+
+    &::before {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: transparent;
+      transition: background-color 0.15s ease;
+    }
+
+    &:hover::before,
+    &.resizing::before {
+      background: var(--primary);
+      opacity: 0.4;
+    }
+
+    &:active::before,
+    &.resizing::before {
+      opacity: 0.6;
+    }
+  }
+
+  .router-content {
+    position: fixed;
+    inset: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    height: 100vh;
+
+    @media (max-width: 1440px) {
+      position: relative;
+    }
+  }
+
+  :global(.dragcula-drop-indicator) {
+    --color: #3765ee;
+    --dotColor: white;
+    --inset: 3%;
+    background: var(--color);
+    transition:
+      top 100ms cubic-bezier(0.2, 0, 0, 1),
+      left 100ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical) {
+    left: var(--inset);
+    right: var(--inset);
+    height: 2px;
+    transform: translateY(-50%);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal) {
+    top: var(--inset);
+    bottom: var(--inset);
+    width: 2px;
+    transform: translateX(-50%);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both) {
+    left: 0;
+    top: 0;
+    width: 2px;
+    height: 3rem;
+    transform: translateY(-50%);
+  }
+
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical::before) {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, calc(-50% + 1px));
+    width: 7px;
+    height: 7px;
+    border-radius: 5px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-vertical::after) {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -6px;
+    transform: translate(-50%, calc(-50% + 1px));
+    width: 7px;
+    height: 7px;
+    border-radius: 5px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal::before) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-horizontal::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::before) {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+  :global(.dragcula-drop-indicator.dragcula-axis-both::after) {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 0;
+    transform: translate(calc(-50% + 1px), calc(-50% + 6px));
+    width: 7px;
+    height: 7px;
+    border-radius: 50px;
+    background: var(--dotColor);
+    border: 2px solid var(--color);
+  }
+
+  :global([data-drag-zone][axis='vertical']) {
+    // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
+    padding-top: 1px;
+    //margin-top: -1px;
   }
 </style>

@@ -107,6 +107,7 @@ export const getUserConfig = (path?: string) => {
       teletype_default_action: 'auto',
       completed_onboarding_examples: [],
       dismissed_onboarding_examples: false,
+      acknowledged_editing_resource_files: false,
 
       /// Deprecated
       homescreen_link_cmdt: false,
@@ -248,6 +249,11 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings?.dismissed_onboarding_examples === undefined) {
     storedConfig.settings.dismissed_onboarding_examples = false
+    changedConfig = true
+  }
+
+  if (storedConfig.settings?.acknowledged_editing_resource_files === undefined) {
+    storedConfig.settings.acknowledged_editing_resource_files = false
     changedConfig = true
   }
 
