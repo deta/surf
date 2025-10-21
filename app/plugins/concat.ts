@@ -25,8 +25,6 @@
 */
 
 import fs from 'fs'
-import path from 'path'
-
 import { Plugin } from 'rollup'
 import { createFilter } from 'rollup-pluginutils'
 
@@ -60,15 +58,17 @@ export default function concat(options: Options = {}): Plugin {
         let code = ''
 
         for (const file of files) {
-          if (filter(file)) {
-            const content = fs.readFileSync(file, 'utf8')
-            code += `${content}\n`
+          try {
+            if (filter(file)) {
+              const content = fs.readFileSync(file, 'utf8')
+              code += `${content}\n`
+            }
+          } catch (err) {
+            this.warn(`Error reading file "${file}": ${err}`)
           }
         }
 
-        const outputFile = path.resolve(process.cwd(), group.outputFile)
-
-        this.info(`Writing concatenated file ${outputFile}`)
+        // Emit the main output file
         this.emitFile({
           type: 'asset',
           fileName: group.outputFile,

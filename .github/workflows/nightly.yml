@@ -87,6 +87,9 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Install cargo-about
+        run: cargo install cargo-about
+
       - name: Cache node_modules
         uses: actions/cache@v3
         with:
@@ -101,6 +104,7 @@ jobs:
           workspaces: |
             packages/backend
             packages/backend-server
+            ~/.cargo/bin/cargo-about
           key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache Turbo

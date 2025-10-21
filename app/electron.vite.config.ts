@@ -11,6 +11,7 @@ import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 import { ObfuscatorOptions } from 'javascript-obfuscator'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
+import { createRustLicensePlugin } from './plugins/rust-license'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const disableBytecode = process.env.DISABLE_BYTECODE === 'true' || IS_DEV
@@ -155,13 +156,15 @@ export default defineConfig({
       Markdown({ mode: [Mode.MARKDOWN, Mode.HTML] }),
       svelte(svelteOptions),
       createLicensePlugin('renderer'),
-      createConcatLicensesPlugin(),
       // needed for gray-matter dependency
       nodePolyfills({
         globals: {
           Buffer: true
         }
-      })
+      }),
+      createRustLicensePlugin('packages/backend', 'dependencies-backend.txt'),
+      createRustLicensePlugin('packages/backend-server', 'dependencies-backend-server.txt'),
+      createConcatLicensesPlugin()
     ],
     build: {
       sourcemap: false,

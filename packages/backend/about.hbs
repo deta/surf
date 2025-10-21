@@ -1,0 +1,22 @@
+[
+{{#each licenses}}
+{
+  "id": "{{id}}",
+  "name": "{{name}}",
+  "text": {{{json text}}},
+  "source_path": {{#if source_path}}"{{source_path}}"{{else}}null{{/if}},
+  "used_by": [
+    {{#each used_by}}
+    {
+      "name": "{{crate.name}}",
+      "version": "{{crate.version}}",
+      "license": "{{crate.license}}",
+      "repository": {{#if crate.repository}}"{{crate.repository}}"{{else}}null{{/if}},
+      "description": {{#if crate.description}}{{{json crate.description}}}{{else}}null{{/if}},
+      "authors": [{{#each crate.authors}}"{{this}}"{{#unless @last}},{{/unless}}{{/each}}]
+    }{{#unless @last}},{{/unless}}
+    {{/each}}
+  ]
+}{{#unless @last}},{{/unless}}
+{{/each}}
+]

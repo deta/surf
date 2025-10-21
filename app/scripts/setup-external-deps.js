@@ -134,6 +134,16 @@ async function download_usearch_sqlite(base_dir) {
   }
 }
 
+async function setup_cargo_license() {
+  try {
+    // Check if cargo-license is installed
+    execSync('cargo license --version', { stdio: 'ignore' })
+  } catch (error) {
+    console.log('Installing cargo-license...')
+    execSync('cargo install cargo-license', { stdio: 'inherit' })
+  }
+}
+
 async function setup_dependencies() {
   switch (os.platform()) {
     case 'darwin':
@@ -148,6 +158,9 @@ async function setup_dependencies() {
     default:
       throw new Error(`unsupported platform: ${os.platform()}`)
   }
+
+  // Check and install cargo-license
+  await setup_cargo_license()
 }
 
 setup_dependencies().catch((error) => {

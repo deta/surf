@@ -420,7 +420,7 @@
               <div class="license-icon" class:open={showLicenses}>
                 <Icon name="chevron.down" />
               </div>
-              Open Source Licenses
+              Open Source Licenses And Notices
             </div>
 
             {#if showLicenses}
