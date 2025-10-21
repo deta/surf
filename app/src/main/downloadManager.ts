@@ -9,6 +9,7 @@ import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
 import { htmlToMarkdown, useLogScope } from '@deta/utils'
 import { useSFFSMain } from './sffs'
+import { getUserConfig, updateUserConfigSettings } from './config'
 
 const log = useLogScope('Download Manager')
 
@@ -285,6 +286,35 @@ export const openResourceAsFile = async (resourceId: string, basePath: string) =
     if (!exists) {
       log.error('Resource file not found at', resourcePath)
       return
+    }
+
+    // show popop informing user about not editing the file directly
+    const mainWindow = getMainWindow()
+    if (!mainWindow) {
+      log.error('No main window found')
+      return
+    }
+
+    const config = getUserConfig()
+    if (!config.settings.acknowledged_editing_resource_files) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        buttons: ['I Understand', 'Cancel'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Open Resource Location',
+        message:
+          'Heads up: Please avoid renaming or moving resource files outside of Surf to prevent issues.'
+      })
+
+      if (response !== 0) {
+        log.debug('User canceled opening resource location')
+        return
+      }
+
+      updateUserConfigSettings({
+        acknowledged_editing_resource_files: true
+      })
     }
 
     log.debug('Opening resource file at', resourcePath)

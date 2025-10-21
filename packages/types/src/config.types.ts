@@ -25,6 +25,7 @@ export type UserSettings = {
   has_seen_hero_screen: boolean
   skipped_hero_screen: boolean
   disable_bookmark_shortcut: boolean
+  acknowledged_editing_resource_files: boolean
 
   // Experiments
   annotations_sidebar: boolean
