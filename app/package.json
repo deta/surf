@@ -69,8 +69,6 @@
     "electron-vite": "^4.0.0",
     "eslint": "^8.47.0",
     "eslint-plugin-svelte": "^3.11.0",
-    "javascript-obfuscator": "^4.1.1",
-    "validator": "^13.15.15",
     "mime-types": "^3.0.1",
     "openai": "^4.28.4",
     "postcss": "^8.4.38",
