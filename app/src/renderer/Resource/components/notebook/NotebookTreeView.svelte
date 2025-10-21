@@ -259,12 +259,12 @@
         if (node.meta.type === 'notebook') {
           // Handle drafts notebook (which has no notebook object)
           if (node.id === 'drafts') {
-            openNotebook('drafts', { target })
+            openNotebook('drafts', { target, from_notebook_tree_sidebar: true })
           } else if (node.meta.notebook) {
-            openNotebook(node.meta.notebook.id, { target })
+            openNotebook(node.meta.notebook.id, { target, from_notebook_tree_sidebar: true })
           }
         } else if (node.meta.type === 'note' && node.meta.entryId) {
-          openResource(node.meta.entryId, { target })
+          openResource(node.meta.entryId, { target, from_notebook_tree_sidebar: true })
         }
       }
     },
