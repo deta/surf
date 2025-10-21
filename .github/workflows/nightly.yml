@@ -5,10 +5,10 @@ permissions:
   contents: write
 
 on:
-  schedule:
-    #  # every weekday at 20:03 UTC / 21:03 CET
-    #  # 20:03 because if you github runners will be more congested at the exact hours
-    - cron: '3 20 * * 1-5'
+  # schedule:
+  #  # every weekday at 20:03 UTC / 21:03 CET
+  #  # 20:03 because if you github runners will be more congested at the exact hours
+  # - cron: '3 20 * * 1-5'
   workflow_dispatch:
 
 jobs:
@@ -48,19 +48,32 @@ jobs:
         with:
           script: |
             const semver = require('semver');
-            const release = await github.rest.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
 
-            const latestStableVersion = release.data.tag_name;
-            let nextNightlyVersion = semver.inc(latestStableVersion, 'prerelease', 'nightly');
+            let nextNightlyVersion;
+
+            try {
+              const release = await github.rest.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+
+              const latestStableVersion = release.data.tag_name;
+              nextNightlyVersion = semver.inc(latestStableVersion, 'prerelease', 'nightly');
+            } catch (error) {
+              if (error.status === 404) {
+                nextNightlyVersion = '0.0.1-nightly.0';
+                console.log('No stable release found.');
+              } else {
+                throw error;
+              }
+            }
 
             const latestNightlyVersion = process.env.LATEST_NIGHTLY_VERSION;
             if (semver.valid(latestNightlyVersion)) {
-                const candidate = semver.inc(latestNightlyVersion, 'prerelease', 'nightly');
-                nextNightlyVersion = semver.gt(candidate, nextNightlyVersion) ? candidate : nextNightlyVersion;
+              const candidate = semver.inc(latestNightlyVersion, 'prerelease', 'nightly');
+              nextNightlyVersion = semver.gt(candidate, nextNightlyVersion) ? candidate : nextNightlyVersion;
             }
+
             console.log(`Next nightly version: ${nextNightlyVersion}`);
             core.setOutput('version', nextNightlyVersion);
 
