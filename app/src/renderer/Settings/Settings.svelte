@@ -75,17 +75,6 @@
     await window.api.checkForUpdates()
   }
 
-  const useAsDefaultBrowser = async () => {
-    // @ts-ignore
-    await window.api.useAsDefaultBrowser()
-
-    // This is needed because we do not know if the user accepted the prompt
-    checkInterval = setInterval(async () => {
-      // @ts-ignore
-      isDefaultBrowser.set(await window.api.isDefaultBrowser())
-    }, 1000)
-  }
-
   const handleMigration = async () => {
     migrating = true
     try {
@@ -343,13 +332,6 @@
         <div class="links-wrapper">
           <button on:click={checkForUpdates}>Check for Updates</button>
         </div>
-
-        {#if !$isDefaultBrowser}
-          <div class="default-wrapper">
-            Surf is not set as your default browser.
-            <button on:click={useAsDefaultBrowser}>Set as your default browser</button>
-          </div>
-        {/if}
 
         {#if userConfig && userConfig.anon_telemetry}
           <div

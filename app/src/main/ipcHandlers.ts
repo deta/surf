@@ -22,7 +22,7 @@ import {
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { checkForUpdates, getAnnouncements } from './appUpdates'
 import { getAnnouncementsWindow } from './announcementsWindow'
-import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
+import { updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest, TrackEvent } from '@deta/services/ipc'
@@ -351,12 +351,6 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     checkForUpdates()
-  })
-
-  IPC_EVENTS_MAIN.useAsDefaultBrowser.on((event) => {
-    if (!validateIPCSender(event)) return
-
-    return useAsDefaultBrowser()
   })
 
   IPC_EVENTS_MAIN.isDefaultBrowser.handle((event) => {
