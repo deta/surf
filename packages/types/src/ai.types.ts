@@ -357,3 +357,73 @@ export const RECOMMENDED_AI_MODELS = [
     description: 'Quick responses with solid reliability'
   }
 ]
+
+export enum CUSTOM_MODELS {
+  Ollama = 'Ollama',
+  OpenRouter = 'OpenRouter',
+  HuggingFaceTogether = 'Hugging Face Together AI',
+  HuggingFace = 'Hugging Face Inference Endpoint'
+}
+
+export type CustomModelType = keyof typeof CUSTOM_MODELS
+
+export type CustomModelDefinition = {
+  id: CUSTOM_MODELS
+  label: string
+  icon: string
+  provider_url?: string
+  model_name?: string
+  model_page?: string
+  api_key_page?: string
+}
+
+export const CUSTOM_MODEL_DEFINITIONS: Record<CUSTOM_MODELS, CustomModelDefinition> = {
+  [CUSTOM_MODELS.Ollama]: {
+    id: CUSTOM_MODELS.Ollama,
+    label: 'Ollama',
+    icon: 'ollama',
+    provider_url: 'http://localhost:11434/v1/chat/completions',
+    model_page: 'https://ollama.com/search'
+  },
+  [CUSTOM_MODELS.OpenRouter]: {
+    id: CUSTOM_MODELS.OpenRouter,
+    label: 'OpenRouter',
+    icon: 'openrouter',
+    provider_url: 'https://openrouter.ai/api/v1/chat/completions',
+    model_page: 'https://openrouter.com/models',
+    api_key_page: 'https://openrouter.ai/settings/keys'
+  },
+  [CUSTOM_MODELS.HuggingFaceTogether]: {
+    id: CUSTOM_MODELS.HuggingFaceTogether,
+    label: 'Hugging Face Together AI',
+    icon: 'huggingface',
+    provider_url: 'https://router.huggingface.co/together/v1/chat/completions',
+    model_page: 'https://huggingface.co/models?inference_provider=together&sort=trending',
+    api_key_page: 'https://huggingface.co/settings/tokens'
+  },
+  [CUSTOM_MODELS.HuggingFace]: {
+    id: CUSTOM_MODELS.HuggingFace,
+    label: 'Hugging Face Custom',
+    icon: 'huggingface',
+    provider_url: 'https://api-inference.huggingface.co/models/',
+    model_page: 'https://huggingface.co/models?inference_provider=together&sort=trending',
+    api_key_page: 'https://huggingface.co/settings/tokens'
+  }
+}
+
+export type ProviderDefinition = {
+  api_key_page?: string
+}
+
+export const BUILT_IN_PROVIDER_DEFINITIONS: Record<Provider, ProviderDefinition> = {
+  [Provider.OpenAI]: {
+    api_key_page: 'https://platform.openai.com/api-keys'
+  },
+  [Provider.Anthropic]: {
+    api_key_page: 'https://console.anthropic.com/settings/keys'
+  },
+  [Provider.Google]: {
+    api_key_page: 'https://aistudio.google.com/app/api-keys'
+  },
+  [Provider.Custom]: {}
+}

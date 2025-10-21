@@ -22,6 +22,7 @@ export type DropdownItemAction = {
     rightLabel?: string
     rightIcon?: string
     action?: () => void
+    data?: any
 }
 
 export type DropdownItem = DropdownItemAction | DropdownItemSeparator | DropdownItemTitle
