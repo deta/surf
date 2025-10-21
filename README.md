@@ -1,108 +1,106 @@
-<div align="center">
+# Elevate your thinking
 
-<a href="https://deta.surf" target="_blank">
-    <img src="./app/build/resources/prod/icon.png" width="80">
-</a>
+Deta Surf is an intelligent notebook that brings your files and the web directly into your notes.
 
-# Deta Surf
+![splash](./docs/assets/readme/splash.png)
 
-Intelligent notebooks – now in open beta!
+It’s meant for simultaneous research and thinking that minimizes the grunt work: manually searching, opening windows & tabs, scrolling, copying and pasting into a document editor. Surf is primarily built in Svelte and Rust, runs on MacOS, Windows and Linux, stores data locally in open formats, and is open source.
 
-</div>
+# Motivation
 
-## What is Surf?
+We want to help people think better, across all their media.
 
-[Surf](https://deta.surf) is a tool for thought — like a personal notebook — but for a multi-media world that includes websites, YouTube videos, PDFs, photos, files & more. Surf helps you manage it all in one place, and generate notes to think on top of it.
+Most applications are focused on a single task, or a single media type: notes, websites, or PDFs. Real thinking requires juggling media across sources to make connections and synthesize ideas.
 
-Learn more on [why we are building Surf](https://deta.surf/motivation).
+Surf aims to make this easier by combining multi-media storage, web access, and intelligent document creation in a single app focused on thinking. Surf is built on the principles of decentralization and openness, in service of the user. This means local first data, open data formats, open source, and openness with respect to AI models.
 
-## Installation
+# Installation
 
 Checkout the [GitHub releases](https://github.com/deta/surf/releases) for the latest stable version of Surf for MacOS, Windows and Linux.
 
-You can also download Surf with some managed & additional features (e.g. AI) from the Deta website. That version is subject to the [Deta Terms](https://deta.surf/terms).
+You can also download Surf with some managed & additional features (e.g. AI) from the Deta website. That version is subject to the [Deta Terms](https://deta.surf/terms).
 
 For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Philosophy
+# Features
 
-Surf is designed to give end users as much agency possible. We think tools for thinking are too important & too personal to be overly centralized and closed.
+## Multi-Media Library & Notebooks
 
-**Personal**
+Surf’s foundation is a multi-media library that lives on your computer. You can add many different “resources” to this library: local files, sites from the web, or media created in Surf.
 
-The user’s thought process should be at the center of the experience. This means local first data storage, but should also reflect in the user experience.
+![notebooks](./docs/assets/readme/notebook-grid.png)
 
-**Open**
+Each resource lives on your device in [local and open data formats] through a Rust storage engine called SFFS. Resources can be organized into [Notebooks](/docs/LIBRARY.md#notebooks), their text content is accessible [offline](/docs/LIBRARY.md#offline) and can be used alone or together to power Surf’s generative notes.
 
-Users should be able to operate _multi_-media, all in one place. They should have agency over their data, source code, and external service providers.
+Read more
 
-**Intelligent**
+[Library](/docs/LIBRARY.md)
 
-Many of the experiences in Surf are designed to use AI, but Surf is intended to augment human intelligence, not automate it.
+Find the most common shortcuts here
 
-## Features
+[Shortcuts](/docs/SHORTCUTS.md)
 
-### Generative Notes
+## Smart Notes
 
-Generate & edit notes that weave your photos, websites, PDFs, YouTube videos & more directly together.
+![smart-notes](./docs/assets/readme/smart-notes.png)
 
-<SMART NOTES IMG>
+Smart Notes are multi-media notes that can be automatically generated from resources in your library and anything on the web. They are intended for exploring and thinking across lots of connected data without having to go the manual route: opening up a bunch of windows, clicking, scrolling and copying & pasting into your document (or chatbot).
 
-**Citations**
+A generation can be powered by a single resource or tab, an entire notebook, or the web. This is possible because of the context stored in your library and Surf’s integration with AI.
 
-Notes deeply link back to specific sections of PDFs, webpages, or YouTube videos from which they were generated.
+Read more:
 
-**@ mentions**
+## Surflets
 
-@ mention anything in your library to add something to context and use it to generate notes out of.
+![surflets](./docs/assets/readme/surflets.png)
 
-### Universal Navigation
+Surf can code interactive applets to help you visualize, understand or explore concepts or data that are aided with code. These Surflets are embedded within the document.
 
-Open a note, PDF, image, file, website or YouTube video in a tab or a split, with the same navigation affordances, regardless of media type.
+Read more:
 
-<IMG>
+[Surflets](./docs/Surflets.md)
 
-### Multi-media memory
+## AI
 
-<MEMORY IMG>
+![models.png](./docs/assets/readme/models.png)
 
-You can add many different “objects” to Surf’s memory. Each object lives on your device in local and open data formats: a database entry, a file, and a vector embedding.
+Surf’s notes and Surflets are powered by large language models. Surf tries to be as open and as agnostic to the model as possible.
 
-Special support has been created for:
+Read more:
 
-- Files
-  - Photos
-  - PDFs
-- Web Resources
-  - Blog Articles
-  - Wikipedia Pages
-  - YouTube Videos (automatic transcript recognition)
-  - Tweets
-  - Notion Documents
-- Native Media
-  - Surflets
-  - Smart Notes
+[AI Models](./docs/AI-Models.md)
 
-### Notebooks
+## Shortcuts
 
-Organize your information into multi-media notebooks for specific topics that interest you.
+Find the most common shortcuts [here](./docs/SHORTCUTS.md)
 
-<NOTEBOOKs IMG>
+# Security
 
-### Surflets
+_To report a security concern, please see_ https://github.com/deta/surf/security/policy
 
-Surf can code interactive applets to help you visualize, understand or explore.
+# Contributing
 
-<SURFLETS IMG>
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on contributing to the project and an overview of the codebase. And please see the PR-template.
 
-## Contributing
+[**PULL_REQUEST_TEMPLATE.md**](PULL_REQUEST_TEMPLATE.md)
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details on contributing to the project and an overview of the codebase.
-
-## Code of Conduct
+# Code of Conduct
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for details on our code of conduct.
 
-## License
+# License
 
-This project is licensed under the Apache 2.0 license. See [LICENSE](LICENSE) for more details.
+The source code for this project is licensed under the Apache 2.0 license, with the following exceptions:
+
+1. Our patch for the @ghostery/adblocker-electron package is licensed under the Mozilla Public License 2.0 (MPL-2.0), consistent with the upstream project's licensing.
+2. Select files may contain their own specific license headers that override the default license.
+
+Unless otherwise specified in the file or directory, all code defaults to the Apache 2.0 license.
+
+See [LICENSE](LICENSE.md) for more details about the Apache 2.0 license.
+
+Deta GmbH is a commercial open source company. Surf is designed to operate as open source software without Deta's servers. Deta GmbH also offers a modified version of Surf (which integrates with Deta's servers) and is subject to separate terms and conditions. This version of Surf can be downloaded from the [Deta website](https://deta.surf/) and is governed by separate terms.
+
+**Note:** The Deta name and logos are trademarks of Deta GmbH and are **not** covered by the Apache 2.0 license.
+
+# Acknowledgements

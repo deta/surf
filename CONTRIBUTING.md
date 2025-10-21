@@ -115,3 +115,85 @@ yarn build:desktop:win:x64
 ```
 
 Check the `package.json` scripts section for more build options.
+
+# 📌 How to Contribute
+
+### 1. Fork & Branch
+
+- Fork this repository
+- Create a new branch for your changes
+  ```bash
+  git checkout -b feature/my-feature
+
+  ```
+
+### 2. Make Changes
+
+Write clean, well-documented code. Include tests when applicable.
+
+### 3. Commit with Signed-off-by
+
+This project uses a **Developer Certificate of Origin (DCO)** to certify contribution rights.
+
+Each commit **must be signed** by adding a `Signed-off-by` line to your commit message:
+
+```bash
+git commit -s -m "Add new feature"
+
+```
+
+This will automatically add:
+
+```
+Signed-off-by: Your Name <you@example.com>
+
+```
+
+If you forgot to sign a commit, you can fix it with:
+
+```bash
+git commit --amend --signoff
+
+```
+
+---
+
+## ✅ Developer Certificate of Origin (DCO)
+
+By contributing, you agree to the Developer Certificate of Origin:
+
+```
+Developer Certificate of Origin
+Version 1.1
+
+By making a contribution to this project, I certify that:
+
+(a) The contribution is my original work, and I have the right to submit it under the open source license indicated in the file; or
+
+(b) The contribution is based upon previous work that, to the best of my knowledge, is covered under an appropriate open source license and I have the right under that license to submit that work with modifications, whether created in whole or in part by me, under the same open source license; or
+
+(c) The contribution was provided directly to me by some other person who certified (a), (b) or (c) and I have not modified it; and
+
+(d) I understand and agree that this project and its contributions are public and that a record of the contribution (including my name and email) is maintained indefinitely and may be redistributed consistent with this project or the open source license(s) involved.
+```
+
+---
+
+## 📥 Pull Requests
+
+Before submitting a pull request:
+
+- Make sure your code builds without errors
+- Follow existing code style
+- Add tests if needed
+- Include a clear description of the change
+
+---
+
+## 🛡 License
+
+By contributing, you agree that your contributions will be licensed under the **Apache License 2.0**, in line with this repository.
+
+---
+
+If you have any questions, feel free to open an issue. Thank you for your contribution!
