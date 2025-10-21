@@ -1,0 +1,55 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: '[FEATURE] '
+labels: 'enhancement'
+body:
+  - type: checkboxes
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following.
+      options:
+        - label: I have read the [Contributing Guidelines](https://github.com/deta/surf/blob/main/CONTRIBUTING.md) for this project.
+          required: true
+        - label: I agree to follow the [Code of Conduct](https://github.com/deta/surf/blob/main/CODE_OF_CONDUCT.md) that this project adheres to.
+          required: true
+        - label: I have searched the [issue tracker](https://www.github.com/deta/surf/issues) for a feature request that matches the one I want to file, without success.
+          required: true
+  - type: textarea
+    attributes:
+      label: Problem/Usecase Description
+      description: A clear and concise description of the problem this feature would solve or the use case it addresses.
+      placeholder: I'm frustrated when... / It would be helpful if... / Users need to...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision this feature working. Be as detailed as possible.
+      placeholder: The feature could work by...
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New functionality
+        - Enhancement to existing feature
+        - Performance improvement
+        - User interface improvement
+        - Other (specify below)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional Context
+      description: Add any other context, mockups, screenshots, or examples about the feature request here.
+      placeholder: You can attach images by dragging and dropping them here.
+  - type: checkboxes
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute to this feature?
+      options:
+        - label: I'd be willing to implement this feature
+        - label: I'd be willing to test this feature once implemented
+        - label: I can provide additional details or clarification if needed
