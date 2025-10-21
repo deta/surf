@@ -36,9 +36,6 @@
   import { appendURLPath, conditionalArrayItem, generateID, truncate } from '@deta/utils'
   import { createEventDispatcher, onMount } from 'svelte'
   import { Button, Dropdown, type DropdownItem, openDialog } from '@deta/ui'
-  import { SFFS } from '@deta/services'
-  import type { Quota } from '@deta/backend/types'
-  import TierQuota from '../components/TierQuota.svelte'
 
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
