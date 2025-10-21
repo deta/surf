@@ -37,8 +37,7 @@
   export let selectedModelId: Writable<string>
   export let models: Writable<Model[]>
 
-  const AI_MODEL_DOCS =
-    'https://deta.notion.site/Using-different-AI-models-in-Surf-199a5244a71780e196fbd02db590e8f4'
+  const AI_MODEL_DOCS = 'https://github.com/deta/surf/blob/main/docs/AI_MODELS.md'
 
   const dispatch = createEventDispatcher<{
     'select-model': string

@@ -6,7 +6,7 @@
 
 # Deta Surf
 
-Notebooks for the internet – now in open beta!
+Intelligent notebooks – now in open beta!
 
 </div>
 
