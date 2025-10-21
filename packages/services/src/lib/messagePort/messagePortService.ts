@@ -37,7 +37,7 @@ type PrimaryEventWithReturn<T extends MessagePortEvent> = {
 
 export class MessagePortService<IsPrimary extends boolean> {
   private log: ReturnType<typeof useLogScope>
-  private handlers = new Map<string, (payload: any) => Promise<any> | any>()
+  private handlers = new Map<string, Set<(payload: any) => Promise<any> | any>>()
   private responseHandlers = new Map<string, (payload: any) => Promise<any> | any>()
   private portCallbacks = new Map<string, Set<(event: MessagePortEventPrimary) => void>>()
   private portResponseHandlers = new Map<
@@ -141,41 +141,44 @@ export class MessagePortService<IsPrimary extends boolean> {
         }
 
         // Otherwise look for a regular message handler
-        const handler = this.handlers.get(payload.type)
-        if (handler) {
-          try {
-            const result = handler(payload.data)
-            if (result instanceof Promise) {
-              result
-                .then((response) => {
-                  if (response !== undefined) {
-                    this.clientPostMessage?.({
-                      type: `${payload.type}:response`,
-                      data: response
-                    })
-                  }
-                })
-                .catch((error) => {
-                  console.error('Error handling message:', error)
-                  this.clientPostMessage?.({
-                    type: `${payload.type}:error`,
-                    data: error instanceof Error ? error.message : 'Unknown error'
+        const handlers = this.handlers.get(payload.type)
+        if (handlers && handlers.size > 0) {
+          // Call all registered handlers for this event type
+          handlers.forEach((handler) => {
+            try {
+              const result = handler(payload.data)
+              if (result instanceof Promise) {
+                result
+                  .then((response) => {
+                    if (response !== undefined) {
+                      this.clientPostMessage?.({
+                        type: `${payload.type}:response`,
+                        data: response
+                      })
+                    }
                   })
+                  .catch((error) => {
+                    console.error('Error handling message:', error)
+                    this.clientPostMessage?.({
+                      type: `${payload.type}:error`,
+                      data: error instanceof Error ? error.message : 'Unknown error'
+                    })
+                  })
+              } else if (result !== undefined) {
+                // Handle synchronous return values
+                this.clientPostMessage?.({
+                  type: `${payload.type}:response`,
+                  data: result
                 })
-            } else if (result !== undefined) {
-              // Handle synchronous return values
+              }
+            } catch (error) {
+              console.error('Error handling message:', error)
               this.clientPostMessage?.({
-                type: `${payload.type}:response`,
-                data: result
+                type: `${payload.type}:error`,
+                data: error instanceof Error ? error.message : 'Unknown error'
               })
             }
-          } catch (error) {
-            console.error('Error handling message:', error)
-            this.clientPostMessage?.({
-              type: `${payload.type}:error`,
-              data: error instanceof Error ? error.message : 'Unknown error'
-            })
-          }
+          })
         } else {
           // Queue the message if no handler is registered
           this.log.debug(`Queueing message of type: ${payload.type}`)
@@ -252,13 +255,29 @@ export class MessagePortService<IsPrimary extends boolean> {
           this.clientPostMessage({ type: name, data: payload })
         },
         handle: (handler: (payload: T) => void) => {
-          this.handlers.set(name, handler)
+          // Get or create a Set for this event type
+          let handlers = this.handlers.get(name)
+          if (!handlers) {
+            handlers = new Set()
+            this.handlers.set(name, handlers)
+          }
+
+          // Add the handler to the Set
+          handlers.add(handler)
 
           // Flush any queued messages for this event type
           this.flushMessageQueue(name, (payload: any) => handler(payload.data))
 
+          // Return cleanup function that removes only this specific handler
           return () => {
-            this.handlers.delete(name)
+            const handlers = this.handlers.get(name)
+            if (handlers) {
+              handlers.delete(handler)
+              // Clean up the Set if it's empty
+              if (handlers.size === 0) {
+                this.handlers.delete(name)
+              }
+            }
           }
         }
       } as IsPrimary extends true ? PrimaryEvent<T> : ClientEvent<T>
@@ -398,13 +417,29 @@ export class MessagePortService<IsPrimary extends boolean> {
           })
         },
         handle: (handler: ClientHandleHandler<T>) => {
-          this.handlers.set(name, handler)
+          // Get or create a Set for this event type
+          let handlers = this.handlers.get(name)
+          if (!handlers) {
+            handlers = new Set()
+            this.handlers.set(name, handlers)
+          }
+
+          // Add the handler to the Set
+          handlers.add(handler)
 
           // Flush any queued messages for this event type
           this.flushMessageQueue(name, (payload: any) => handler(payload.data))
 
+          // Return cleanup function that removes only this specific handler
           return () => {
-            this.handlers.delete(name)
+            const handlers = this.handlers.get(name)
+            if (handlers) {
+              handlers.delete(handler)
+              // Clean up the Set if it's empty
+              if (handlers.size === 0) {
+                this.handlers.delete(name)
+              }
+            }
           }
         }
       } as IsPrimary extends true ? PrimaryEventWithReturn<T> : ClientEventWithReturn<T>

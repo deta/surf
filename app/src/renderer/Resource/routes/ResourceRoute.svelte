@@ -101,6 +101,10 @@
 </div>
 
 <style lang="scss">
+  // well.. this is another sin
+  :global(.router-content:not(:has(.text-resource-wrapper))) {
+    position: relative !important;
+  }
   :global(#app) {
     height: 100%;
     width: 100%;
@@ -114,12 +118,14 @@
   }
 
   .wrapper {
+    position: relative;
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
     overflow: hidden;
     background: light-dark(var(--app-background), var(--app-background-dark));
+    background: light-dark(#fff, rgba(27, 36, 53, 1));
     border: 0.5px solid rgba(0, 0, 0, 0.1);
 
     h1 {

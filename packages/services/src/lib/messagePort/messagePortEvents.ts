@@ -135,6 +135,9 @@ export interface MPExternStateResourceCreated extends MessagePortEvent {
 export interface MPExternStateResourceDeleted extends MessagePortEvent {
   payload: { resourceId: string }
 }
+export interface MPExternStateResourceUpdated extends MessagePortEvent {
+  payload: { resourceId: string }
+}
 
 export interface MPExternStateNotebooksChanged extends MessagePortEvent {
   payload: { notebookIds: string[] }
@@ -174,6 +177,7 @@ export type MPContextManagerAction = {
 type MessagePortEventRegistry = {
   extern_state_resourceCreated: MPExternStateResourceCreated
   extern_state_resourceDeleted: MPExternStateResourceDeleted
+  extern_state_resourceUpdated: MPExternStateResourceUpdated
   extern_state_notebookAddResources: MPExternStateNotebookChanged
   extern_state_notebookRemoveResources: MPExternStateNotebookChanged
   extern_state_notebooksChanged: MPExternStateNotebooksChanged
@@ -216,6 +220,9 @@ const createMessagePortEvents = <IsPrimary extends boolean>(
     ),
     extern_state_resourceDeleted: messagePortService.addEvent<MPExternStateResourceDeleted>(
       'extern-state-resource-deleted'
+    ),
+    extern_state_resourceUpdated: messagePortService.addEvent<MPExternStateResourceUpdated>(
+      'extern-state-resource-updated'
     ),
     extern_state_notebookAddResources: messagePortService.addEvent<MPExternStateNotebookChanged>(
       'extern-state-notebook-add-resources'

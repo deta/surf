@@ -234,87 +234,89 @@
   class:loading={$isLoading}
   use:startingClass={{}}
 >
-  {#if $statusMessage}
-    <div class="status-message" class:error={$statusMessage.type === 'error'}>
-      <div class="status-content">
+  <div style="margin: 0 auto;width:100%;max-width: 740px;">
+    {#if $statusMessage}
+      <div class="status-message" class:error={$statusMessage.type === 'error'}>
+        <div class="status-content">
+          {#if $statusMessage.type === 'error'}
+            <Icon name="exclamation.circle" size="1.15rem" />
+            <span>{$statusMessage.value}</span>
+          {:else}
+            <Icon name="plane.loader" size="1.15rem" />
+            <span class="status-text">{$statusMessage.value}</span>
+          {/if}
+        </div>
         {#if $statusMessage.type === 'error'}
-          <Icon name="exclamation.circle" size="1.15rem" />
-          <span>{$statusMessage.value}</span>
-        {:else}
-          <Icon name="plane.loader" size="1.15rem" />
-          <span class="status-text">{$statusMessage.value}</span>
+          <button class="dismiss-button" on:click={dismissStatus} aria-label="Dismiss">
+            <Icon name="close" size="0.75rem" />
+          </button>
         {/if}
       </div>
-      {#if $statusMessage.type === 'error'}
-        <button class="dismiss-button" on:click={dismissStatus} aria-label="Dismiss">
-          <Icon name="close" size="0.75rem" />
-        </button>
-      {/if}
-    </div>
-  {:else if !(!isEditorEmpty || !showExamplePrompts || $contextManagementDialogOpen) && editor?.focused}
-    <div class="prompts">
-      <PromptPills
-        promptItems={$suggestedPrompts}
-        hide={!isEditorEmpty ||
-          !showExamplePrompts ||
-          $contextManagementDialogOpen ||
-          !editor?.focused}
-        direction={'horizontal'}
-        on:click={handleClickPrompt}
-      />
-    </div>
-  {/if}
-  <Input
-    bind:editor
-    value={inputValue}
-    active={$contextManagementDialogOpen}
-    placeholder={writable($isLoading ? 'Answering...' : 'Ask me anything…')}
-    bind:focusInput
-    submitOnEnter
-    parseMentions
-    {mentionItemsFetcher}
-    disabled={$isLoading}
-    on:submit={handleSubmit}
-    on:blur
-  />
-  <header>
-    <div
-      class="context-controls bottom"
-      use:startingClass={{}}
-      class:open-context-picker={$contextManagementDialogOpen}
-    >
-      <div>
-        <AddToContextMenu {onFileSelect} {onMentionSelect} align="end" disabled={$isLoading} />
-        <Dropdown
-          items={$toolsDropdownItems}
-          triggerText="Tools"
-          triggerIcon="bolt"
-          align="end"
-          disabled={$isLoading}
+    {:else if !(!isEditorEmpty || !showExamplePrompts || $contextManagementDialogOpen) && editor?.focused}
+      <div class="prompts">
+        <PromptPills
+          promptItems={$suggestedPrompts}
+          hide={!isEditorEmpty ||
+            !showExamplePrompts ||
+            $contextManagementDialogOpen ||
+            !editor?.focused}
+          direction={'horizontal'}
+          on:click={handleClickPrompt}
         />
-        <ModelPicker align="end" />
+      </div>
+    {/if}
+    <Input
+      bind:editor
+      value={inputValue}
+      active={$contextManagementDialogOpen}
+      placeholder={writable($isLoading ? 'Answering...' : 'Ask me anything…')}
+      bind:focusInput
+      submitOnEnter
+      parseMentions
+      {mentionItemsFetcher}
+      disabled={$isLoading}
+      on:submit={handleSubmit}
+      on:blur
+    />
+    <header>
+      <div
+        class="context-controls bottom"
+        use:startingClass={{}}
+        class:open-context-picker={$contextManagementDialogOpen}
+      >
         <div>
-          <button
-            class="submit-btn -mr-1.5"
-            on:click={$isLoading ? handleCancel : handleSubmit}
-            disabled={isEditorEmpty && !$isLoading}
-          >
-            {#if $isLoading}
-              <span class="loading-icon">
-                <Icon name="spinner" fill="var(--accent)" size="1rem" class="loading-icon" />
-              </span>
-              <span class="stop-icon">
-                <Icon name="spinner.stop" size="1rem" />
-              </span>
-            {:else}
-              <Icon name="cursor" size="14" />
-              <span>Ask</span>
-            {/if}
-          </button>
+          <AddToContextMenu {onFileSelect} {onMentionSelect} align="end" disabled={$isLoading} />
+          <Dropdown
+            items={$toolsDropdownItems}
+            triggerText="Tools"
+            triggerIcon="bolt"
+            align="end"
+            disabled={$isLoading}
+          />
+          <ModelPicker align="end" />
+          <div>
+            <button
+              class="submit-btn -mr-1.5"
+              on:click={$isLoading ? handleCancel : handleSubmit}
+              disabled={isEditorEmpty && !$isLoading}
+            >
+              {#if $isLoading}
+                <span class="loading-icon">
+                  <Icon name="spinner" fill="var(--accent)" size="1rem" class="loading-icon" />
+                </span>
+                <span class="stop-icon">
+                  <Icon name="spinner.stop" size="1rem" />
+                </span>
+              {:else}
+                <Icon name="cursor" size="14" />
+                <span>Ask</span>
+              {/if}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </header>
+    </header>
+  </div>
 </div>
 
 <style lang="scss">
@@ -366,8 +368,10 @@
       font-family: var(--default);
       font-weight: var(--medium);
       font-size: 0.9rem;
+
       --status-shimmer: light-dark(#aae5ff, rgba(147, 197, 253, 0.65));
       --status-base: light-dark(#399bf1, var(--accent-dark, #8192ff));
+
       background: linear-gradient(
           90deg,
           transparent 0%,
@@ -539,8 +543,11 @@
 
       transition-property: top, left, right, padding;
       bottom: 0;
-      left: calc(50% - 780px / 2);
-      right: calc(50% - 780px / 2);
+      //left: calc(50% - 780px / 2);
+      //right: calc(50% - 780px / 2);
+
+      left: 0;
+      right: 0;
 
       /*
       background:
@@ -560,16 +567,18 @@
       background-position: center bottom;
       */
 
-      @media screen and (max-width: 780px) {
-        left: 0 !important;
-        right: 0 !important;
-      }
+      //@media screen and (min-width: 810px) {
+      //  left: var(--chat-input-padding) !important;
+      //  right: 50rem !important;
+      //  padding-inline: 0;
+      //}
 
       top: unset;
       padding-bottom: 2.5rem;
       padding-inline: var(--chat-input-padding);
+      //padding-inline: var(--chat-input-padding);
       width: 100%;
-      max-width: var(--chat-input-max-width);
+      //max-width: var(--chat-input-max-width);
 
       :global(.browser-content) & {
         left: calc(anchor(--editor-last-line start) - 2rem);

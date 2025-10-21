@@ -17,6 +17,7 @@
     initializeTabOrientation
   } from '@deta/services/tabs'
   import NavigationBar from './components/NavigationBar/NavigationBar.svelte'
+  import NavigationBarGroup from './components/NavigationBar/NavigationBarGroup.svelte'
   import AppSidebar from './components/Layout/AppSidebar.svelte'
   import { isLinux, isMac, isWindows, ResourceTag, useDebounce, wait } from '@deta/utils'
   import { Button, prepareContextMenu } from '@deta/ui'
@@ -304,8 +305,6 @@
           view={activeTabView}
           onsearchinput={handleSearchInput}
           tab={tabsService.activeTab}
-          roundLeftCorner
-          roundRightCorner={!viewManager.sidebarViewOpen}
         />
       {/if}
       <div class="tab-contents">
@@ -659,7 +658,7 @@
   :global([data-drag-zone][axis='vertical']) {
     // This is needed to prevent margin collapse when the first child has margin-top. Without this, it will move the container element instead.
     padding-top: 1px;
-    margin-top: -1px;
+    //margin-top: -1px;
   }
 
   .windows-menu-button {

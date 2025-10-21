@@ -75,6 +75,16 @@ const eventHandlers = {
     })
   },
 
+  onToggleNotebookSidebar: (callback: (data: { open: boolean }) => void) => {
+    return IPC_EVENTS_RENDERER.toggleNotebookSidebar.on((_, data) => {
+      try {
+        callback(data)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
   onMessagePort: (callback: MessagePortCallbackClient) => {
     messagePort.onMessage(callback)
   }

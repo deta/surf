@@ -15,7 +15,8 @@
    *  </ResourceLoader>
    */
   import { type Snippet } from 'svelte'
-  import { useResourceManager } from '@deta/services/resources'
+  import { onMount, onDestroy } from 'svelte'
+  import { useResourceManager, ResourceManagerEvents } from '@deta/services/resources'
   import { type Resource } from '@deta/services/resources'
 
   let {
@@ -37,8 +38,8 @@
   } = $props()
 
   const resourceManager = useResourceManager()
-  // TODO: maxu: check state update reactivity
-  let resourcePromise = $state(lazy ? undefined : typeof resource === 'string' ? resourceManager.getResource(resource, { includeAnnotations }) : resource)
+
+  let resourcePromise = $derived(lazy ? undefined : typeof resource === 'string' ? resourceManager.getResource(resource, { includeAnnotations }) : Promise.resolve(resource))
 
   const onContentVisibilityChanged = (e: ContentVisibilityAutoStateChangeEvent) => {
     if (!e.skipped && resourcePromise === undefined) {
@@ -51,18 +52,18 @@
 </script>
 
 {#if !lazy && resourcePromise}
-{#await resourcePromise}
-  {@render loading?.()}
-{:then resource}
-  {@render children?.(resource)}
-{/await}
+  {#await resourcePromise}
+    {@render loading?.()}
+  {:then resource}
+      {@render children?.(resource)}
+  {/await}
 {:else}
   <div oncontentvisibilityautostatechange={onContentVisibilityChanged}>
     {#if resourcePromise}
       {#await resourcePromise}
         {@render loading?.()}
       {:then resource}
-        {@render children?.(resource)}
+          {@render children?.(resource)}
       {/await}
     {/if}
   </div>

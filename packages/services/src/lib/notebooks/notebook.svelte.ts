@@ -96,6 +96,18 @@ export class Notebook {
     this.notebookManager.emit(NotebookManagerEvents.Updated, this.id, updates)
   }
 
+  /**
+   * Update this notebook instance from fresh space data
+   * This preserves object identity while syncing with backend state
+   */
+  updateFromSpace(space: NotebookSpace) {
+    this.log.debug('updating notebook from space data')
+    this.updatedAt = space.updated_at
+    this.deleted = space.deleted
+    this.data = space.name
+    // Note: contents are NOT reset - they persist unless explicitly fetched
+  }
+
   async updateIndex(index: number) {
     this.log.debug('updating space index', index)
 

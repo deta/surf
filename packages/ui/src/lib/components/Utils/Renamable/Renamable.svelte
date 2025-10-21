@@ -83,7 +83,7 @@
   }
 
   function handleDoubleClick(event: MouseEvent) {
-    if (isEditing && inputElement) {
+    if (!disabled && isEditing && inputElement) {
       event.preventDefault()
       inputElement.select()
     }
@@ -95,7 +95,7 @@
 
   // Handle click on container when not editing
   function handleContainerClick() {
-    if (!isEditing) {
+    if (!disabled && !isEditing) {
       startEditing()
     }
   }
@@ -149,7 +149,7 @@
       opacity: 0.5;
     }
     
-    &:not(.disabled):hover:not(.editing) {
+    &:not(.disabled):hover:not(.editing):not(.tree-node-renamable) {
       background-color: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.05));
       border-radius: 4px;
     }

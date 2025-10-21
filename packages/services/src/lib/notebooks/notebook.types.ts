@@ -9,6 +9,7 @@ export enum NotebookManagerEvents {
   RemovedResources = 'removed-notebook-resource',
 
   CreatedResource = 'created-resource',
+  UpdatedResource = 'updated-resource',
   DeletedResource = 'deleted-resource'
 }
 export type NotebookManagerEventHandlers = {
@@ -19,5 +20,6 @@ export type NotebookManagerEventHandlers = {
   [NotebookManagerEvents.RemovedResources]: (notebookId: string, resourceIds: string[]) => void
 
   [NotebookManagerEvents.CreatedResource]: (resourceId: string) => void
+  [NotebookManagerEvents.UpdatedResource]: (resourceId: string) => void
   [NotebookManagerEvents.DeletedResource]: (resourceId: string) => void
 }

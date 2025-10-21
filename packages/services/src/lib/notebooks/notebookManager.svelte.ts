@@ -119,6 +119,36 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
           }
         }),
 
+        // Listen to resource updates (e.g., name changes) to keep notebook contents fresh
+        this.resourceManager.on(ResourceManagerEvents.Updated, (resource: Resource) => {
+          this.log.debug('Resource updated, refreshing affected notebooks:', resource.id)
+
+          // Find notebooks that contain this resource and refresh their contents
+          for (const notebook of this.notebooks.values()) {
+            const hasResource = notebook.contents.some((entry) => entry.entry_id === resource.id)
+            if (hasResource) {
+              this.log.debug('Refreshing notebook contents for:', notebook.nameValue)
+              // Refresh contents to get updated resource metadata
+              notebook.fetchContents().catch((error) => {
+                this.log.warn('Failed to refresh notebook contents:', notebook.id, error)
+              })
+            }
+          }
+
+          // Send cross-renderer message for resource updates
+          if (isMainRenderer()) {
+            useViewManager()?.viewsValue.forEach((view) =>
+              this.messagePort.extern_state_resourceUpdated.send(view.id, {
+                resourceId: resource.id
+              })
+            )
+          } else {
+            this.messagePort.extern_state_resourceUpdated.send({
+              resourceId: resource.id
+            })
+          }
+        }),
+
         this.resourceManager.on(
           ResourceManagerEvents.NotebookAddResources,
           (notebookId: string, resourceIds: string[]) => {
@@ -175,6 +205,44 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
               })
             })
           }),
+          this.messagePort.extern_state_resourceUpdated.on(async ({ resourceId }) => {
+            this.log.debug('Received cross-renderer resource update:', resourceId)
+
+            try {
+              await this.resourceManager.reloadResource(resourceId, true)
+            } catch (error) {
+              this.log.warn('Failed to refresh resource metadata:', resourceId, error)
+            }
+
+            // Find notebooks that contain this resource and refresh their contents
+            for (const notebook of this.notebooks.values()) {
+              const hasResource = notebook.contents.some((entry) => entry.entry_id === resourceId)
+              if (hasResource) {
+                this.log.debug('Refreshing notebook contents for:', notebook.nameValue)
+                notebook.fetchContents().catch((error) => {
+                  this.log.warn('Failed to refresh notebook contents:', notebook.id, error)
+                })
+              }
+            }
+
+            // Emit local event to trigger NotebookTreeView reactivity
+            this.emit(NotebookManagerEvents.UpdatedResource, resourceId)
+
+            // Also emit through ResourceManager to trigger ResourceLoader updates
+            this.resourceManager.emit('externalResourceUpdated', resourceId)
+
+            if (isMainRenderer()) {
+              useViewManager().viewsValue.forEach((view) => {
+                this.messagePort.extern_state_resourceUpdated.send(view.id, {
+                  resourceId
+                })
+              })
+            } else {
+              this.messagePort.extern_state_resourceUpdated.send({
+                resourceId
+              })
+            }
+          }),
 
           this.messagePort.extern_state_notebookAddResources.on(({ notebookId, resourceIds }) => {
             this.getNotebook(notebookId).then((e) => e?.fetchContents())
@@ -204,6 +272,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
             }
           ),
           this.messagePort.extern_state_notebooksChanged.on(() => {
+            console.log('xxxx-deinemudda')
             this.loadNotebooks()
           })
         )
@@ -338,16 +407,40 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
       })
       .sort((a, b) => (a.name.index ?? -1) - (b.name.index ?? -1))
       .map((space, idx) => ({ ...space, name: { ...space.name, index: idx } }))
-      .map((space) => this.createNotebookObject(space as unknown as NotebookSpace))
 
     this.log.debug('loaded spaces:', spaces)
 
-    this.notebooks.clear()
-    spaces.forEach((space) => this.notebooks.set(space.id, space))
+    // Preserve object identity by updating existing notebooks instead of replacing them
+    // This prevents breaking reactivity in components that hold references to Notebook objects
+    const newSpaceIds = new Set(spaces.map((s) => s.id))
+    const existingIds = new Set(this.notebooks.keys())
+
+    // Remove notebooks that no longer exist
+    for (const existingId of existingIds) {
+      if (!newSpaceIds.has(existingId)) {
+        this.log.debug('Removing deleted notebook:', existingId)
+        this.notebooks.delete(existingId)
+      }
+    }
+
+    // Update existing notebooks or add new ones
+    for (const space of spaces) {
+      const existing = this.notebooks.get(space.id)
+      if (existing) {
+        // Update existing notebook in-place to preserve object identity
+        this.log.debug('Updating existing notebook:', space.id)
+        existing.updateFromSpace(space as unknown as NotebookSpace)
+      } else {
+        // Create new notebook for newly added spaces
+        this.log.debug('Adding new notebook:', space.id)
+        const notebook = this.createNotebookObject(space as unknown as NotebookSpace)
+        this.notebooks.set(space.id, notebook)
+      }
+    }
 
     this.triggerUpdate()
 
-    return spaces
+    return Array.from(this.notebooks.values())
   }
 
   async createNotebook(data: Partial<NotebookData>, isUserAction = false) {
