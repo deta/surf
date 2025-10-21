@@ -1,11 +1,13 @@
 import { app, net } from 'electron'
 import { isPathSafe, getContentType } from './utils'
 import path, { join } from 'path'
-import { stat, mkdir } from 'fs/promises'
+import { stat, mkdir, rename } from 'fs/promises'
 import { Worker } from 'worker_threads'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { pathToFileURL } from 'url'
-import { useLogScope } from '@deta/utils'
+import { getResourceFileExtension, getResourceFileName, useLogScope } from '@deta/utils'
+import { SFFSMain, useSFFSMain } from './sffs'
+import { SFFSRawResource, SFFSResource } from '@deta/types'
 
 interface ImageProcessingParams {
   requestURL: string
@@ -42,7 +44,7 @@ const imageProcessorOnMessage = (result: {
     log.error('Image processing error:', result.error)
     response = new Response(`Image Processing Error: ${result.error}`, { status: 500 })
   } else {
-    response = new Response(result.buffer)
+    response = new Response(result.buffer as any)
   }
   handles.forEach((handle) => handle.resolve(response.clone())) // NOTE: Try clonse so its not consumed and lost for multiple reauesters
   imageProcessorHandles.delete(result.messageID)
@@ -369,15 +371,102 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
   }
 }
 
-const handleSurfResourceDataRequest = async (req: GlobalRequest, resourceId: string) => {
+const fetchFilePath = async (base: string, filePath: string) => {
+  try {
+    if (!isPathSafe(base, filePath)) {
+      return {
+        response: new Response('Forbidden', { status: 403 }),
+        filePath,
+        base
+      }
+    }
+
+    const response = await net.fetch(`file://${filePath}`)
+    return { response, filePath, base }
+  } catch (error) {
+    return null
+  }
+}
+
+const migrateResourceFile = async (
+  legacyFilePath: string,
+  newFilePath: string,
+  resource?: SFFSResource
+) => {
+  log.debug('Migrating resource file to new path with extension:', newFilePath)
+
+  if (legacyFilePath !== newFilePath) {
+    await rename(legacyFilePath, newFilePath)
+  }
+
+  const sffs = useSFFSMain()
+  if (!resource || !sffs) return
+
+  await sffs.updateResource({
+    id: resource.id,
+    resource_path: newFilePath,
+    resource_type: resource.type,
+    created_at: resource.createdAt,
+    updated_at: resource.updatedAt,
+    deleted: resource.deleted ? 1 : 0
+  } satisfies SFFSRawResource)
+}
+
+const fetchResourceFile = async (resourceId: string, resource?: SFFSResource) => {
   const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
   const filePath = join(base, resourceId)
 
-  if (!isPathSafe(base, filePath)) {
-    return new Response('Forbidden', { status: 403 })
-  }
+  try {
+    let extension = ''
+    let newFileName = resourceId
+    if (resource) {
+      extension = getResourceFileExtension(resource.type)
+      newFileName = getResourceFileName(SFFSMain.convertResourceToCompositeResource(resource))
+    }
 
-  const response = await net.fetch(`file://${filePath}`)
+    // try stored resource path first
+    if (
+      resource &&
+      resource.path &&
+      (resource.path.endsWith(`.${extension}`) || resource.path.endsWith('.json'))
+    ) {
+      const result = await fetchFilePath(base, resource.path)
+      if (result) {
+        return result
+      }
+    }
+
+    // then try the new path (with new file name and extension)
+    let newFilePath = join(base, extension ? `${newFileName}.${extension}` : resourceId)
+    let result = await fetchFilePath(base, newFilePath)
+    if (result) {
+      if (resource?.path !== newFilePath) {
+        await migrateResourceFile(newFilePath, newFilePath, resource)
+      }
+
+      return result
+    }
+
+    // try legacy path with only resourceId
+    const legacyFilePath = join(base, resourceId)
+    result = await fetchFilePath(base, legacyFilePath)
+    if (result) {
+      await migrateResourceFile(legacyFilePath, newFilePath, resource)
+      return result
+    }
+
+    return { response: new Response('Not Found', { status: 404 }), filePath, base }
+  } catch (error) {
+    log.error('Error fetching resource file:', error)
+    return { response: new Response('Not Found', { status: 404 }), filePath, base }
+  }
+}
+
+const handleSurfResourceDataRequest = async (req: GlobalRequest, resourceId: string) => {
+  const sffs = useSFFSMain()
+  const resource = await sffs?.readResource(resourceId).catch(() => null)
+
+  const { response, filePath, base } = await fetchResourceFile(resourceId, resource ?? undefined)
   if (
     response.headers.get('content-type')?.startsWith('image/') &&
     !response.headers.get('content-type')?.startsWith('image/gif')
@@ -426,17 +515,16 @@ export const surfletProtocolHandler = async (req: GlobalRequest) => {
     const isV2Protocol = url.hostname.endsWith('.v2.app.local')
     const suffix = isV2Protocol ? '.v2.app.local' : '.app.local'
     const id = url.hostname.replace(suffix, '')
-    const base = join(app.getPath('userData'), 'sffs_backend', 'resources')
-    const path = join(base, id)
 
-    if (!isPathSafe(base, path)) {
-      return new Response('Forbidden', { status: 403 })
-    }
-    let res = await net.fetch(`file://${path}`)
-    if (!res.ok) {
+    const sffs = useSFFSMain()
+    const resource = await sffs?.readResource(id).catch(() => null)
+
+    const { response } = await fetchResourceFile(id, resource ?? undefined)
+    if (!response.ok) {
       return new Response('Not Found', { status: 404 })
     }
-    const code = await res.text()
+
+    const code = await response.text()
     let headers = {
       'Content-Type': 'text/html'
     }

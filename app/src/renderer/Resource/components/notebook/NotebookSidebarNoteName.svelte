@@ -38,12 +38,24 @@
     notebookManager.removeResourcesFromNotebook(notebookId, [resource.id], true)
   }
 
+  const handleOpenAsFile = (resourceId: string) => {
+    // @ts-ignore
+    window.api.openResourceLocally(resourceId)
+  }
+
+  const handleExport = (resourceId: string) => {
+    // @ts-ignore
+    window.api.exportResource(resourceId)
+  }
+
   const CTX_MENU_ITEMS: CtxItem[] = $derived(
     resource
       ? getResourceCtxItems({
           resource,
           sortedNotebooks: notebookManager.sortedNotebooks,
           onOpen: (target: OpenTarget) => openResource(resource.id, { target, offline: false }),
+          onOpenAsFile: (id: string) => handleOpenAsFile(id),
+          onExport: (id: string) => handleExport(id),
           onAddToNotebook: (id: string) => handleAddToNotebook(id),
           onDeleteResource: async (resourceId: string) => {
             const { closeType: confirmed } = await openDialog({

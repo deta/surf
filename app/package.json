@@ -37,7 +37,6 @@
     "electron-drag-click": "^1.0.5",
     "electron-updater": "^6.1.7",
     "iconify-icon": "^2.1.0",
-    "mime-types": "^2.1.35",
     "sharp": "^0.33.5",
     "svelte-dnd-list": "^0.1.8",
     "svelte-portal": "^2.2.1"
@@ -58,7 +57,7 @@
     "@mateothegreat/svelte5-router": "^2.16.19",
     "@svelte-plugins/tooltips": "^3.0.1",
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
-    "@types/mime-types": "^2.1.4",
+    "@types/mime-types": "^3.0.1",
     "@types/node": "^18.17.5",
     "autoprefixer": "^10.4.19",
     "bits-ui": "^2.9.3",
@@ -87,6 +86,7 @@
     "uuid": "^9.0.1",
     "vite": "^7.1.11",
     "vite-plugin-css-injected-by-js": "^3.5.1",
-    "vite-plugin-markdown": "^2.2.0"
+    "vite-plugin-markdown": "^2.2.0",
+    "vite-plugin-node-polyfills": "^0.24.0"
   }
 }

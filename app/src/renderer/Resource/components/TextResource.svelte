@@ -46,7 +46,8 @@
     wait,
     htmlToMarkdown,
     isDev,
-    conditionalArrayItem
+    conditionalArrayItem,
+    markdownToHtml
   } from '@deta/utils'
   import CitationItem from './CitationItem.svelte'
   import { generateContentHash, mapCitationsToText, parseChatOutputToHtml } from '@deta/services/ai'
@@ -59,6 +60,7 @@
   import {
     EventContext,
     GeneratePromptsEventTrigger,
+    isWebResourceType,
     MentionEventType,
     NoteCreateCitationEventTrigger,
     PageChatMessageSentEventError,
@@ -69,7 +71,6 @@
     ResourceTagsBuiltInKeys,
     ResourceTypes,
     ViewLocation,
-    WEB_RESOURCE_TYPES,
     type CitationClickData,
     type CitationInfo
   } from '@deta/types'
@@ -320,7 +321,8 @@
       const parsedContent = WebParser.getResourceContent(resource.type, data)
 
       const text = parsedContent.html || parsedContent.plain || ''
-      content.set(text)
+      const html = await markdownToHtml(text)
+      content.set(html)
     }
 
     await tick()
@@ -381,7 +383,8 @@
         const content = WebParser.getResourceContent(resource.type, data)
 
         const text = content.html || content.plain || ''
-        value = writable(text)
+        const html = await markdownToHtml(text)
+        value = writable(html)
       }
 
       title = resource.metadata.name ?? 'Untitled'
@@ -635,8 +638,7 @@
     const canonicalUrl = (resource?.tags ?? []).find(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
     )?.value
-    const canBeEmbedded =
-      WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
+    const canBeEmbedded = isWebResourceType(resource.type) && canonicalUrl
 
     if (resource.type.startsWith('image/')) {
       insertResourceEmbed(resource, position)

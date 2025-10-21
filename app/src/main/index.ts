@@ -17,6 +17,7 @@ import { SurfBackendServerManager } from './surfBackend'
 import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 import { useLogScope } from '@deta/utils'
+import { initializeSFFSMain } from './sffs'
 
 const log = useLogScope('Main')
 
@@ -180,6 +181,8 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
 
   surfBackendManager.start()
   await surfBackendManager.waitForStart()
+
+  initializeSFFSMain()
 }
 
 const initializeApp = async () => {

@@ -210,7 +210,11 @@ export class DownloadsManager {
 
           if (isValidType) {
             // @ts-ignore
-            await window.backend.resources.updateResourceHash(downloadData.resourceId)
+            await window.backend.resources.updateResourceHash(
+              downloadData.resourceId,
+              resource.type,
+              resource.path
+            )
             // @ts-ignore
             await window.backend.resources.triggerPostProcessing(downloadData.resourceId)
             this.resourceManager.reloadResource(downloadData.resourceId)

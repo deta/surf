@@ -7,7 +7,8 @@ import mime from 'mime-types'
 import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import type { DownloadPathResponseMessage, SFFSResource } from '@deta/types'
 import { isPathSafe, checkFileExists } from './utils'
-import { useLogScope } from '@deta/utils'
+import { htmlToMarkdown, useLogScope } from '@deta/utils'
+import { useSFFSMain } from './sffs'
 
 const log = useLogScope('Download Manager')
 
@@ -252,53 +253,114 @@ export function initDownloadManager(partition: string) {
 }
 
 /**
- * Opens the file associtated with a resource in the user's downloads folder using the system file explorer.
- * If the resource is not found in the downloads, it will be copied to the downloads directory.
+ * Opens the file associtated with a resource in the resources folder using the system file explorer.
  */
-export const openResourceAsFile = async (resource: SFFSResource, resourcesDirectory: string) => {
-  const downloadsPath = app.getPath('downloads')
-  const resourceName = resource?.metadata?.name
+export const openResourceAsFile = async (resourceId: string, basePath: string) => {
+  try {
+    const sffs = useSFFSMain()
+    if (!sffs) {
+      log.error('SFFS is not initialized')
+      return
+    }
 
-  if (resourceName) {
-    const downloadedFilePath = path.join(downloadsPath, resourceName)
+    const resource = await sffs.readResource(resourceId).catch(() => null)
+    if (!resource) {
+      log.error('Resource not found:', resourceId)
+      return
+    }
 
-    if (!isPathSafe(downloadsPath, downloadedFilePath)) {
-      log.error('Download path is not safe:', downloadsPath, downloadedFilePath)
+    const resourcePath = resource.path
+
+    if (!isPathSafe(basePath, resourcePath)) {
+      log.error('Resource path is not safe:', basePath, resourcePath)
       return
     }
 
     // check if the file exists
     const exists = await fs.promises
-      .access(downloadedFilePath)
+      .access(resourcePath)
       .then(() => true)
       .catch(() => false)
-    if (exists) {
-      log.debug('Opening resource file at', downloadedFilePath)
-      shell.showItemInFolder(downloadedFilePath)
+
+    if (!exists) {
+      log.error('Resource file not found at', resourcePath)
       return
-    } else {
-      log.debug('Resource file not found at', downloadedFilePath)
     }
-  }
 
-  const fileName = resourceName || resource.id
-
-  const internalFilePath = path.join(resourcesDirectory, resource.id)
-  const newDownloadFilePath = path.join(downloadsPath, fileName)
-
-  if (!isPathSafe(resourcesDirectory, internalFilePath)) {
-    log.error('Source path is not safe:', resourcesDirectory, internalFilePath)
+    log.debug('Opening resource file at', resourcePath)
+    shell.showItemInFolder(resourcePath)
+  } catch (err) {
+    log.error('Error opening resource as file:', err)
     return
   }
+}
 
-  if (!isPathSafe(downloadsPath, newDownloadFilePath)) {
-    log.error('Download path is not safe:', downloadsPath, newDownloadFilePath)
+/**
+ * Exports the file associated with a resource to a user-selected location.
+ */
+export const exportResource = async (resourceId: string, basePath: string) => {
+  try {
+    const sffs = useSFFSMain()
+    if (!sffs) {
+      log.error('SFFS is not initialized')
+      return
+    }
+
+    const resource = await sffs.readResource(resourceId).catch(() => null)
+    if (!resource) {
+      log.error('Resource not found:', resourceId)
+      return
+    }
+
+    const resourcePath = resource.path
+
+    if (!isPathSafe(basePath, resourcePath)) {
+      log.error('Resource path is not safe:', basePath, resourcePath)
+      return
+    }
+
+    // check if the file exists
+    const exists = await fs.promises
+      .access(resourcePath)
+      .then(() => true)
+      .catch(() => false)
+
+    if (!exists) {
+      log.error('Resource file not found at', resourcePath)
+      return
+    }
+
+    const mainWindow = getMainWindow()
+    if (!mainWindow) {
+      log.error('No main window found')
+      return
+    }
+
+    const fileName = path.basename(resourcePath)
+
+    // prompt user to select save location
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Export Resource',
+      defaultPath: fileName
+    })
+
+    if (canceled || !filePath) {
+      log.debug('User canceled export dialog')
+      return
+    }
+
+    // read the resource file and convert to markdown
+    const buffer = await fs.promises.readFile(resourcePath)
+    let text = buffer.toString('utf-8')
+    const markdown = await htmlToMarkdown(text, true)
+
+    // write the markdown to the selected location
+    await fs.promises.writeFile(filePath, markdown, 'utf-8')
+
+    log.debug('Opening resource file at', filePath)
+    shell.showItemInFolder(filePath)
+  } catch (err) {
+    log.error('Error exporting resource:', err)
     return
   }
-
-  log.debug('Copying resource file from', internalFilePath, 'to:', newDownloadFilePath)
-  await fs.promises.copyFile(internalFilePath, newDownloadFilePath)
-
-  log.debug('Opening resource file at', newDownloadFilePath)
-  shell.showItemInFolder(newDownloadFilePath)
 }

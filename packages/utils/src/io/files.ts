@@ -1,5 +1,7 @@
-import { ResourceTypes } from '@deta/types'
+import { isMarkdownResourceType, ResourceTypes, type SFFSRawCompositeResource } from '@deta/types'
 import { fromMime } from 'human-filetypes'
+import mime from 'mime-types'
+import { uuidToBase62 } from '../data'
 
 export const humanFileTypes = {
   'image/png': 'PNG',
@@ -184,4 +186,31 @@ export const shortenFilename = (raw: string, max = 30) => {
   const name = raw.slice(0, raw.lastIndexOf('.'))
 
   return name.length > max ? `${name.slice(0, max)}[...]${extension}` : raw
+}
+
+export const getResourceFileExtension = (type: string) => {
+  if (isMarkdownResourceType(type)) {
+    return 'md'
+  }
+
+  const mimeType = mime.extension(type)
+  if (mimeType) {
+    return mimeType
+  }
+
+  return 'json'
+}
+
+export const getResourceFileName = (resource: SFFSRawCompositeResource) => {
+  if (resource.metadata?.name) {
+    const shortName = resource.metadata.name
+      .slice(0, 150)
+      .replace(/[<>:"\/\\|?*\x00-\x1F]/g, '-')
+      .replace(/^\.+/, '') // Remove leading periods
+      .replace(/\s+/g, ' ') // Normalize spaces
+    const shortID = uuidToBase62(resource.resource.id)
+    return `${shortName}-${shortID}`
+  }
+
+  return resource.resource.id
 }

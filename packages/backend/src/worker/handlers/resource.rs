@@ -32,13 +32,17 @@ impl Worker {
 
         let resource_id = random_uuid();
         let ct = current_time();
+        let extension = crate::utils::get_resource_file_extension(&resource_type);    
+        let name = metadata.as_ref().map(|m| m.name.as_ref());
+        let resource_name = crate::utils::get_resource_filename(&resource_id, name);
+
         let resource = Resource {
             id: resource_id.clone(),
             resource_path: Path::new(&self.resources_path)
-                .join(resource_id)
-                .as_os_str()
-                .to_string_lossy()
-                .to_string(),
+            .join(format!("{}.{}", resource_name, extension))
+            .as_os_str()
+            .to_string_lossy()
+            .to_string(),
             resource_type: resource_type.clone(),
             created_at: ct,
             updated_at: ct,

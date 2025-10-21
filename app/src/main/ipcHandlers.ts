@@ -17,7 +17,7 @@ import { useAsDefaultBrowser, updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
-import { openResourceAsFile } from './downloadManager'
+import { exportResource, openResourceAsFile } from './downloadManager'
 import { getAppMenu } from './appMenu'
 
 import fs from 'fs/promises'
@@ -323,12 +323,23 @@ function setupIpcHandlers(backendRootPath: string) {
     ipcSenders.updatePrompt(id, content)
   })
 
-  IPC_EVENTS_MAIN.openResourceLocally.on((event, resource: SFFSResource) => {
+  IPC_EVENTS_MAIN.openResourceLocally.on((event, resourceId: string) => {
     if (!validateIPCSender(event)) return
 
     try {
-      const resourcesDirectory = path.join(backendRootPath, 'resources')
-      openResourceAsFile(resource, resourcesDirectory)
+      const basePath = path.join(backendRootPath, 'resources')
+      openResourceAsFile(resourceId, basePath)
+    } catch (error) {
+      log.error('Error opening resource file:', error)
+    }
+  })
+
+  IPC_EVENTS_MAIN.exportResource.on((event, resourceId: string) => {
+    if (!validateIPCSender(event)) return
+
+    try {
+      const basePath = path.join(backendRootPath, 'resources')
+      exportResource(resourceId, basePath)
     } catch (error) {
       log.error('Error opening resource file:', error)
     }

@@ -620,8 +620,12 @@ const api = {
       })
   },
 
-  openResourceLocally: (resource: SFFSResource) => {
-    IPC_EVENTS_RENDERER.openResourceLocally.send(resource)
+  openResourceLocally: (resourceId: string) => {
+    IPC_EVENTS_RENDERER.openResourceLocally.send(resourceId)
+  },
+
+  exportResource: (resourceId: string) => {
+    IPC_EVENTS_RENDERER.exportResource.send(resourceId)
   },
 
   fetchHTMLFromRemoteURL: async (url: string, opts?: RequestInit) => {

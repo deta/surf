@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod api;
 pub mod store;
+pub mod utils;
 pub mod worker;
 
 use neon::{prelude::ModuleContext, result::NeonResult};

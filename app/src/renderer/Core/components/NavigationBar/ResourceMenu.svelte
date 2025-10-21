@@ -1,20 +1,20 @@
 <script lang="ts">
+  import { writable } from 'svelte/store'
   import { Icon } from '@deta/icons'
   import { useBrowser } from '@deta/services/browser'
   import { useNotebookManager } from '@deta/services/notebooks'
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import type { TabItem } from '@deta/services/tabs'
   import { constructBreadcrumbs } from './breadcrumbs'
-  import type { Option } from '@deta/types'
+  import { isWebResourceType, ResourceTypes, ViewType, type Option } from '@deta/types'
   import {
     Button,
     closeContextMenu,
     CONTEXT_MENU_KEY,
     openContextMenu,
-    openDialog,
     type CtxItem
   } from '@deta/ui'
-  import { useLogScope } from '@deta/utils'
+  import { conditionalArrayItem, isMac, useLogScope } from '@deta/utils'
   import type { WebContentsView } from '@deta/services/views'
 
   let { resource, tab, view }: { resource: Resource; tab: Option<TabItem>; view: WebContentsView } =
@@ -25,6 +25,7 @@
   const resourceManager = useResourceManager()
   const notebookManager = useNotebookManager()
   const activeLocation = $derived(view.url ?? writable(''))
+  const viewType = $derived(view.type)
 
   const activeHistory = $derived(view.navigationHistory)
   const activeHistoryIndex = $derived(view.navigationHistoryIndex)
@@ -43,7 +44,7 @@
       ))
   )
 
-  const onDeleteNote = async () => {
+  const onDeleteResource = async () => {
     // TODO: we need to make dialogs overlay everything and communicate
     //const { closeType: confirmed } = await openDialog({
     //  title: `Delete <i>${truncate(resource.metadata.name, 26)}</i>`,
@@ -68,8 +69,22 @@
         view.webContents.loadURL('surf://surf/notebook')
       }
     } catch (err) {
-      log.error('Failed to delete note', err)
+      log.error('Failed to delete resource', err)
     }
+  }
+
+  const handleOpenAsFile = () => {
+    // @ts-ignore
+    window.api.openResourceLocally(resource.id)
+  }
+
+  const handleExport = () => {
+    // @ts-ignore
+    window.api.exportResource(resource.id)
+  }
+
+  const handleOpenResource = (offline: boolean) => {
+    browser.openResource(resource.id, { offline, target: 'active_tab' })
   }
 
   const CTX_MENU_ITEMS: CtxItem[] = [
@@ -86,12 +101,47 @@
           icon: 'arrow.up.right',
           action: () => browser.moveSidebarViewToTab()
         },
+
+    { type: 'separator' },
+
+    ...conditionalArrayItem<CtxItem>(isWebResourceType(resource.type), [
+      $viewType === ViewType.Resource
+        ? {
+            type: 'action',
+            text: 'View Live Version',
+            icon: 'world',
+            action: () => handleOpenResource(false)
+          }
+        : {
+            type: 'action',
+            text: 'View Offline Version',
+            icon: 'save',
+            action: () => handleOpenResource(true)
+          }
+    ]),
+
+    {
+      type: 'action',
+      text: isMac() ? 'Reveal in Finder' : 'Show in Explorer',
+      icon: 'folder.open',
+      action: () => handleOpenAsFile()
+    },
+
+    ...conditionalArrayItem<CtxItem>(resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE, {
+      type: 'action',
+      text: 'Export as Markdown',
+      icon: 'save',
+      action: () => handleExport()
+    }),
+
+    { type: 'separator' },
+
     {
       type: 'action',
       kind: 'danger',
       text: 'Delete',
       icon: 'trash',
-      action: onDeleteNote
+      action: onDeleteResource
     }
   ]
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  import { ResourceTagsBuiltInKeys, WEB_RESOURCE_TYPES } from '@deta/types'
+  import { isWebResourceType, ResourceTagsBuiltInKeys } from '@deta/types'
   import { mimeTypeToCodeLanguage, useLogScope } from '@deta/utils'
   import { Icon } from '@deta/icons'
 
@@ -27,7 +27,7 @@
 
   $: imageResource = resource?.type?.startsWith('image/')
 
-  $: canBeEmbedded = resource && WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x))
+  $: canBeEmbedded = resource && isWebResourceType(resource.type)
   $: canonicalUrl = (resource?.tags ?? []).find(
     (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
   )?.value

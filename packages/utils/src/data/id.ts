@@ -18,3 +18,21 @@ export const hashString = (str: string): number => {
   }
   return hash
 }
+
+export const uuidToBase62 = (uuid: string) => {
+  // Remove hyphens and convert to Buffer/array of bytes
+  const bytes = Buffer.from(uuid.replace(/-/g, ''), 'hex')
+
+  // Base62 characters (0-9, a-z, A-Z)
+  const base62 = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+  let result = ''
+  let number = BigInt('0x' + uuid.replace(/-/g, ''))
+
+  while (number > 0n) {
+    result = base62[Number(number % 62n)] + result
+    number = number / 62n
+  }
+
+  return result
+}

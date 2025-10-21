@@ -3,7 +3,7 @@
   import { provideConfig } from '@deta/services'
   import { createResourceManager, type Resource } from '@deta/services/resources'
   import { provideAI } from '@deta/services/ai'
-  import { ResourceTypes, WEB_RESOURCE_TYPES, type CitationClickEvent } from '@deta/types'
+  import { isWebResourceType, ResourceTypes, type CitationClickEvent } from '@deta/types'
 
   import TextResource from '../components/TextResource.svelte'
   import { useMessagePortClient } from '@deta/services/messagePort'
@@ -29,8 +29,8 @@
   let resource: Resource | null = $state(null)
 
   let canBeNoteResource = $derived(
-    WEB_RESOURCE_TYPES.some((x) => resource.type.startsWith(x)) ||
-      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE
+    resource &&
+      (isWebResourceType(resource.type) || resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE)
   )
 
   function handleCitationClick(data: CitationClickEvent) {
