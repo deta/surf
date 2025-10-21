@@ -217,6 +217,10 @@ export const WEB_RESOURCE_TYPES = [
   ResourceTypes.PLAYLIST_YOUTUBE
 ]
 
+export const isWebResourceType = (type: string) => {
+  return WEB_RESOURCE_TYPES.findIndex((x) => type.startsWith(x)) !== -1
+}
+
 export interface ResourceDataPDF {
   url: string
   downloadURL?: string
@@ -262,5 +266,16 @@ export type DetectedResource<T = ResourceData> = {
 
 export type ResourceStateCombined = 'idle' | 'extracting' | 'post-processing' | 'error'
 export type ResourceState = 'idle' | 'running' | 'error'
+
+export const MARKDOWN_RESOURCE_TYPES = [
+  ResourceTypes.LINK,
+  ResourceTypes.ARTICLE,
+  ResourceTypes.POST,
+  ResourceTypes.DOCUMENT_SPACE_NOTE
+]
+
+export const isMarkdownResourceType = (type: string) => {
+  return MARKDOWN_RESOURCE_TYPES.findIndex((x) => type.startsWith(x)) !== -1
+}
 
 export * from './resources/index.types'

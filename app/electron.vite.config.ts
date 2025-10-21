@@ -9,6 +9,7 @@ import obfuscator from 'rollup-plugin-obfuscator'
 // import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 import { ObfuscatorOptions } from 'javascript-obfuscator'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
@@ -92,7 +93,8 @@ export default defineConfig({
       }
     },
     define: {
-      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform),
+      'process.platform': JSON.stringify(process.platform)
     },
     css: cssConfig
   },
@@ -134,7 +136,8 @@ export default defineConfig({
       minify: true
     },
     define: {
-      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform),
+      'process.platform': JSON.stringify(process.platform)
     },
     css: cssConfig
   },
@@ -152,7 +155,13 @@ export default defineConfig({
       Markdown({ mode: [Mode.MARKDOWN, Mode.HTML] }),
       svelte(svelteOptions),
       createLicensePlugin('renderer'),
-      createConcatLicensesPlugin()
+      createConcatLicensesPlugin(),
+      // needed for gray-matter dependency
+      nodePolyfills({
+        globals: {
+          Buffer: true
+        }
+      })
     ],
     build: {
       sourcemap: false,
@@ -182,7 +191,8 @@ export default defineConfig({
       minify: true
     },
     define: {
-      'import.meta.env.PLATFORM': JSON.stringify(process.platform)
+      'import.meta.env.PLATFORM': JSON.stringify(process.platform),
+      'process.platform': JSON.stringify(process.platform)
     },
     css: cssConfig
   }

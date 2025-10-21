@@ -122,6 +122,16 @@
     }
   }
 
+  const handleOpenAsFile = (resourceId: string) => {
+    // @ts-ignore
+    window.api.openResourceLocally(resourceId)
+  }
+
+  const handleExport = (resourceId: string) => {
+    // @ts-ignore
+    window.api.exportResource(resourceId)
+  }
+
   const getSourceCardCtxItems = (resource: Resource, sourceNotebookId?: string) =>
     getResourceCtxItems({
       resource,
@@ -131,6 +141,8 @@
       onOpenOffline: (resourceId: string) =>
         openResource(resourceId, { offline: true, target: 'tab' }),
       onDeleteResource: () => onDeleteResource(resource),
+      onOpenAsFile: () => handleOpenAsFile(resource.id),
+      onExport: () => handleExport(resource.id),
       onRemove:
         !sourceNotebookId || sourceNotebookId === 'drafts'
           ? undefined

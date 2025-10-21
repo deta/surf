@@ -9,6 +9,7 @@ import {
   type AIChatMessageSource,
   type CitationClickEvent,
   type Fn,
+  isWebResourceType,
   type NavigateURLOptions,
   NotebookDefaults,
   type OpenResourceOptions,
@@ -713,12 +714,7 @@ export class BrowserService {
 
     let url: string | null = null
 
-    if (
-      offline ||
-      !resource.url ||
-      resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE ||
-      resource.type === ResourceTypes.PDF
-    ) {
+    if (offline || !resource.url || !isWebResourceType(resource.type)) {
       url =
         `surf://surf/resource/${resource.id}` + (resource.type === ResourceTypes.PDF ? '?raw' : '')
     } else {

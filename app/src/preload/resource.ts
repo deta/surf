@@ -116,6 +116,14 @@ const api = {
     IPC_EVENTS_RENDERER.openSettings.send(tab)
   },
 
+  openResourceLocally: (resourceId: string) => {
+    IPC_EVENTS_RENDERER.openResourceLocally.send(resourceId)
+  },
+
+  exportResource: (resourceId: string) => {
+    IPC_EVENTS_RENDERER.exportResource.send(resourceId)
+  },
+
   showOpenDialog: async (options: ShowOpenDialog['payload']) => {
     try {
       const filePaths = await IPC_EVENTS_RENDERER.showOpenDialog.invoke(options)

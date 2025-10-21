@@ -13,7 +13,7 @@
   import DownloadsIndicator from './DownloadsIndicator.svelte'
   import ExtensionBrowserActions from './ExtensionBrowserActions.svelte'
   import { useBrowser } from '@deta/services/browser'
-  import NoteMenu from './NoteMenu.svelte'
+  import ResourceMenu from './ResourceMenu.svelte'
   import { ResourceTypes } from '@deta/types'
   import type { TabItem } from '@deta/services/tabs'
 
@@ -65,6 +65,7 @@
   const navigationHistory = $derived(view.navigationHistory)
   const navigationHistoryIndex = $derived(view.navigationHistoryIndex)
   const extractedResourceId = $derived(view.extractedResourceId)
+  const resourceCreatedByUser = $derived(view.resourceCreatedByUser)
 
   const canGoBack = $derived($navigationHistoryIndex > 0)
   const canGoForward = $derived($navigationHistoryIndex < $navigationHistory?.length - 1)
@@ -162,6 +163,24 @@
     <DownloadsIndicator />
     <ExtensionBrowserActions />
 
+    {#if $activeViewType === ViewType.Resource}
+      {#key $activeViewTypeData?.id}
+        <ResourceLoader resource={$activeViewTypeData?.id}>
+          {#snippet children(resource: Resource)}
+            <ResourceMenu {resource} {tab} {view} />
+          {/snippet}
+        </ResourceLoader>
+      {/key}
+    {:else if $extractedResourceId && $resourceCreatedByUser}
+      {#key $extractedResourceId}
+        <ResourceLoader resource={$extractedResourceId}>
+          {#snippet children(resource: Resource)}
+            <ResourceMenu {resource} {tab} {view} />
+          {/snippet}
+        </ResourceLoader>
+      {/key}
+    {/if}
+
     {#if $activeViewType === ViewType.Page}
       {#key $extractedResourceId}
         <SaveState {view} />
@@ -173,16 +192,6 @@
             {#key $activeViewTypeData.id}
               <SaveState {view} />
             {/key}
-          {/if}
-        {/snippet}
-      </ResourceLoader>
-    {/if}
-
-    {#if $activeViewType === ViewType.Resource}
-      <ResourceLoader resource={$activeViewTypeData?.id}>
-        {#snippet children(resource: Resource)}
-          {#if resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-            <NoteMenu {resource} {tab} {view} />
           {/if}
         {/snippet}
       </ResourceLoader>

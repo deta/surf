@@ -57,6 +57,7 @@
   import {
     EventContext,
     GeneratePromptsEventTrigger,
+    isWebResourceType,
     MentionEventType,
     NoteCreateCitationEventTrigger,
     PageChatMessageSentEventError,
@@ -66,7 +67,6 @@
     PromptType,
     ResourceTagsBuiltInKeys,
     ResourceTypes,
-    WEB_RESOURCE_TYPES
   } from '@deta/types'
   import {
     type AIChatMessageParsed,
@@ -441,8 +441,7 @@
     const canonicalUrl = (resource?.tags ?? []).find(
       (tag) => tag.name === ResourceTagsBuiltInKeys.CANONICAL_URL
     )?.value
-    const canBeEmbedded =
-      WEB_RESOURCE_TYPES.some((x) => resource?.type.startsWith(x)) && canonicalUrl
+    const canBeEmbedded = isWebResourceType(resource.type) && canonicalUrl
 
     if (resource.type.startsWith('image/')) {
       insertResourceEmbed(resource, position)

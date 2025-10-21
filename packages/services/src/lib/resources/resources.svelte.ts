@@ -14,7 +14,11 @@ import {
   getNormalizedHostname,
   isMainRenderer,
   isMac,
-  copyToClipboard
+  copyToClipboard,
+  htmlToMarkdown,
+  generateMarkdownWithFrontmatter,
+  parseMarkdownWithFrontmatter,
+  optimisticParseJSON
 } from '@deta/utils'
 import { SFFS } from '../sffs'
 import {
@@ -39,7 +43,10 @@ import {
   type SFFSRawResource,
   type SpaceEntrySearchOptions,
   type NotebookData,
-  type OpenTarget
+  type OpenTarget,
+  MARKDOWN_RESOURCE_TYPES,
+  isMarkdownResourceType,
+  isWebResourceType
 } from '@deta/types'
 // import type { Telemetry } from './telemetry'
 import {
@@ -47,7 +54,6 @@ import {
   EventContext,
   ResourceProcessingStateType,
   ResourceTagDataStateValue,
-  WEB_RESOURCE_TYPES,
   NotebookDefaults,
   type DetectedResource,
   type EventBusMessage,
@@ -100,6 +106,8 @@ export const getResourceCtxItems = ({
   onPin,
   onUnPin,
   onOpen,
+  onOpenAsFile,
+  onExport,
   onAddToNotebook,
   onOpenOffline,
   onDeleteResource,
@@ -110,6 +118,8 @@ export const getResourceCtxItems = ({
   onPin?: () => void
   onUnPin?: () => void
   onOpen?: (target: OpenTarget) => void
+  onOpenAsFile?: (resourceId: string) => void
+  onExport?: (resourceId: string) => void
   onAddToNotebook: (notebookId: string) => void
   onOpenOffline: (resourceId: string) => void
   onDeleteResource: (resourceId: string) => void
@@ -180,15 +190,33 @@ export const getResourceCtxItems = ({
       action: () => copyToClipboard(resource.id)
     }),
 
+    { type: 'separator' },
+
     ...conditionalArrayItem<CtxItem>(onOpenOffline !== undefined, [
-      { type: 'separator' },
       {
         type: 'action',
-        text: 'View Offline',
+        text: 'View Offline Version',
         icon: 'save',
         action: () => onOpenOffline(resource.id)
       }
     ]),
+
+    ...conditionalArrayItem<CtxItem>(onOpenAsFile !== undefined, {
+      type: 'action',
+      text: isMac() ? 'Reveal in Finder' : 'Show in Explorer',
+      icon: 'folder.open',
+      action: () => onOpenAsFile?.(resource.id)
+    }),
+
+    ...conditionalArrayItem<CtxItem>(
+      onExport !== undefined && resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE,
+      {
+        type: 'action',
+        text: 'Export as Markdown',
+        icon: 'save',
+        action: () => onExport?.(resource.id)
+      }
+    ),
 
     ...conditionalArrayItem<CtxItem>(resource.canBeRefreshed.value, {
       type: 'action',
@@ -287,8 +315,8 @@ export type ResourceEventHandlers = {
 
 export class Resource extends EventEmitterBase<ResourceEventHandlers> {
   private sffs: SFFS
-  private resourceManager: ResourceManager
-  private log: ScopedLogger
+  resourceManager: ResourceManager
+  log: ScopedLogger
 
   id: string
   type: string
@@ -383,7 +411,7 @@ export class Resource extends EventEmitterBase<ResourceEventHandlers> {
   }
 
   get canBeRefreshed() {
-    const canBeRefreshed = WEB_RESOURCE_TYPES.some((x) => this.type.startsWith(x))
+    const canBeRefreshed = isWebResourceType(this.type)
     const canBeReprocessed = this.type === ResourceTypes.PDF || this.type.startsWith('image/')
 
     return {
@@ -393,7 +421,7 @@ export class Resource extends EventEmitterBase<ResourceEventHandlers> {
   }
 
   private async readDataAsBlob() {
-    const buffer = (await this.sffs.readDataFile(this.id)) as any
+    const buffer = (await this.sffs.readDataFile(this.id, this.type, this.path)) as any
 
     return new Blob([buffer], { type: this.type })
   }
@@ -428,7 +456,7 @@ export class Resource extends EventEmitterBase<ResourceEventHandlers> {
       return
     }
 
-    await this.sffs.writeDataFile(this.id, this.rawData)
+    await this.sffs.writeDataFile(this.id, this.type, this.path, this.rawData)
   }
 
   updateData(data: Blob, write = true) {
@@ -594,6 +622,11 @@ export class ResourceNote extends Resource {
 
   async updateContent(content: string) {
     this.parsedData.set(content)
+
+    this.log.debug('updating note content with', { content })
+    const markdown = await htmlToMarkdown(content)
+    this.log.debug('updating note content with markdown', { markdown })
+
     const blob = new Blob([content], { type: this.type })
     return this.updateData(blob, true)
   }
@@ -625,6 +658,36 @@ export class ResourceJSON<T> extends Resource {
 
     const data = await this.getData()
     const text = await data.text()
+
+    if (isMarkdownResourceType(this.type) && this.path.endsWith('.md')) {
+      const parsed = await parseMarkdownWithFrontmatter<T>(text)
+
+      // if no frontmatter found fallback to try parsing as JSON
+      if (!parsed.matter || Object.keys(parsed.matter as any).length === 0) {
+        this.log.warn('no frontmatter found in markdown, trying to parse as JSON instead', this.id)
+        const parsedJSON = optimisticParseJSON<T>(text)
+        if (parsedJSON && Object.keys(parsedJSON).length > 0) {
+          this.parsedData = parsedJSON
+
+          // write as proper markdown with frontmatter
+          try {
+            await this.updateParsedData(parsedJSON)
+          } catch (error) {
+            this.log.error('failed to update resource data with parsed JSON', error)
+          }
+
+          return parsedJSON
+        }
+      }
+
+      this.parsedData = {
+        ...parsed.matter,
+        content_plain: parsed.content
+      }
+
+      return this.parsedData
+    }
+
     const parsed = JSON.parse(text) as T
 
     this.parsedData = parsed
@@ -632,11 +695,12 @@ export class ResourceJSON<T> extends Resource {
   }
 
   async updateParsedData(data: T) {
-    const blobData = JSON.stringify(data)
-    const blob = new Blob([blobData], { type: this.type })
-
     this.parsedData = data
 
+    const blob = await this.resourceManager.createFormattedResourceBlob(
+      this.type,
+      data as ResourceData
+    )
     return this.updateData(blob, true)
   }
 }
@@ -1438,6 +1502,26 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     }
   }
 
+  async createFormattedResourceBlob<T extends ResourceData>(type: string, data: T) {
+    if (typeof data === 'string') {
+      return new Blob([data], { type })
+    }
+
+    if (isMarkdownResourceType(type)) {
+      const content = WebParser.getResourceContent(type, data)
+      const { content_html, content_plain, ...frontmatter } = data as any
+      const blobData = await generateMarkdownWithFrontmatter(
+        content.html || content.plain || '',
+        frontmatter
+      )
+
+      return new Blob([blobData], { type })
+    }
+
+    const blobData = JSON.stringify(data)
+    return new Blob([blobData], { type })
+  }
+
   /**
    * @param userAction - if true will track event for this created note, should be set whenever
    * user interaction creates the note.
@@ -1487,8 +1571,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
-    const blobData = JSON.stringify(data)
-    const blob = new Blob([blobData], { type: ResourceTypes.LINK })
+    const blob = await this.createFormattedResourceBlob(ResourceTypes.LINK, data as ResourceData)
 
     const additionalTags: SFFSResourceTag[] = []
 
@@ -1535,15 +1618,14 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     ) as Promise<ResourceAnnotation>
   }
 
-  async createDetectedResource<T>(
+  async createDetectedResource<T = ResourceData>(
     detectedResource: DetectedResource<T>,
     metadata?: Partial<SFFSResourceMetadata>,
     tags?: SFFSResourceTag[]
   ) {
     const { data, type } = detectedResource
 
-    const blobData = typeof data === 'string' ? data : JSON.stringify(data)
-    const blob = new Blob([blobData], { type: type })
+    const blob = await this.createFormattedResourceBlob(type, data as ResourceData)
 
     const sourcePublishedAt = (data as any).date_published as string | undefined
     const additionalTags =

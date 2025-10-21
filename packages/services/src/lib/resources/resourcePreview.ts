@@ -231,7 +231,7 @@ export const getResourcePreview = async (resource: Resource, opts?: PreviewOptio
           content: hideContent ? undefined : previewContent,
           contentType: 'plain',
           annotations: annotationItems,
-          image: userMediaResource ?? data.images[0] ?? undefined,
+          image: userMediaResource ?? data.images?.[0] ?? undefined,
           url: data.url,
           source: {
             text: data.site_name

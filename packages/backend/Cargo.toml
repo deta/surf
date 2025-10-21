@@ -15,11 +15,13 @@ rusqlite = { version = "0.31.0", features = ["bundled", "array", "chrono", "load
 rust-embed = "8.2.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
+serde_yaml = "0.9"
 thiserror = "1.0.57"
 tokio = { version = "1.43.1", features = ["full"] }
 uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
 rand = "0.8.5"
+lazy_static = "1.4.0"
 text-splitter = { version = "0.6.3" }
 url = "2.5.0"
 regex = "1.10.3"
@@ -38,9 +40,11 @@ html-escape = "0.2.13"
 ocrs = "0.8.1"
 rten = "0.13.1"
 image = "0.25.2"
+mime = "0.3.17"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 uds_windows = "1.1.0"
+mime2ext = "0.1.54"
 
 [dependencies.neon]
 version = "1.1.1"

@@ -13,6 +13,9 @@ import {
 } from 'fs'
 
 import { getUserConfig } from '../../main/config'
+import { getResourceFileExtension, getResourceFileName } from '@deta/utils/io'
+import { SFFSRawCompositeResource } from '@deta/types'
+import { optimisticParseJSON } from '@deta/utils/data'
 
 enum ResourceProcessingStateType {
   Pending = 'pending',
@@ -37,29 +40,56 @@ type EventBusMessage = {
   status: ResourceProcessingState
 }
 
-const APP_PATH = process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
-const USER_DATA_PATH =
-  process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ?? ''
-
-const ENABLE_DEBUG_PROXY = process.argv.includes('--enable-debug-proxy')
-
-const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
-const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
-
-const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
-const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
-
-const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
-const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key
-
 export type SFFSOptions = {
   num_worker_threads?: number
   num_processor_threads?: number
+  appPath?: string
+  userDataPath?: string
+}
+
+export const parseSFFSBackendOptions = (opts?: SFFSOptions) => {
+  const APP_PATH =
+    opts?.appPath ?? process.argv.find((arg) => arg.startsWith('--appPath='))?.split('=')[1] ?? ''
+  const USER_DATA_PATH =
+    opts?.userDataPath ??
+    process.argv.find((arg) => arg.startsWith('--userDataPath='))?.split('=')[1] ??
+    ''
+
+  const ENABLE_DEBUG_PROXY = process.argv.includes('--enable-debug-proxy')
+
+  const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
+  const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
+
+  const userConfig = getUserConfig(USER_DATA_PATH) // getConfig<UserConfig>(USER_DATA_PATH, 'user.json')
+  const LANGUAGE_SETTING = userConfig.settings?.embedding_model.includes('multi') ? 'multi' : 'en'
+
+  const API_BASE = import.meta.env.P_VITE_API_BASE ?? 'https://deta.space/api'
+  const API_KEY = import.meta.env.P_VITE_API_KEY ?? userConfig.api_key ?? ''
+
+  return {
+    APP_PATH,
+    BACKEND_ROOT_PATH,
+    BACKEND_RESOURCES_PATH,
+    LANGUAGE_SETTING,
+    API_BASE,
+    API_KEY,
+    ENABLE_DEBUG_PROXY
+  }
 }
 
 export const initSFFS = (opts?: SFFSOptions) => {
   const num_worker_threads = opts?.num_worker_threads ?? 12
   const num_processor_threads = opts?.num_processor_threads ?? 12
+
+  const {
+    APP_PATH,
+    BACKEND_ROOT_PATH,
+    BACKEND_RESOURCES_PATH,
+    LANGUAGE_SETTING,
+    API_BASE,
+    API_KEY,
+    ENABLE_DEBUG_PROXY
+  } = parseSFFSBackendOptions(opts)
 
   mkdirSync(BACKEND_RESOURCES_PATH, { recursive: true })
 
@@ -316,22 +346,126 @@ export class ResourceHandle {
     this.sffs = sffs
   }
 
+  static async migrateResourceFile(
+    sffs: any,
+    resource: SFFSRawCompositeResource,
+    legacyFilePath: string,
+    newFilePath: string
+  ): Promise<void> {
+    try {
+      if (legacyFilePath !== newFilePath) {
+        await fsp.rename(legacyFilePath, newFilePath)
+      }
+
+      const data = {
+        ...resource.resource,
+        id: resource.resource.id,
+        resource_path: newFilePath,
+        updated_at: resource.resource.updated_at
+      }
+
+      console.log(`Updating resource data`, data)
+      await sffs.js__store_update_resource(JSON.stringify(data))
+    } catch (renameError) {
+      // If rename fails (e.g. newFilePath already exists), continue using the legacy path
+      console.warn(
+        `Failed to migrate legacy file ${legacyFilePath} to ${newFilePath}:`,
+        renameError
+      )
+    }
+  }
+
+  static async tryOpeningFile(path: string, flags: string): Promise<fsp.FileHandle | null> {
+    try {
+      return await fsp.open(path, flags)
+    } catch (err) {
+      return null
+    }
+  }
+
+  static async createHandle(
+    sffs: any,
+    fd: fsp.FileHandle,
+    finalPath: string,
+    resourceId: string
+  ): Promise<ResourceHandle> {
+    const initialHash = JSON.parse(await sffs.js__store_get_resource_hash(resourceId))
+    return new ResourceHandle(fd, finalPath, resourceId, initialHash, sffs)
+  }
+
   static async open(
     sffs: any,
     rootPath: string,
     resourceId: string,
-    flags: string = 'a+'
+    flags: string = 'a+',
+    resourceType: string = 'application/octet-stream',
+    resourcePath: string = ''
   ): Promise<ResourceHandle> {
-    const resolvedRootPath = path.resolve(rootPath)
-    const resolvedFilePath = path.resolve(resolvedRootPath, resourceId)
+    const extension = getResourceFileExtension(resourceType)
 
-    if (!resolvedFilePath.startsWith(resolvedRootPath)) {
+    console.log(
+      `Opening resource ${resourceId} of type ${resourceType} with extension ${extension}`,
+      resourcePath
+    )
+
+    // Try to open the file at the provided resourcePath first
+    // but only if it ends with the correct extension
+    if (
+      resourcePath &&
+      (resourcePath.endsWith(`.${extension}`) || resourcePath.endsWith('.json'))
+    ) {
+      const fd = await ResourceHandle.tryOpeningFile(resourcePath, flags)
+      if (fd) {
+        return ResourceHandle.createHandle(sffs, fd, resourcePath, resourceId)
+      }
+    }
+
+    let fd: fsp.FileHandle | null = null
+
+    const resolvedRootPath = path.resolve(rootPath)
+    const legacyFilePath = path.resolve(resolvedRootPath, resourceId)
+
+    const dataString = await sffs.js__store_get_resource(resourceId, false)
+
+    const resource = optimisticParseJSON<SFFSRawCompositeResource>(dataString)
+    if (!resource) {
+      throw new Error('Resource not found in SFFS store')
+    }
+
+    const newFileName = getResourceFileName(resource)
+    const newFilePath = path.resolve(resolvedRootPath, `${newFileName}.${extension}`)
+
+    if (!legacyFilePath.startsWith(resolvedRootPath) || !newFilePath.startsWith(resolvedRootPath)) {
       throw new Error('Invalid resource ID')
     }
 
-    const fd = await fsp.open(resolvedFilePath, flags)
-    const initialHash = JSON.parse(await sffs.js__store_get_resource_hash(resourceId))
-    return new ResourceHandle(fd, resolvedFilePath, resourceId, initialHash, sffs)
+    // Try to open the file at the new path first
+    console.log('Trying to open resource at new path:', newFilePath)
+    fd = await ResourceHandle.tryOpeningFile(newFilePath, flags)
+    if (fd) {
+      if (resourcePath && resourcePath !== newFilePath) {
+        console.warn(
+          `Resource path ${resourcePath} differs from new file path ${newFilePath}, migrating`
+        )
+        await ResourceHandle.migrateResourceFile(sffs, resource, newFilePath, newFilePath)
+      }
+
+      return ResourceHandle.createHandle(sffs, fd, newFilePath, resourceId)
+    }
+
+    // If that fails, try the legacy path
+    console.log('Trying to open resource at legacy path:', legacyFilePath)
+    fd = await ResourceHandle.tryOpeningFile(legacyFilePath, flags)
+
+    // If we opened the legacy path, we need to migrate it to the new path
+    if (fd) {
+      console.warn(`Opened legacy file ${legacyFilePath}, will migrate to new path`)
+      await ResourceHandle.migrateResourceFile(sffs, resource, legacyFilePath, newFilePath)
+      return ResourceHandle.createHandle(sffs, fd, legacyFilePath, resourceId)
+    }
+
+    console.error(`Failed to open both new and legacy file paths for resource ${resourceId}`)
+    throw new Error('Failed to open resource file')
   }
 
   async readAll(): Promise<Uint8Array> {
@@ -426,15 +560,24 @@ export class ResourceHandle {
   }
 }
 
-export const initResources = (sffs: ReturnType<typeof initSFFS>) => {
+export const initResources = (sffs: ReturnType<typeof initSFFS>, opts?: SFFSOptions) => {
+  const { BACKEND_RESOURCES_PATH } = parseSFFSBackendOptions(opts)
+
   const resourceHandles = new Map<string, ResourceHandle>()
 
-  async function openResource(resourceId: string, flags: string) {
+  async function openResource(
+    resourceId: string,
+    resourceType: string,
+    resourcePath: string,
+    flags: string
+  ) {
     const resourceHandle = await ResourceHandle.open(
       sffs,
       BACKEND_RESOURCES_PATH,
       resourceId,
-      flags
+      flags,
+      resourceType,
+      resourcePath
     )
     resourceHandles.set(resourceId, resourceHandle)
 
@@ -474,12 +617,16 @@ export const initResources = (sffs: ReturnType<typeof initSFFS>) => {
     await (sffs as any).js__store_resource_post_process(resourceId)
   }
 
-  async function updateResourceHash(resourceId: string) {
+  async function updateResourceHash(
+    resourceId: string,
+    resourceType: string,
+    resourcePath: string
+  ) {
     let resourceHandle = resourceHandles.get(resourceId)
     let needsClose = false
 
     if (!resourceHandle) {
-      await openResource(resourceId, 'r+')
+      await openResource(resourceId, resourceType, resourcePath, 'r+')
       resourceHandle = resourceHandles.get(resourceId)
       needsClose = true
     }
@@ -503,7 +650,7 @@ export const initResources = (sffs: ReturnType<typeof initSFFS>) => {
 
 export const initBackend = (opts?: SFFSOptions) => {
   const sffs = initSFFS(opts)
-  const resources = initResources(sffs)
+  const resources = initResources(sffs, opts)
 
   return {
     sffs,
