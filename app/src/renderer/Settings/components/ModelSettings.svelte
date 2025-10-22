@@ -56,18 +56,45 @@
   let anthropicApiKey = ''
   let googleApiKey = ''
 
-  // Get models for a specific built-in provider
+  let isUpdatingKeys = false
+
+  let statusMessage = ''
+  let statusTimeout: number | null = null
+
   const getProviderModels = (provider: Provider) => {
     return BUILT_IN_MODELS.filter((model) => model.provider === provider)
   }
 
+  const showStatus = (message: string) => {
+    statusMessage = message
+    if (statusTimeout) clearTimeout(statusTimeout)
+    statusTimeout = setTimeout(() => {
+      statusMessage = ''
+      statusTimeout = null
+    }, 3000) as unknown as number
+  }
+
   // Update API key for all models of a built-in provider
   const updateProviderApiKey = (provider: Provider, apiKey: string) => {
+    isUpdatingKeys = true
     const modelsForProvider = BUILT_IN_MODELS.filter((m) => m.provider === provider)
 
     modelsForProvider.forEach((model) => {
       updateModel(model.id, { custom_key: apiKey })
     })
+
+    // Show feedback to user
+    const providerName = ProviderLabels[provider]
+    if (apiKey) {
+      showStatus(`${providerName} API key updated successfully`)
+    } else {
+      showStatus(`${providerName} API key cleared`)
+    }
+
+    // Reset flag after a short delay to allow store updates to complete
+    setTimeout(() => {
+      isUpdatingKeys = false
+    }, 100)
   }
 
   const allModels = derived([models], ([models]) => {
@@ -184,6 +211,9 @@
   onMount(() => {
     // Load provider-level API keys from any configured model for each provider
     return models.subscribe((allModels) => {
+      // Skip reloading if we're currently updating keys to prevent loop
+      if (isUpdatingKeys) return
+
       // Load OpenAI API key
       const openAIModel = allModels.find((m) => m.provider === Provider.OpenAI && m.custom_key)
       openAIApiKey = openAIModel?.custom_key ?? ''
@@ -202,6 +232,13 @@
 </script>
 
 <div class="wrapper">
+  {#if statusMessage}
+    <div class="status-message">
+      <Icon name="check.circle" />
+      <span>{statusMessage}</span>
+    </div>
+  {/if}
+
   <div class="dev-wrapper">
     <div class="space-y-3">
       <div class="w-full flex items-center justify-between">
@@ -517,6 +554,31 @@
 </div>
 
 <style lang="scss">
+  .status-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: light-dark(#ecfdf5, #064e3b);
+    border: 1px solid light-dark(#10b981, #059669);
+    border-radius: 0.5rem;
+    color: light-dark(#065f46, #d1fae5);
+    font-size: 0.875rem;
+    animation: slideIn 0.3s ease-out;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .wrapper {
     width: 100%;
     display: flex;
