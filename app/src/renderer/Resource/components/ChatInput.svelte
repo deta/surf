@@ -66,11 +66,16 @@
 
   let focusInput: () => void
   let chatInputElement: HTMLElement
+  let tempContent: string = ''
 
   // ==== Status Message Management
 
   export const showStatus = (message: AIChatStatusMessage) => {
     statusMessage.set(message)
+
+    if (message.type === 'error') {
+      setContent(tempContent, true)
+    }
   }
 
   export const dismissStatus = () => {
@@ -198,10 +203,14 @@
       log.debug('No editor, not submitting')
       return
     }
+
+    tempContent = currentContent
+
     const mentions: MentionItem[] = editor.getMentions()
     dispatch('submit', { query: currentContent, mentions })
     tick().then(() => {
       focus()
+      clearEditor()
     })
   }
 

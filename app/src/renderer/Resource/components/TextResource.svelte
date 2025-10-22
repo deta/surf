@@ -1310,7 +1310,7 @@
         id: options.generationID,
         textQuery: textQuery,
         autoScroll: options.autoScroll,
-        showPrompt: false, //options.showPrompt,
+        showPrompt: options.showPrompt,
         loadingMessage: loadingMessage
       })
 

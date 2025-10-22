@@ -134,6 +134,23 @@ export class EditorAIGeneration {
     return null
   }
 
+  deleteNode(id: string, type: string, transaction?: Transaction) {
+    this.log.debug('Deleting AI generation node', id, type)
+
+    const nodePos = this.noteEditor.getNodeByID(id, type)
+    if (!nodePos) {
+      this.log.warn('Node not found, cannot delete', id, type)
+      return
+    }
+
+    const tr = transaction || this.editor.view.state.tr
+    tr.delete(nodePos.pos, nodePos.pos + nodePos.node.nodeSize)
+
+    if (!transaction) {
+      this.editor.view.dispatch(tr)
+    }
+  }
+
   updateStatus(status: AIGenerationStatus) {
     this.log.debug('Updating AI generation node status', this.id, status)
 
@@ -141,6 +158,10 @@ export class EditorAIGeneration {
 
     const tr = this.editor.view.state.tr
     this.updateAIGenerationNodeStatus(status, tr)
+
+    if (status === 'failed') {
+      this.deleteNode(this.id, 'generation', tr)
+    }
 
     this.editor.view.dispatch(tr)
   }
