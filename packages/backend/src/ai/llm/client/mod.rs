@@ -51,9 +51,9 @@ pub enum Model {
     #[serde(rename = "o3-mini")]
     O3Mini,
 
-    #[serde(rename = "claude-sonnet-4-5-20250929")]
+    #[serde(rename = "claude-4-5-sonnet-latest")]
     Claude45Sonnet,
-    #[serde(rename = "claude-sonnet-4-20250514")]
+    #[serde(rename = "claude-4-sonnet-latest")]
     Claude4Sonnet,
     #[serde(rename = "claude-3-7-sonnet-latest")]
     Claude37Sonnet,
