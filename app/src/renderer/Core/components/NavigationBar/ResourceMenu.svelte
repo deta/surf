@@ -87,7 +87,7 @@
   }
 
   const handleOpenResource = (offline: boolean) => {
-    browser.openResource(resource.id, { offline, target: 'active_tab' })
+    browser.openResource(resource.id, { offline, target: tab ? 'active_tab' : 'sidebar' })
   }
 
   const CTX_MENU_ITEMS: CtxItem[] = [
@@ -104,6 +104,35 @@
           icon: 'arrow.up.right',
           action: () => browser.moveSidebarViewToTab()
         },
+
+    {
+      type: 'action',
+      text: 'Copy URL',
+      icon: 'copy',
+      action: () => (tab ? tab.copyURL() : view.copyURL())
+    },
+
+    ...conditionalArrayItem<CtxItem>(!tab, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        text: 'Reload Page',
+        icon: 'reload',
+        action: () => view.webContents.reload()
+      },
+      {
+        type: 'action',
+        text: 'Go Back',
+        icon: 'arrow.left',
+        action: () => view.webContents.goBack()
+      },
+      {
+        type: 'action',
+        text: 'Go Forward',
+        icon: 'arrow.right',
+        action: () => view.webContents.goForward()
+      }
+    ]),
 
     ...conditionalArrayItem<CtxItem>(!!resource, { type: 'separator' }),
 
@@ -138,12 +167,10 @@
     }),
 
     ...conditionalArrayItem<CtxItem>(!!resource, [
-      { type: 'separator' },
-
       {
         type: 'action',
         kind: 'danger',
-        text: 'Delete',
+        text: 'Delete from Surf',
         icon: 'trash',
         action: onDeleteResource
       }

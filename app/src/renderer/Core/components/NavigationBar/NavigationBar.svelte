@@ -212,7 +212,7 @@
           {/snippet}
         </ResourceLoader>
       {/key}
-    {:else if $extractedResourceId && $resourceCreatedByUser}
+    {:else if $activeViewType === ViewType.Page && $extractedResourceId && $resourceCreatedByUser}
       {#key $extractedResourceId}
         <ResourceLoader resource={$extractedResourceId}>
           {#snippet children(resource: Resource)}
@@ -221,7 +221,9 @@
         </ResourceLoader>
       {/key}
     {:else}
-      <ResourceMenu {tab} {view} />
+      {#key $activeLocation}
+        <ResourceMenu {tab} {view} />
+      {/key}
     {/if}
 
     {#if $activeViewType === ViewType.Page}
