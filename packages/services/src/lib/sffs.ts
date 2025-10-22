@@ -48,7 +48,12 @@ import type {
   Message,
   CreateChatCompletionOptions
 } from '@deta/backend/types'
-import { APIKeyMissingError, BadRequestError, TooManyRequestsError } from '@deta/backend/types'
+import {
+  APIKeyMissingError,
+  BadRequestError,
+  TooManyRequestsError,
+  UnauthorizedError
+} from '@deta/backend/types'
 
 export type HorizonToCreate = Optional<
   HorizonData,
@@ -978,6 +983,9 @@ export class SFFS {
         }
         if (message.includes('LLM Too Many Requests error')) {
           throw new TooManyRequestsError()
+        }
+        if (message.includes('LLM Unauthorized error')) {
+          throw new UnauthorizedError()
         }
       }
       throw error

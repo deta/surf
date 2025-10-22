@@ -693,6 +693,9 @@ impl LLMClient {
                 if status == reqwest::StatusCode::BAD_REQUEST {
                     return Err(BackendError::LLMClientErrorBadRequest);
                 }
+                if status == reqwest::StatusCode::UNAUTHORIZED {
+                    return Err(BackendError::LLMClientErrorUnauthorized);
+                }
                 if status.is_client_error() {
                     let error_text = response.text()?;
                     model.provider().parse_potential_error(&error_text)?;
