@@ -21,7 +21,9 @@
         <Icon name="chevron.right" size="22" />
       {/if}
 
-      <h1>{title}</h1>
+    <slot name="pre-title"></slot>
+      <h1>{title} <slot name="title"></slot></h1>
+
     </div>
 
     <slot name="header"></slot>

@@ -23,6 +23,7 @@
     OPEN_AI_PATH_SUFFIX,
     Provider,
     ProviderLabels,
+    ProviderIcons,
     type Model
   } from '@deta/types/src/ai.types'
   import {
@@ -33,7 +34,7 @@
     type SelectItem
   } from '@deta/ui/legacy'
   import { Icon } from '@deta/icons'
-  import { appendURLPath, conditionalArrayItem, generateID, truncate } from '@deta/utils'
+  import { generateID, truncate } from '@deta/utils'
   import { createEventDispatcher, onMount } from 'svelte'
   import { Button, Dropdown, type DropdownItem, openDialog } from '@deta/ui'
 
@@ -49,49 +50,51 @@
   }>()
 
   const modelSelectorOpen = writable(false)
-  const providerSelectorOpen = writable(false)
-  const showProviderSettings = writable(false)
-  const selectedProvider = writable<ModelProvider | null>(null)
 
-  let customProviderName = ''
-  let customModelName = ''
-  let customProviderUrl = ''
-  let customMaxTokens = 128_000
-  let customVisionSupport = false
-  let customSupportsJsonFormat = false
-  let customApiKey = ''
+  // Provider-level API keys
+  let openAIApiKey = ''
+  let anthropicApiKey = ''
+  let googleApiKey = ''
 
-  const selectConfigureItem = {
-    id: 'configure',
-    label: 'Custom Provider',
-    icon: 'add'
-  } as SelectItem
+  let isUpdatingKeys = false
 
-  const modelToProvider = (model: Model) => {
-    if (model.provider === Provider.Custom) {
-      return {
-        id: model.id,
-        type: 'custom',
-        label: model.label,
-        icon: model.icon,
-        model
-      } as ModelProvider
-    }
+  let statusMessage = ''
+  let statusTimeout: number | null = null
 
-    return {
-      id: model.provider,
-      type: 'built-in',
-      label: ProviderLabels[model.provider],
-      icon: model.icon,
-      model
-    } as ModelProvider
+  const getProviderModels = (provider: Provider) => {
+    return BUILT_IN_MODELS.filter((model) => model.provider === provider)
   }
 
-  const providerToModel = (providerId: string) => {
-    const provider = $providerItems.find((item) => item.id === providerId)
-    if (!provider) return null
+  const showStatus = (message: string) => {
+    statusMessage = message
+    if (statusTimeout) clearTimeout(statusTimeout)
+    statusTimeout = setTimeout(() => {
+      statusMessage = ''
+      statusTimeout = null
+    }, 3000) as unknown as number
+  }
 
-    return provider.data.model as Model
+  // Update API key for all models of a built-in provider
+  const updateProviderApiKey = (provider: Provider, apiKey: string) => {
+    isUpdatingKeys = true
+    const modelsForProvider = BUILT_IN_MODELS.filter((m) => m.provider === provider)
+
+    modelsForProvider.forEach((model) => {
+      updateModel(model.id, { custom_key: apiKey })
+    })
+
+    // Show feedback to user
+    const providerName = ProviderLabels[provider]
+    if (apiKey) {
+      showStatus(`${providerName} API key updated successfully`)
+    } else {
+      showStatus(`${providerName} API key cleared`)
+    }
+
+    // Reset flag after a short delay to allow store updates to complete
+    setTimeout(() => {
+      isUpdatingKeys = false
+    }, 100)
   }
 
   const allModels = derived([models], ([models]) => {
@@ -126,81 +129,8 @@
     )
   })
 
-  const providerItems = derived([allModels, selectedProvider], ([allModels, _selectedProvider]) => {
-    const items = Array.from(
-      new Set(
-        allModels.map((model) => (model.provider === Provider.Custom ? model.id : model.provider))
-      )
-    )
-
-    const parsedItems = items.map((item) => {
-      const matchingModel = allModels.find((model) => {
-        const hasSiblings = allModels.filter((m) => m.provider === item).length > 1
-
-        if (model.provider !== Provider.Custom) {
-          if (model.provider !== item) return false
-
-          if (hasSiblings) {
-            return model.tier === ModelTiers.Premium
-          }
-
-          return true
-        }
-
-        return model.id === item
-      })
-
-      const provider = modelToProvider(matchingModel)
-
-      return {
-        id: provider.id,
-        label: provider.label,
-        icon: provider.icon,
-        data: provider,
-        action: () => {
-          handleSelectedProviderChange(provider.id)
-        }
-      } satisfies DropdownItem
-    })
-
-    const builtInItems = parsedItems.filter((item) => item.data.type === 'built-in')
-    const customItems = parsedItems.filter((item) => item.data.type === 'custom')
-
-    return [
-      { type: 'title', label: 'Built-In' },
-      ...builtInItems,
-
-      ...conditionalArrayItem<DropdownItem>(customItems.length > 0, [
-        { type: 'title', label: 'Custom' },
-        ...customItems
-      ]),
-      { type: 'separator' },
-      {
-        id: 'add-provider',
-        label: 'New Provider',
-        icon: 'add',
-        subItems: [
-          ...Object.values(CUSTOM_MODEL_DEFINITIONS).map<DropdownItem>((def) => ({
-            id: def.id,
-            label: def.label,
-            icon: def.icon,
-            action: () => {
-              modelSelectorOpen.set(false)
-              handleCreateNewModel(def.id)
-            }
-          })),
-          {
-            id: 'custom',
-            label: 'Custom',
-            icon: 'sparkles',
-            action: () => {
-              modelSelectorOpen.set(false)
-              handleCreateNewModel('custom')
-            }
-          }
-        ]
-      }
-    ] satisfies DropdownItem[]
+  const customModels = derived([models], ([models]) => {
+    return models.filter((m) => m.provider === Provider.Custom)
   })
 
   const updateModel = (id: string, updates: Partial<Model>) => {
@@ -210,6 +140,16 @@
   const selectModel = (id: string) => {
     selectedModelId.set(id)
     dispatch('select-model', id)
+  }
+
+  const handleSelectedModelChange = (event: CustomEvent<string>) => {
+    const model = $allModels.find((model) => model.id === event.detail)
+
+    if (model) {
+      selectModel(model.id)
+    } else {
+      modelSelectorOpen.set(false)
+    }
   }
 
   const handleCreateNewModel = async (type: 'custom' | CUSTOM_MODELS) => {
@@ -243,46 +183,11 @@
       }
     }
 
-    const provider = modelToProvider(newCustomModel)
-    selectedProvider.set(provider)
-    showProviderSettings.set(true)
-
     dispatch('created-model', newCustomModel)
   }
 
-  const handleSelectedProviderChange = (id: string) => {
-    const providerItem = $providerItems.find((item) => item.id === id)
-    if (providerItem) {
-      selectedProvider.set(providerItem.data)
-    }
-
-    providerSelectorOpen.set(false)
-    showProviderSettings.set(true)
-  }
-
-  const handleSelectedModelChange = (event: CustomEvent<string>) => {
-    const model = $allModels.find((model) => model.id === event.detail)
-
-    if (model) {
-      selectModel(model.id)
-    } else {
-      modelSelectorOpen.set(false)
-    }
-  }
-
-  const handleModelChange = (changes: Partial<Model>) => {
-    const model = $selectedProvider.model
-    if (!model) return
-
-    if (changes.label) {
-      $selectedProvider.label = changes.label
-    }
-
-    updateModel(model.id, changes)
-  }
-
-  const handleDeleteModel = async () => {
-    const model = $selectedProvider.model
+  const handleDeleteModel = async (modelId: string) => {
+    const model = $customModels.find((m) => m.id === modelId)
     if (!model) return
 
     const { closeType: confirmed } = await openDialog({
@@ -300,51 +205,28 @@
       selectedModelId.set(null)
     }
 
-    selectedProvider.set(null)
-    showProviderSettings.set(false)
-
     dispatch('delete-model', model.id)
   }
 
   onMount(() => {
-    if ($selectedModel) {
-      const provider = modelToProvider($selectedModel)
-      selectedProvider.set(provider)
-    }
+    // Load provider-level API keys from any configured model for each provider
+    return models.subscribe((allModels) => {
+      // Skip reloading if we're currently updating keys to prevent loop
+      if (isUpdatingKeys) return
 
-    return selectedProvider.subscribe((provider) => {
-      if (!provider) return
+      // Load OpenAI API key
+      const openAIModel = allModels.find((m) => m.provider === Provider.OpenAI && m.custom_key)
+      openAIApiKey = openAIModel?.custom_key ?? ''
 
-      if (provider.type === 'custom') {
-        customProviderName = provider.label
-        customModelName = provider.model?.custom_model_name ?? ''
-        customMaxTokens = provider.model?.max_tokens ?? 128_000
-        customVisionSupport = provider.model?.vision ?? false
-        customSupportsJsonFormat = provider.model?.supports_json_format ?? false
-        customApiKey = provider.model?.custom_key ?? ''
+      // Load Anthropic API key
+      const anthropicModel = allModels.find(
+        (m) => m.provider === Provider.Anthropic && m.custom_key
+      )
+      anthropicApiKey = anthropicModel?.custom_key ?? ''
 
-        if (provider.model?.provider_url) {
-          if (provider.model?.skip_append_open_ai_suffix !== true) {
-            customProviderUrl = appendURLPath(provider.model.provider_url, OPEN_AI_PATH_SUFFIX)
-            updateModel(provider.model.id, {
-              provider_url: customProviderUrl,
-              skip_append_open_ai_suffix: true
-            })
-          } else {
-            customProviderUrl = provider.model.provider_url
-          }
-        } else {
-          customProviderUrl = ''
-        }
-      } else {
-        customProviderName = ''
-        customModelName = ''
-        customProviderUrl = ''
-        customMaxTokens = 128_000
-        customVisionSupport = false
-        customSupportsJsonFormat = false
-        customApiKey = provider.model?.custom_key ?? ''
-      }
+      // Load Google API key
+      const googleModel = allModels.find((m) => m.provider === Provider.Google && m.custom_key)
+      googleApiKey = googleModel?.custom_key ?? ''
     })
   })
 </script>
@@ -353,13 +235,13 @@
   <div class="dev-wrapper">
     <div class="space-y-3">
       <div class="w-full flex items-center justify-between">
-        <h2 class="text-xl font-medium">Selected AI Model</h2>
+        <h2 class="text-xl font-medium">Active Model</h2>
 
         <div class="block">
           <SelectDropdown
             items={modelItems}
             search="disabled"
-            selected={$selectedModel.id ?? null}
+            selected={$selectedModel?.id ?? null}
             open={modelSelectorOpen}
             side="bottom"
             closeOnMouseLeave={false}
@@ -392,11 +274,9 @@
 
       <div class="details-text">
         <p>
-          Choose from built-in AI models by OpenAI and Anthropic, or configure your own custom model
-          below. Your selected model will be used across all Surf features.
+          Your selected model will be used across all Surf features. Surf may switch to more
+          efficient models from the same provider for certain features.
         </p>
-
-        <p>Surf may switch to more efficient models from the same provider for certain features.</p>
       </div>
     </div>
   </div>
@@ -404,209 +284,307 @@
   <div class="dev-wrapper">
     <div class="space-y-3">
       <div class="w-full flex items-center justify-between">
-        <h2 class="text-xl font-medium">Configure your AI Models</h2>
+        <h2 class="text-xl font-medium">Configure Models</h2>
       </div>
 
       <div class="details-text">
         <p>
-          Configure the built-in AI providers or add your own custom models. Visit our <a
-            href={AI_MODEL_DOCS}
-            target="_blank">manual</a
-          > for more information and setup instructions on how to configure your own models.
+          Configure built-in providers by providing an API key which will be used for all models of
+          that provider or add custom models. Visit our <a href={AI_MODEL_DOCS} target="_blank"
+            >manual</a
+          > for more information.
         </p>
       </div>
     </div>
 
-    <Expandable
-      title={$selectedProvider?.type === Provider.Custom
-        ? 'Configure Custom Model'
-        : 'Configure Built-In Provider'}
-      expanded={$showProviderSettings && $selectedProvider}
-    >
-      <div slot="header" class="flex items-center gap-2">
-        <!-- <button
-          on:click={() => handleCreateNewModel('custom')}
-          class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 hover:bg-gray-700/10 dark:hover:bg-gray-700/80 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
-        >
-          <Icon name="add" />
-        </button> -->
+    <!-- OpenAI Provider -->
+    <Expandable title="OpenAI" expanded={false}>
+      <div slot="pre-title" class="flex items-center gap-2">
+        <Icon name={ProviderIcons[Provider.OpenAI]} />
+      </div>
 
+      <div class="provider-config">
+        <FormField
+          label="API Key"
+          placeholder="your API key"
+          infoLink={BUILT_IN_PROVIDER_DEFINITIONS[Provider.OpenAI]?.api_key_page}
+          infoText="Get Key"
+          type="password"
+          bind:value={openAIApiKey}
+          on:save={() => updateProviderApiKey(Provider.OpenAI, openAIApiKey)}
+        />
+
+        <div class="model-list">
+          <p class="model-list-title">Available Models:</p>
+          <div class="model-chips">
+            {#each getProviderModels(Provider.OpenAI) as model}
+              <div class="model-chip">
+                <Icon name={model.icon} />
+                {model.label}
+                {#if !model.vision}
+                  <Icon name="vision.off" className="opacity-60" />
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </Expandable>
+
+    <!-- Anthropic Provider -->
+    <Expandable title="Anthropic" expanded={false}>
+      <div slot="pre-title" class="flex items-center gap-2">
+        <Icon name={ProviderIcons[Provider.Anthropic]} />
+      </div>
+
+      <div class="provider-config">
+        <FormField
+          label="API Key"
+          placeholder="your API key"
+          infoLink={BUILT_IN_PROVIDER_DEFINITIONS[Provider.Anthropic]?.api_key_page}
+          infoText="Get Key"
+          type="password"
+          bind:value={anthropicApiKey}
+          on:save={() => updateProviderApiKey(Provider.Anthropic, anthropicApiKey)}
+        />
+
+        <div class="model-list">
+          <p class="model-list-title">Available Models:</p>
+          <div class="model-chips">
+            {#each getProviderModels(Provider.Anthropic) as model}
+              <div class="model-chip">
+                <Icon name={model.icon} />
+                {model.label}
+                {#if !model.vision}
+                  <Icon name="vision.off" className="opacity-60" />
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </Expandable>
+
+    <!-- Google Provider -->
+    <Expandable title="Google" expanded={false}>
+      <div slot="pre-title" class="flex items-center gap-2">
+        <Icon name={ProviderIcons[Provider.Google]} />
+      </div>
+
+      <div class="provider-config">
+        <FormField
+          label="API Key"
+          placeholder="your API key"
+          infoLink={BUILT_IN_PROVIDER_DEFINITIONS[Provider.Google]?.api_key_page}
+          infoText="Get Key"
+          type="password"
+          bind:value={googleApiKey}
+          on:save={() => updateProviderApiKey(Provider.Google, googleApiKey)}
+        />
+
+        <div class="model-list">
+          <p class="model-list-title">Available Models:</p>
+          <div class="model-chips">
+            {#each getProviderModels(Provider.Google) as model}
+              <div class="model-chip">
+                <Icon name={model.icon} />
+                {model.label}
+                {#if !model.vision}
+                  <Icon name="vision.off" className="opacity-60" />
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </Expandable>
+
+    <!-- Custom Models Section -->
+    <div class="space-y-3">
+      <div class="w-full flex items-center justify-between gap-4">
+        <span class="custom-kok">Custom Models</span>
+        <hr />
         <Dropdown
-          items={$providerItems}
-          bind:open={$providerSelectorOpen}
+          items={[
+            ...Object.values(CUSTOM_MODEL_DEFINITIONS).map((def) => ({
+              id: def.id,
+              label: def.label,
+              icon: def.icon,
+              action: () => handleCreateNewModel(def.id)
+            })),
+            {
+              id: 'custom',
+              label: 'Custom',
+              icon: 'sparkles',
+              action: () => handleCreateNewModel('custom')
+            }
+          ]}
           align="end"
-          subAlign="start"
         >
-          <button
-            class="whitespace-nowrap disabled:opacity-10 appearance-none border-0 group margin-0 flex items-center gap-2 px-2 py-2 transition-colors duration-200 rounded-xl text-sky-1000 dark:text-gray-100"
-          >
-            {#if $selectedProvider}
-              <Icon name={$selectedProvider.icon} />
-            {/if}
-
-            {$selectedProvider ? $selectedProvider.label : 'Select model to configure'}
-
-            {#if $providerSelectorOpen}
-              <Icon name="chevron.up" className="opacity-60" />
-            {:else}
-              <Icon name="chevron.down" className="opacity-60" />
-            {/if}
-          </button>
+          <Button size="sm" class="add-model-button">
+            <Icon name="add" />
+            Add Model
+          </Button>
         </Dropdown>
       </div>
 
-      {#if $selectedProvider?.type === Provider.Custom}
-        {@const modelDefinition = Object.values(CUSTOM_MODEL_DEFINITIONS).find(
-          (def) => def.label === $selectedProvider.label
-        )}
+      {#if $customModels.length > 0}
+        <div class="custom-model-list">
+          {#each $customModels as model}
+            {@const modelDefinition = Object.values(CUSTOM_MODEL_DEFINITIONS).find(
+              (def) => def.label === model.label
+            )}
 
-        <div class="provider-config">
-          {#if $selectedProvider.label === CUSTOM_MODELS.Ollama}
-            <p>
-              Make sure you have the <a href="https://ollama.com/download" target="_blank"
-                >Ollama app</a
-              >
-              installed and its running locally. Checkout our
-              <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how to configure
-              it.
-            </p>
-          {:else if $selectedProvider.label === CUSTOM_MODELS.OpenRouter}
-            <p>
-              To use models hosted by <a href="https://openrouter.ai/" target="_blank">OpenRouter</a
-              >
-              first create an account, then generate an API key from their
-              <a href="https://openrouter.ai/settings/keys" target="_blank">settings page</a>.
-            </p>
-            <p>
-              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
-              to configure it.
-            </p>
-          {:else if $selectedProvider.label === CUSTOM_MODELS.HuggingFaceTogether}
-            <p>
-              To use text generation models from <a href="https://huggingface.co/" target="_blank"
-                >Hugging Face</a
-              >
-              you can use their routing service with one of their supported
-              <a href="https://huggingface.co/blog/inference-providers" target="_blank"
-                >Inference Providers</a
-              >
-              like <a href="https://together.ai" target="_blank">Together AI</a>.
-            </p>
-            <p>
-              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
-              to configure it.
-            </p>
-          {:else}
-            <p>Here you can configure your own custom model and provider.</p>
-            <p>
-              Checkout our <a href={AI_MODEL_DOCS} target="_blank">manual</a> for more details on how
-              to configure it.
-            </p>
-          {/if}
+            <Expandable title="" expanded={false}>
+              <div slot="title" class="flex items-center gap-2">
+                <Icon name={model.icon} />
+                <span>{model.label}</span>
+                {#if !model.vision}
+                  <Icon name="vision.off" className="opacity-60" />
+                {/if}
+              </div>
 
-          <div style="margin-top: 0.25rem;"></div>
+              <div slot="header">
+                <Button
+                  size="md"
+                  onclick={() => handleDeleteModel(model.id)}
+                  class="delete-model-button"
+                >
+                  <Icon name="trash" size="1em" />
+                </Button>
+              </div>
 
-          <FormField
-            label="Model Label"
-            placeholder="My Custom Model"
-            infoText="Give your custom model a name so you can identify it within Surf's UI"
-            bind:value={customProviderName}
-            on:save={() => handleModelChange({ label: customProviderName })}
-          />
+              <div class="provider-config">
+                <FormField
+                  label="Model Label"
+                  placeholder="My Custom Model"
+                  infoText="Give your custom model a name so you can identify it within Surf's UI"
+                  value={model.label}
+                  on:save={(e) => updateModel(model.id, { label: e.detail })}
+                />
 
-          {#if !!modelDefinition}
-            <FormField
-              label="Model ID"
-              placeholder="llama3.2"
-              infoText="View List"
-              infoLink={modelDefinition?.model_page}
-              bind:value={customModelName}
-              on:save={() => handleModelChange({ custom_model_name: customModelName })}
-            />
-          {:else}
-            <FormField
-              label="Provider Model ID"
-              placeholder="llama3.2"
-              infoText="The ID of the model from the provider's API"
-              bind:value={customModelName}
-              on:save={() => handleModelChange({ custom_model_name: customModelName })}
-            />
-          {/if}
+                {#if !!modelDefinition}
+                  <FormField
+                    label="Model ID"
+                    placeholder="llama3.2"
+                    infoText="View List"
+                    infoLink={modelDefinition?.model_page}
+                    value={model.custom_model_name ?? ''}
+                    on:save={(e) => updateModel(model.id, { custom_model_name: e.detail })}
+                  />
+                {:else}
+                  <FormField
+                    label="Provider Model ID"
+                    placeholder="llama3.2"
+                    infoText="The ID of the model from the provider's API"
+                    value={model.custom_model_name ?? ''}
+                    on:save={(e) => updateModel(model.id, { custom_model_name: e.detail })}
+                  />
+                {/if}
 
-          <FormField
-            label="API Key {modelDefinition && !modelDefinition?.api_key_page ? '(optional)' : ''}"
-            placeholder="{modelDefinition && !modelDefinition?.api_key_page
-              ? 'optional '
-              : ''}API key"
-            infoText="Get Key"
-            infoLink={modelDefinition?.api_key_page}
-            type="password"
-            bind:value={customApiKey}
-            on:save={() => handleModelChange({ custom_key: customApiKey })}
-          />
+                <FormField
+                  label="API Key {modelDefinition && !modelDefinition?.api_key_page
+                    ? '(optional)'
+                    : ''}"
+                  placeholder="{modelDefinition && !modelDefinition?.api_key_page
+                    ? 'optional '
+                    : ''}API key"
+                  infoText="Get Key"
+                  infoLink={modelDefinition?.api_key_page}
+                  type="password"
+                  value={model.custom_key ?? ''}
+                  on:save={(e) => updateModel(model.id, { custom_key: e.detail })}
+                />
 
-          <FormField
-            label="API Endpoint"
-            placeholder="https://<hostname>/v1/chat/completions"
-            infoText="Full URL of the model provider's OpenAI compatible API endpoint"
-            bind:value={customProviderUrl}
-            on:save={() => handleModelChange({ provider_url: customProviderUrl })}
-          />
+                <FormField
+                  label="API Endpoint"
+                  placeholder="https://<hostname>/v1/chat/completions"
+                  infoText="Full URL of the model provider's OpenAI compatible API endpoint"
+                  value={model.provider_url ?? ''}
+                  on:save={(e) => updateModel(model.id, { provider_url: e.detail })}
+                />
 
-          <FormField
-            label="Context Size (tokens)"
-            placeholder="128000"
-            infoText="Maximum number of tokens the model supports in the context window"
-            type="number"
-            bind:value={customMaxTokens}
-            on:save={() => handleModelChange({ max_tokens: customMaxTokens })}
-          />
+                <FormField
+                  label="Context Size (tokens)"
+                  placeholder="128000"
+                  infoText="Maximum number of tokens the model supports in the context window"
+                  type="number"
+                  value={model.max_tokens ?? 128_000}
+                  on:save={(e) => {
+                    const tokens = parseInt(e.detail)
+                    if (!isNaN(tokens) && tokens > 0) {
+                      updateModel(model.id, { max_tokens: tokens })
+                    }
+                  }}
+                />
 
-          <FormField
-            label="Supports Vision"
-            infoText="Does the model support vision features like image tagging"
-            type="checkbox"
-            bind:value={customVisionSupport}
-            on:save={() => handleModelChange({ vision: customVisionSupport })}
-          />
+                <FormField
+                  label="Supports Vision"
+                  infoText="Does the model support vision features like image tagging"
+                  type="checkbox"
+                  value={model.vision ?? false}
+                  on:save={(e) => updateModel(model.id, { vision: e.detail })}
+                />
 
-          <FormField
-            label="Supports JSON Format"
-            infoText="Does the model support outputing in JSON format"
-            type="checkbox"
-            bind:value={customSupportsJsonFormat}
-            on:save={() => handleModelChange({ supports_json_format: customSupportsJsonFormat })}
-          />
-
-          <Button size="md" onclick={handleDeleteModel} class="delete-model-button">
-            Delete Model
-          </Button>
+                <FormField
+                  label="Supports JSON Format"
+                  infoText="Does the model support outputing in JSON format"
+                  type="checkbox"
+                  value={model.supports_json_format ?? false}
+                  on:save={(e) => updateModel(model.id, { supports_json_format: e.detail })}
+                />
+              </div>
+            </Expandable>
+          {/each}
         </div>
-      {:else if $selectedProvider}
-        <div class="provider-config">
-          <p>
-            Set your own API key for {$selectedProvider.label} to skip our services and let Surf talk
-            with {$selectedProvider.label}'s API directly. More details in the
-            <a href={AI_MODEL_DOCS} target="_blank">manual</a>.
-          </p>
-
-          <FormField
-            label="{$selectedProvider?.label} API Key"
-            placeholder="your API key"
-            infoLink={BUILT_IN_PROVIDER_DEFINITIONS[$selectedProvider.id]?.api_key_page}
-            infoText="Get Key"
-            type="password"
-            bind:value={customApiKey}
-            on:save={() => handleModelChange({ custom_key: customApiKey })}
-          />
-        </div>
+      {:else}
+        <p class="no-custom-models">
+          No custom models configured. Add a custom model to get started.
+        </p>
       {/if}
-    </Expandable>
+    </div>
   </div>
 </div>
 
+{#if statusMessage}
+  <div class="status-message">
+    <Icon name="check.circle" />
+    <span>{statusMessage}</span>
+  </div>
+{/if}
+
 <style lang="scss">
+  .status-message {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999999;
+
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: light-dark(#ecfdf5, #064e3b);
+    border: 1px solid light-dark(#10b981, #059669);
+    border-radius: 0.5rem;
+    color: light-dark(#065f46, #d1fae5);
+    font-size: 0.875rem;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .wrapper {
+    position: relative;
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -632,6 +610,7 @@
   }
 
   .dev-wrapper {
+    position: relative;
     width: 100%;
     background: radial-gradient(
       290.88% 100% at 50% 0%,
@@ -713,12 +692,76 @@
   }
 
   :global(.delete-model-button[data-button-root]) {
-    background-color: #fee2e2;
-    color: #b91c1c;
-    margin-top: 0.5rem;
+    background-color: light-dark(oklch(96.5% 0 0), oklch(15% 0.05 250));
+    color: light-dark(oklch(55.3% 0 0), oklch(70.3% 0 0));
+    padding: 8px;
+    border-radius: 10px;
 
     &:hover {
-      background-color: #fecaca;
+      background-color: light-dark(oklch(0.93 0.05 17.43), oklch(25% 0.05 250));
+      color: light-dark(#b91c1c, oklch(80.3% 0 0));
     }
+  }
+
+  .model-list {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+  }
+
+  .model-list-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: light-dark(#374151, #94a3b8);
+    margin-bottom: 0.5rem;
+  }
+
+  .model-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .model-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: light-dark(#374151, #cbd5f5);
+  }
+
+  .custom-model-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .no-custom-models {
+    color: light-dark(#6b7280, #94a3b8);
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  :global(.add-model-button[data-button-root]) {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  hr {
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.04));
+    width: 100%;
+  }
+  .custom-kok {
+    text-transform: uppercase;
+    width: max-content;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 450;
+    opacity: 0.5;
+    letter-spacing: 0.022em;
   }
 </style>
