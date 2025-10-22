@@ -17,8 +17,11 @@
   import { conditionalArrayItem, isMac, useLogScope } from '@deta/utils'
   import type { WebContentsView } from '@deta/services/views'
 
-  let { resource, tab, view }: { resource: Resource; tab: Option<TabItem>; view: WebContentsView } =
-    $props()
+  let {
+    resource,
+    tab,
+    view
+  }: { resource?: Resource; tab: Option<TabItem>; view: WebContentsView } = $props()
 
   const log = useLogScope('NoteMenu')
   const browser = useBrowser()
@@ -84,7 +87,7 @@
   }
 
   const handleOpenResource = (offline: boolean) => {
-    browser.openResource(resource.id, { offline, target: 'active_tab' })
+    browser.openResource(resource.id, { offline, target: tab ? 'active_tab' : 'sidebar' })
   }
 
   const CTX_MENU_ITEMS: CtxItem[] = [
@@ -102,9 +105,38 @@
           action: () => browser.moveSidebarViewToTab()
         },
 
-    { type: 'separator' },
+    {
+      type: 'action',
+      text: 'Copy URL',
+      icon: 'copy',
+      action: () => (tab ? tab.copyURL() : view.copyURL())
+    },
 
-    ...conditionalArrayItem<CtxItem>(isWebResourceType(resource.type), [
+    ...conditionalArrayItem<CtxItem>(!tab, [
+      { type: 'separator' },
+      {
+        type: 'action',
+        text: 'Reload Page',
+        icon: 'reload',
+        action: () => view.webContents.reload()
+      },
+      {
+        type: 'action',
+        text: 'Go Back',
+        icon: 'arrow.left',
+        action: () => view.webContents.goBack()
+      },
+      {
+        type: 'action',
+        text: 'Go Forward',
+        icon: 'arrow.right',
+        action: () => view.webContents.goForward()
+      }
+    ]),
+
+    ...conditionalArrayItem<CtxItem>(!!resource, { type: 'separator' }),
+
+    ...conditionalArrayItem<CtxItem>(resource && isWebResourceType(resource.type), [
       $viewType === ViewType.Resource
         ? {
             type: 'action',
@@ -120,29 +152,29 @@
           }
     ]),
 
-    {
+    ...conditionalArrayItem<CtxItem>(!!resource, {
       type: 'action',
       text: isMac() ? 'Reveal in Finder' : 'Show in Explorer',
       icon: 'folder.open',
       action: () => handleOpenAsFile()
-    },
+    }),
 
-    ...conditionalArrayItem<CtxItem>(resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE, {
+    ...conditionalArrayItem<CtxItem>(resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE, {
       type: 'action',
       text: 'Export as Markdown',
       icon: 'save',
       action: () => handleExport()
     }),
 
-    { type: 'separator' },
-
-    {
-      type: 'action',
-      kind: 'danger',
-      text: 'Delete',
-      icon: 'trash',
-      action: onDeleteResource
-    }
+    ...conditionalArrayItem<CtxItem>(!!resource, [
+      {
+        type: 'action',
+        kind: 'danger',
+        text: 'Delete from Surf',
+        icon: 'trash',
+        action: onDeleteResource
+      }
+    ])
   ]
 </script>
 
