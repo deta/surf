@@ -16,10 +16,12 @@ import {
   isMac,
   copyToClipboard,
   htmlToMarkdown,
-  generateMarkdownWithFrontmatter,
-  parseMarkdownWithFrontmatter,
   optimisticParseJSON
 } from '@deta/utils'
+import {
+  generateMarkdownWithFrontmatter,
+  parseMarkdownWithFrontmatter
+} from '@deta/utils/src/formatting/markdown-extended'
 import { SFFS } from '../sffs'
 import {
   type AiSFFSQueryResponse,
