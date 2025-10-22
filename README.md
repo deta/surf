@@ -93,19 +93,19 @@ Surf is built around tabs, split view and a sidebar for easy navigation.
 
 Surf can code interactive applets to help you visualize, understand or explore concepts or data that are aided with code.
 
-[Read more](./docs/Surflets.md).
+[Read more](./docs/SURFLETS.md).
 
 ## AI
 
 ![models.png](./docs/assets/readme/models.png)
 
-[Surf’s notes](./docs/SMART_NOTES.md) and [Surflets](./docs/Surflets.md) are powered by large language models of your choice.
+[Surf’s notes](./docs/SMART_NOTES.md) and [Surflets](./docs/SURFLETS.md) are powered by large language models of your choice.
 
 - Bring your own key for popular models
 - Add a cloud model
 - Use Local Language Models
 
-[Read more](./docs/AI-Models.md).
+[Read more](./docs/AI_MODELS.md).
 
 ## Shortcuts
 
