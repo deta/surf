@@ -232,13 +232,6 @@
 </script>
 
 <div class="wrapper">
-  {#if statusMessage}
-    <div class="status-message">
-      <Icon name="check.circle" />
-      <span>{statusMessage}</span>
-    </div>
-  {/if}
-
   <div class="dev-wrapper">
     <div class="space-y-3">
       <div class="w-full flex items-center justify-between">
@@ -293,6 +286,13 @@
       <div class="w-full flex items-center justify-between">
         <h2 class="text-xl font-medium">Configure Models</h2>
       </div>
+
+      {#if statusMessage}
+        <div class="status-message">
+          <Icon name="check.circle" />
+          <span>{statusMessage}</span>
+        </div>
+      {/if}
 
       <div class="details-text">
         <p>
@@ -555,7 +555,10 @@
 
 <style lang="scss">
   .status-message {
+    position: absolute;
+    bottom: 10px;
     display: flex;
+    width: 95%;
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
@@ -605,6 +608,7 @@
   }
 
   .dev-wrapper {
+    position: relative;
     width: 100%;
     background: radial-gradient(
       290.88% 100% at 50% 0%,
