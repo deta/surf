@@ -220,6 +220,8 @@
           {/snippet}
         </ResourceLoader>
       {/key}
+    {:else}
+      <ResourceMenu {tab} {view} />
     {/if}
 
     {#if $activeViewType === ViewType.Page}

@@ -17,8 +17,11 @@
   import { conditionalArrayItem, isMac, useLogScope } from '@deta/utils'
   import type { WebContentsView } from '@deta/services/views'
 
-  let { resource, tab, view }: { resource: Resource; tab: Option<TabItem>; view: WebContentsView } =
-    $props()
+  let {
+    resource,
+    tab,
+    view
+  }: { resource?: Resource; tab: Option<TabItem>; view: WebContentsView } = $props()
 
   const log = useLogScope('NoteMenu')
   const browser = useBrowser()
@@ -102,9 +105,9 @@
           action: () => browser.moveSidebarViewToTab()
         },
 
-    { type: 'separator' },
+    ...conditionalArrayItem<CtxItem>(!!resource, { type: 'separator' }),
 
-    ...conditionalArrayItem<CtxItem>(isWebResourceType(resource.type), [
+    ...conditionalArrayItem<CtxItem>(resource && isWebResourceType(resource.type), [
       $viewType === ViewType.Resource
         ? {
             type: 'action',
@@ -120,29 +123,31 @@
           }
     ]),
 
-    {
+    ...conditionalArrayItem<CtxItem>(!!resource, {
       type: 'action',
       text: isMac() ? 'Reveal in Finder' : 'Show in Explorer',
       icon: 'folder.open',
       action: () => handleOpenAsFile()
-    },
+    }),
 
-    ...conditionalArrayItem<CtxItem>(resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE, {
+    ...conditionalArrayItem<CtxItem>(resource?.type === ResourceTypes.DOCUMENT_SPACE_NOTE, {
       type: 'action',
       text: 'Export as Markdown',
       icon: 'save',
       action: () => handleExport()
     }),
 
-    { type: 'separator' },
+    ...conditionalArrayItem<CtxItem>(!!resource, [
+      { type: 'separator' },
 
-    {
-      type: 'action',
-      kind: 'danger',
-      text: 'Delete',
-      icon: 'trash',
-      action: onDeleteResource
-    }
+      {
+        type: 'action',
+        kind: 'danger',
+        text: 'Delete',
+        icon: 'trash',
+        action: onDeleteResource
+      }
+    ])
   ]
 </script>
 
