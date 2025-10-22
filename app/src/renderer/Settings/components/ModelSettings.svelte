@@ -414,6 +414,16 @@
                 {/if}
               </div>
 
+              <div slot="header">
+                <Button
+                  size="md"
+                  onclick={() => handleDeleteModel(model.id)}
+                  class="delete-model-button"
+                >
+                  <Icon name="trash" size="1em" />
+                </Button>
+              </div>
+
               <div class="provider-config">
                 <FormField
                   label="Model Label"
@@ -493,14 +503,6 @@
                   value={model.supports_json_format ?? false}
                   on:save={(e) => updateModel(model.id, { supports_json_format: e.detail })}
                 />
-
-                <Button
-                  size="md"
-                  onclick={() => handleDeleteModel(model.id)}
-                  class="delete-model-button"
-                >
-                  Delete Model
-                </Button>
               </div>
             </Expandable>
           {/each}
@@ -622,12 +624,14 @@
   }
 
   :global(.delete-model-button[data-button-root]) {
-    background-color: #fee2e2;
-    color: #b91c1c;
-    margin-top: 0.5rem;
+    background-color: light-dark(oklch(96.5% 0 0), oklch(15% 0.05 250));
+    color: light-dark(oklch(55.3% 0 0), oklch(70.3% 0 0));
+    padding: 8px;
+    border-radius: 10px;
 
     &:hover {
-      background-color: #fecaca;
+      background-color: light-dark(oklch(0.93 0.05 17.43), oklch(25% 0.05 250));
+      color: light-dark(#b91c1c, oklch(80.3% 0 0));
     }
   }
 
@@ -682,7 +686,7 @@
   }
 
   hr {
-    border: 1px solid rgba(0, 0, 0, 0.035);
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.035), rgba(255, 255, 255, 0.04));
     width: 100%;
   }
   .custom-kok {
