@@ -346,8 +346,8 @@
       }
     }
 
-    .navbar {
-      height: 32px;
+    &.navbar {
+      height: 42px;
     }
 
     .breadcrumbs {
