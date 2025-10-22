@@ -132,7 +132,7 @@ The source code for this project is licensed under the Apache 2.0 license, with 
 
 Unless otherwise specified in the file or directory, all code defaults to the Apache 2.0 license.
 
-See [LICENSE](LICENSE.md) for more details about the Apache 2.0 license.
+See [LICENSE](LICENSE) for more details about the Apache 2.0 license.
 
 **Note:** The Deta name and logos are trademarks of Deta GmbH and are **not** covered by the Apache 2.0 license.
 
