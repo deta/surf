@@ -403,8 +403,7 @@
               (def) => def.label === model.label
             )}
 
-            <!-- title={model.label} -->
-            <Expandable expanded={false}>
+            <Expandable title="" expanded={false}>
               <div slot="title" class="flex items-center gap-2">
                 <Icon name={model.icon} />
                 <span>{model.label}</span>
@@ -469,7 +468,12 @@
                   infoText="Maximum number of tokens the model supports in the context window"
                   type="number"
                   value={model.max_tokens ?? 128_000}
-                  on:save={(e) => updateModel(model.id, { max_tokens: parseInt(e.detail) })}
+                  on:save={(e) => {
+                    const tokens = parseInt(e.detail)
+                    if (!isNaN(tokens) && tokens > 0) {
+                      updateModel(model.id, { max_tokens: tokens })
+                    }
+                  }}
                 />
 
                 <FormField
