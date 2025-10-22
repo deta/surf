@@ -93,7 +93,7 @@
 
 <style lang="scss">
   // well.. this is another sin
-  :global(.router-content:not(:has(.text-resource-wrapper))) {
+  :global(.router-content:not(:has(.text-resource-wrapper)):not(:has(.tty-wrapper))) {
     position: relative !important;
   }
   :global(#app) {
