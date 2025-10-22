@@ -312,6 +312,7 @@ export enum MultiSelectResourceEventAction {
 export enum PageChatMessageSentEventError {
   APIKeyMissing = 'api_key_missing',
   BadRequest = 'bad_request',
+  Unauthorized = 'unauthorized',
   RAGEmptyContext = 'rag_empty_context',
   TooManyRequests = 'too_many_requests',
   Other = 'other'

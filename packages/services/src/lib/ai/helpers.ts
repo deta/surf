@@ -13,7 +13,12 @@ import { codeLanguageToMimeType, markdownToHtml, useLogScope } from '@deta/utils
 import { WebParser } from '@deta/web-parser'
 import { PromptIDs, getPrompt } from './prompts'
 import type { AIService } from './aiClean'
-import { APIKeyMissingError, BadRequestError, TooManyRequestsError } from '@deta/backend/types'
+import {
+  APIKeyMissingError,
+  BadRequestError,
+  TooManyRequestsError,
+  UnauthorizedError
+} from '@deta/backend/types'
 import { type ChatError } from '@deta/types/src/ai.types'
 import { ResourceManager } from '@deta/services/resources'
 import { ResourceTag } from '@deta/utils/formatting'
@@ -284,6 +289,10 @@ export const parseAIError = (e: any) => {
   } else if (e instanceof BadRequestError) {
     error = PageChatMessageSentEventError.BadRequest
     content = 'The AI server sent a bad request error. You can try again with a different query.'
+  } else if (e instanceof UnauthorizedError) {
+    error = PageChatMessageSentEventError.Unauthorized
+    content =
+      'Unauthorized, please check your API key and make sure you have right access permissions.'
   } else {
     content = 'Encountered an unexpected error: ' + e?.message || String(e)
   }

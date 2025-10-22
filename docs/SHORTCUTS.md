@@ -9,7 +9,6 @@ For Windows & Linux, substitute ⌘ with Ctrl and ⌥ with alt
 **General Navigation (most used)**
 
 | ⌘ + T          | Create a new Tab / Go to `command menu`                   |
-| -------------- | --------------------------------------------------------- |
 | ⌘ + E          | Notes sidebar                                             |
 | ⌘ + O (Letter) | Change orientation of your tab bars (horizontal/vertical) |
 | ⌘ + ,          | Open the app settings                                     |
@@ -17,7 +16,6 @@ For Windows & Linux, substitute ⌘ with Ctrl and ⌥ with alt
 **Browsing**
 
 | ⌘ + R                             | Reload Tab                     |
-| --------------------------------- | ------------------------------ |
 | ⌘ +  1, 2 , 3 , 4 , 5 , 6 , 7 , 8 | Switch Tabs                    |
 | ⌘ + W                             | Close Active Tab               |
 | ⌘ + shift + T                     | Restore Recently Closed Tab    |
@@ -29,11 +27,9 @@ For Windows & Linux, substitute ⌘ with Ctrl and ⌥ with alt
 **View**
 
 | ⌘ + `Plus`  | Zoom In    |
-| ----------- | ---------- |
 | ⌘ + `Minus` | Zoom Out   |
 | ⌘ + `Equal` | Reset Zoom |
 
 **🔥 🍳 The — if something breaks shortcut**
 
 | `Shift` + ⌥ + ⌘ + R | Restarts the whole app |
-| ------------------- | ---------------------- |
