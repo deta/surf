@@ -259,8 +259,10 @@
 
       <div class="details-text">
         <p>
-          Set API keys for built-in providers. The API key will be used for all models from that
-          provider.
+          Configure built-in providers by providing an API key which will be used for all models of
+          that provider or add custom models. Visit our <a href={AI_MODEL_DOCS} target="_blank"
+            >manual</a
+          > for more information.
         </p>
       </div>
     </div>
