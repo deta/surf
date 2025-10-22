@@ -109,6 +109,16 @@ export class BadRequestError extends Error {
   }
 }
 
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('Unauthorized')
+    this.name = 'UnauthorizedError'
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, UnauthorizedError)
+    }
+  }
+}
+
 export interface App {
   id: string
   app_type: string

@@ -28,6 +28,8 @@ pub enum BackendError {
     LLMClientErrorBadRequest,
     #[error("LLM Too Many Requests error")]
     LLMClientErrorTooManyRequests,
+    #[error("LLM Unauthorized error")]
+    LLMClientErrorUnauthorized,
     // TODO: fix this monstrosity
     #[error("LLM Quota Depleted error: {quotas}")]
     LLMClientErrorQuotasDepleted { quotas: serde_json::Value },
