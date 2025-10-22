@@ -51,9 +51,9 @@ pub enum Model {
     #[serde(rename = "o3-mini")]
     O3Mini,
 
-    #[serde(rename = "claude-4-5-sonnet-latest")]
+    #[serde(rename = "claude-sonnet-4-5-20250929")]
     Claude45Sonnet,
-    #[serde(rename = "claude-4-sonnet-latest")]
+    #[serde(rename = "claude-sonnet-4-20250514")]
     Claude4Sonnet,
     #[serde(rename = "claude-3-7-sonnet-latest")]
     Claude37Sonnet,
@@ -511,8 +511,8 @@ impl Model {
             Self::GPT4o => "gpt-4o",
             Self::GPT4oMini => "gpt-4o-mini",
             Self::O3Mini => "o3-mini",
-            Self::Claude45Sonnet => "claude-4-5-sonnet-latest",
-            Self::Claude4Sonnet => "claude-4-sonnet-latest",
+            Self::Claude45Sonnet => "claude-sonnet-4-5-20250929",
+            Self::Claude4Sonnet => "claude-sonnet-4-20250514",
             Self::Claude37Sonnet => "claude-3-7-sonnet-latest",
             Self::Claude35Sonnet => "claude-3-5-sonnet-latest",
             Self::Claude35Haiku => "claude-3-5-haiku-latest",

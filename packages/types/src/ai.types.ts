@@ -18,8 +18,8 @@ export enum BuiltInModelIDs {
   O4Mini = 'o4-mini',
   O3Mini = 'o3-mini',
   ClaudeSonnet = 'claude-3-5-sonnet-latest',
-  ClaudeSonnet45 = 'claude-4-5-sonnet-latest',
-  ClaudeSonnet4 = 'claude-4-sonnet-latest',
+  ClaudeSonnet45 = 'claude-sonnet-4-5-20250929',
+  ClaudeSonnet4 = 'claude-sonnet-4-20250514',
   ClaudeSonnet37 = 'claude-3-7-sonnet-latest',
   ClaudeHaiku = 'claude-3-5-haiku-latest',
   Gemini2Flash = 'gemini-2.0-flash'

@@ -294,7 +294,7 @@ export const parseAIError = (e: any) => {
     content =
       'Unauthorized, please check your API key and make sure you have right access permissions.'
   } else {
-    content = 'Encountered an unexpected error: ' + e?.message || String(e)
+    content = 'Encountered an unexpected error: ' + (e?.message || String(e))
   }
   if (typeof e === 'string' && e.toLowerCase().includes('Content is too long'.toLowerCase())) {
     content = 'The content is too long to process. Please try a more specific question.'
