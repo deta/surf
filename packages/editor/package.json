@@ -1,0 +1,117 @@
+{
+  "name": "@deta/editor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "svelte": "./src/lib/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./src/lib/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "svelte": "./src/lib/editor.ts",
+      "import": "./dist/editor.js"
+    },
+    "./extensions/CaretIndicator": {
+      "types": "./dist/extensions/CaretIndicator/index.d.ts",
+      "svelte": "./src/lib/extensions/CaretIndicator/index.ts",
+      "import": "./dist/extensions/CaretIndicator/index.js"
+    },
+    "./extensions/Mention": {
+      "types": "./dist/extensions/Mention/index.d.ts",
+      "svelte": "./src/lib/extensions/Mention/index.ts",
+      "import": "./dist/extensions/Mention/index.js"
+    },
+    "./extensions/Slash": {
+      "types": "./dist/extensions/Slash/index.d.ts",
+      "svelte": "./src/lib/extensions/Slash/index.ts",
+      "import": "./dist/extensions/Slash/index.js"
+    },
+    "./extensions/Link": {
+      "types": "./dist/extensions/Link/index.d.ts",
+      "svelte": "./src/lib/extensions/Link/index.ts",
+      "import": "./dist/extensions/Link/index.js"
+    },
+    "./src/lib": "./src/lib/index.ts",
+    "./src/lib/*": "./src/lib/*",
+    "./src/*": "./src/*",
+    "./dist": "./dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "svelte-package --watch",
+    "build": "svelte-kit sync && svelte-package",
+    "build:types": "tsc --emitDeclarationOnly",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "package": "svelte-package",
+    "sync": "svelte-kit sync"
+  },
+  "devDependencies": {
+    "@deta/icons": "*",
+    "@deta/types": "*",
+    "@deta/utils": "*",
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "@skilitics-public/two-fingers": "^2.1.0",
+    "@sveltejs/kit": "^2.31.1",
+    "@sveltejs/package": "^2.4.1",
+    "@sveltejs/vite-plugin-svelte": "^6.1.2",
+    "@tiptap/extension-details": "^2.26.3",
+    "@tiptap/extension-details-content": "^2.26.3",
+    "@tiptap/extension-details-summary": "^2.26.3",
+    "@tiptap/extension-mathematics": "^2.26.3",
+    "@tiptap/extension-unique-id": "^2.26.3",
+    "@tiptap/core": "^2.1.11",
+    "@tiptap/extension-bubble-menu": "^2.1.13",
+    "@tiptap/extension-floating-menu": "^2.1.13",
+    "@tiptap/extension-image": "^2.11.2",
+    "@tiptap/extension-link": "^2.1.11",
+    "@tiptap/extension-list-keymap": "^2.11.1",
+    "@tiptap/extension-mention": "^2.11.2",
+    "@tiptap/extension-placeholder": "^2.1.11",
+    "@tiptap/extension-table": "^2.12.0",
+    "@tiptap/extension-table-cell": "^2.12.0",
+    "@tiptap/extension-table-header": "^2.12.0",
+    "@tiptap/extension-table-row": "^2.12.0",
+    "@tiptap/extension-task-item": "^2.1.11",
+    "@tiptap/extension-task-list": "^2.1.11",
+    "@tiptap/extension-underline": "^2.11.7",
+    "@tiptap/pm": "^2.1.11",
+    "@tiptap/starter-kit": "^2.1.12",
+    "@tiptap/suggestion": "^2.4.0",
+    "@tsconfig/svelte": "^5.0.2",
+    "dompurify": "^3.2.4",
+    "rehype-highlight": "^7.0.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "sass": "^1.70.0",
+    "svelte": "^5.38.1",
+    "svelte-check": "^3.6.2",
+    "svelte-exmarkdown": "^3.0.5",
+    "svelte-tiptap": "^1.1.2",
+    "tiptap-markdown": "^0.8.9",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2",
+    "vite": "^7.1.5"
+  },
+  "dependencies": {
+    "@tiptap/extension-code-block-lowlight": "^2.11.2",
+    "@tiptap/extension-text-style": "^2.8.0",
+    "hast-util-to-html": "^9.0.4",
+    "linkifyjs": "^4.3.2",
+    "lowlight": "^3.3.0"
+  }
+}

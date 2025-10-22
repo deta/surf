@@ -1,0 +1,59 @@
+{
+  "name": "horizon",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run desktop#dev",
+    "dev:silent": "SILENCE_WARNINGS=true yarn run dev",
+    "dev:all": "turbo dev",
+    "build": "turbo run desktop#build",
+    "build:frontend": "turbo run desktop#build:frontend",
+    "build:packages": "turbo build --filter=!desktop",
+    "build:libs": "turbo run @deta/utils#build @deta/ui#build @deta/icons#build @deta/editor#build --force",
+    "build:desktop": "yarn workspace desktop build",
+    "build:desktop:mwl": "yarn turbo run desktop#build:mwl",
+    "build:desktop:mac": "yarn turbo run desktop#build:mac",
+    "build:desktop:mac:x64": "yarn turbo run desktop#build:mac:x64",
+    "build:desktop:mac:arm": "yarn turbo run desktop#build:mac:arm",
+    "build:desktop:lin:x64": "yarn turbo run desktop#build:lin:x64",
+    "build:desktop:lin:arm": "yarn turbo run desktop#build:lin:arm",
+    "build:desktop:win:x64": "yarn turbo run desktop#build:win:x64",
+    "build:backend": "yarn turbo run @deta/backend#build",
+    "build:tela": "yarn workspace @horizon/tela build",
+    "build:dragcula": "yarn workspace @horizon/dragcula build",
+    "lint": "turbo lint",
+    "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md}\"",
+    "prepare": "husky",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "husky": "^9.0.10",
+    "patch-package": "^8.0.0",
+    "postinstall-postinstall": "^2.1.0",
+    "prettier": "^3.1.1",
+    "prettier-plugin-svelte": "^3.4.0",
+    "turbo": "2.5.6"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "yarn@1.22.22",
+  "workspaces": {
+    "packages": [
+      "app",
+      "packages/*"
+    ],
+    "nohoist": [
+      "electron",
+      "electron-builder",
+      "electron-vite"
+    ]
+  },
+  "resolutions": {
+    "cookie": "^0.7.0",
+    "brace-expansion": "^2.0.2",
+    "tmp": "^0.2.4",
+    "devalue": "^5.4.1"
+  }
+}

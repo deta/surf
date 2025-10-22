@@ -1,0 +1,134 @@
+{
+  "name": "@deta/services",
+  "private": true,
+  "version": "0.0.0",
+  "svelte": "src/lib/index.ts",
+  "main": "src/lib/index.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./src/lib/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ipc": {
+      "types": "./dist/ipc/index.d.ts",
+      "svelte": "./src/lib/ipc/index.ts",
+      "import": "./dist/ipc/index.js",
+      "default": "./dist/ipc/index.js"
+    },
+    "./views": {
+      "types": "./dist/views/index.d.ts",
+      "svelte": "./src/lib/views/index.ts",
+      "import": "./dist/views/index.js",
+      "default": "./dist/views/index.js"
+    },
+    "./tabs": {
+      "types": "./dist/tabs/index.d.ts",
+      "svelte": "./src/lib/tabs/index.ts",
+      "import": "./dist/tabs/index.js",
+      "default": "./dist/tabs/index.js"
+    },
+    "./shortcuts": {
+      "types": "./dist/shortcuts/index.d.ts",
+      "svelte": "./src/lib/shortcuts/index.ts",
+      "import": "./dist/shortcuts/index.js",
+      "default": "./dist/shortcuts/index.js"
+    },
+    "./resources": {
+      "types": "./dist/resources/index.d.ts",
+      "svelte": "./src/lib/resources/index.ts",
+      "import": "./dist/resources/index.js",
+      "default": "./dist/resources/index.js"
+    },
+    "./notebooks": {
+      "types": "./dist/notebooks/index.d.ts",
+      "svelte": "./src/lib/notebooks/index.ts",
+      "import": "./dist/notebooks/index.js",
+      "default": "./dist/notebooks/index.js"
+    },
+    "./mentions": {
+      "types": "./dist/mentions/index.d.ts",
+      "svelte": "./src/lib/mentions/index.ts",
+      "import": "./dist/mentions/index.js",
+      "default": "./dist/mentions/index.js"
+    },
+    "./teletype": {
+      "types": "./dist/teletype/index.d.ts",
+      "svelte": "./src/lib/teletype/index.ts",
+      "import": "./dist/teletype/index.js",
+      "default": "./dist/teletype/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai/index.d.ts",
+      "svelte": "./src/lib/ai/index.ts",
+      "import": "./dist/ai/index.js",
+      "default": "./dist/ai/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "svelte": "./src/lib/constants/index.ts",
+      "import": "./dist/constants/index.js",
+      "default": "./dist/constants/index.js"
+    },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "svelte": "./src/lib/helpers/index.ts",
+      "import": "./dist/helpers/index.js",
+      "default": "./dist/helpers/index.js"
+    },
+    "./messagePort": {
+      "types": "./dist/messagePort/index.d.ts",
+      "svelte": "./src/lib/messagePort/index.ts",
+      "import": "./dist/messagePort/index.js",
+      "default": "./dist/messagePort/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "svelte": "./src/lib/browser/index.ts",
+      "import": "./dist/browser/index.js",
+      "default": "./dist/browser/index.js"
+    },
+    "./src": "./src/lib/index.ts",
+    "./src/*": "./src/lib/*",
+    "./src/ipc": "./src/lib/ipc/index.ts",
+    "./dist": "./dist/index.js",
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src/"
+  ],
+  "scripts": {
+    "dev": "svelte-package --watch",
+    "build": "svelte-kit sync && svelte-package",
+    "build:types": "tsc --emitDeclarationOnly",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "package": "svelte-package",
+    "sync": "svelte-kit sync"
+  },
+  "dependencies": {
+    "fuse.js": "^7.0.0",
+    "@deta/editor": "*",
+    "@deta/utils": "*",
+    "@deta/teletype": "*",
+    "@deta/web-parser": "*"
+  },
+  "devDependencies": {
+    "@deta/types": "*",
+    "svelte": "^5.38.1",
+    "@sveltejs/kit": "^2.31.1",
+    "@sveltejs/package": "^2.4.1",
+    "@deta/backend": "*",
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "date-fns": "^3.2.0",
+    "p-queue": "^8.0.1",
+    "typescript": "^5.5.0",
+    "vite": "^7.1.11",
+    "vite-plugin-markdown": "^2.2.0"
+  }
+}

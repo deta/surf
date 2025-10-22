@@ -1,0 +1,7 @@
+export { default as Editor } from './components/Editor.svelte'
+export * from './editor'
+export * from './types'
+export { NodeViewContent } from 'svelte-tiptap'
+export * from '@tiptap/core'
+export { default as NodeViewWrapper } from './components/NodeViewWrapper.svelte'
+export * from './extensions/TitleNode'

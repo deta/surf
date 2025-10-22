@@ -1,0 +1,43 @@
+{
+  "name": "@deta/icons",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "svelte": "./src/lib/main.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/lib/main.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/lib/main.d.ts",
+      "svelte": "./src/lib/main.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/lib"
+  ],
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "@sveltejs/vite-plugin-svelte": "^6.1.0",
+    "@tsconfig/svelte": "^5.0.2",
+    "concurrently": "^7.0.0",
+    "human-filetypes": "^1.1.3",
+    "sass": "^1.70.0",
+    "svelte": "^5.38.1",
+    "svelte-check": "^3.6.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2",
+    "vite": "^7.1.11",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

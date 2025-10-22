@@ -1,0 +1,52 @@
+name: Backend Changes Pull Request
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+    paths:
+      - 'packages/backend/**'
+      - 'packages/backend-server/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      RUST_LOG: debug
+      RUSTFLAGS: '-D warnings'
+      CARGO_INCREMENTAL: 0
+      RUST_TEST_THREADS: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/backend
+            packages/backend-server
+          key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run backend linting & tests
+        run: |
+          cd packages/backend
+          cargo clippy --all-targets
+          cargo test
+
+      - name: Run backend-server linting & tests
+        run: |
+          cd packages/backend-server
+          cargo clippy --all-targets
+          cargo test

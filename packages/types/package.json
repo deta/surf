@@ -1,0 +1,16 @@
+{
+  "name": "@deta/types",
+  "private": true,
+  "version": "0.0.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "@deta/icons": "*"
+  }
+}

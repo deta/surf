@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Surf</title>
+  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+  <!-- <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+    /> -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body>
+  <div id="app"></div>
+  <script type="module" src="/Core/core.ts"></script>
+  <script type="module">
+    import houdini from '@deta/ui/src/lib/utils/houdini.js?url'
+
+    if ('paintWorklet' in CSS) {
+      CSS.paintWorklet.addModule(houdini)
+    }
+    if ('layoutWorklet' in CSS) {
+      CSS.layoutWorklet.addModule(houdini)
+    }
+  </script>
+</body>
+
+</html>

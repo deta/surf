@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+*.log*
+resources/bin/*
+
+# Sentry Config File
+.env.sentry-build-plugin
+.fastembed*

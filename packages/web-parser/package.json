@@ -1,0 +1,28 @@
+{
+  "name": "@deta/web-parser",
+  "private": true,
+  "version": "0.0.0",
+  "svelte": "src/index.ts",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@horizon/eslint-config": "*",
+    "@deta/types": "*",
+    "@horizon/typescript-config": "*",
+    "@deta/utils": "*",
+    "@types/dompurify": "^3.0.5",
+    "@types/html-minifier-terser": "^7.0.2",
+    "dompurify": "^3.2.4",
+    "html-minifier-terser": "^7.2.0",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@medv/finder": "^3.2.0",
+    "@mozilla/readability": "^0.6.0",
+    "css-selector-generator": "^3.6.8",
+    "rss-parser": "^3.13.0"
+  }
+}

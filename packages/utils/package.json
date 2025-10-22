@@ -1,0 +1,76 @@
+{
+  "name": "@deta/utils",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.js"
+    },
+    "./data": {
+      "types": "./dist/data/index.d.ts",
+      "import": "./dist/data/index.js"
+    },
+    "./dom": {
+      "types": "./dist/dom/index.d.ts",
+      "import": "./dist/dom/index.js"
+    },
+    "./formatting": {
+      "types": "./dist/formatting/index.d.ts",
+      "import": "./dist/formatting/index.js"
+    },
+    "./io": {
+      "types": "./dist/io/index.d.ts",
+      "import": "./dist/io/index.js"
+    },
+    "./system": {
+      "types": "./dist/system/index.d.ts",
+      "import": "./dist/system/index.js"
+    },
+    "./src/*": "./src/*",
+    "./dist/*": "./dist/*"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:types": "tsc --emitDeclarationOnly",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@deta/types": "*",
+    "@horizon/eslint-config": "*",
+    "@horizon/typescript-config": "*",
+    "@types/mime-types": "^3.0.1",
+    "@types/uuid": "^10.0.0",
+    "date-fns": "^3.2.0",
+    "gray-matter": "^4.0.3",
+    "human-filetypes": "^1.1.3",
+    "is-ip": "^5.0.1",
+    "mime-types": "^3.0.1",
+    "rehype-parse": "^9.0.1",
+    "rehype-remark": "^10.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-stringify": "^11.0.0",
+    "svelte": "^5.38.1",
+    "typescript": "^5.5.0",
+    "unified": "^11.0.5",
+    "uuid": "^9.0.1",
+    "vfile-matter": "^5.0.1"
+  },
+  "dependencies": {
+    "events": "^3.3.0",
+    "typed-emitter": "^2.1.0"
+  }
+}

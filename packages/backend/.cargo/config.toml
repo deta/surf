@@ -1,0 +1,23 @@
+# [net]
+# git-fetch-with-cli = true
+
+# [target.x86_64-apple-darwin]
+# rustflags = ["-C", "link-arg=-undefined", "-C", "link-arg=dynamic_lookup"]
+
+# [target.aarch64-apple-darwin]
+# rustflags = [
+#   "-C",
+#   "link-arg=-Wl",
+#   "-C",
+#   "link-arg=-undefined",
+#   "-C",
+#   "link-arg=dynamic_lookup",
+#   # "-C",
+#   # "link-arg=-lomp",
+#   # "-C",
+#   # # this is required for sqlite vss 
+#   # # libomp is installed in /opt/homebrew/opt/libomp/lib normally with homebrew
+#   # # if you installed it with another package manager, you will need to change this path to where libomp is installed
+#   # # TODO: have a better way to handle this
+#   # "link-arg=-L/opt/homebrew/opt/libomp/lib",
+# ]

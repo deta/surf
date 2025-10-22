@@ -1,0 +1,296 @@
+@keyframes scale-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+#context-menu {
+  --ctx-background: light-dark(#fff, var(--surface-elevated-dark, #111b2b));
+  --ctx-border: light-dark(rgba(0, 0, 0, 0.175), var(--border-subtle-dark, rgba(255, 255, 255, 0.25)));
+  --ctx-shadow-color: light-dark(
+    var(--shadow-soft, rgba(0, 0, 0, 0.12)),
+    var(--shadow-soft-dark, rgba(125, 125, 125, 0.25))
+  );
+
+  --ctx-item-hover: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.08));
+  --ctx-item-danger-hover: light-dark(#ff4d4f, var(--danger-dark, #f87171));
+  --ctx-item-submenu-open: light-dark(rgba(0, 0, 0, 0.065), rgba(255, 255, 255, 0.12));
+  --ctx-item-text: light-dark(#210e1f, var(--on-surface-dark, #cbd5f5));
+  --ctx-item-text-hover: light-dark(#000, var(--on-app-background-dark, #e5edff));
+
+
+  &:not(.overlay) {
+    isolation: isolate;
+    position: fixed;
+    top: var(--y);
+    left: var(--x);
+  }
+
+  &.overlay {
+    margin: 12px;
+  }
+
+  z-index: 2147483647;
+  /* max value lol */
+  min-width: 180px;
+  height: fit-content;
+  background: var(--ctx-background);
+  padding: 0.225rem;
+  border-radius: 12px;
+  border: 1px solid var(--ctx-border);
+  box-shadow: 0 2px 10px var(--ctx-shadow-color);
+  user-select: none;
+  font-size: 0.85rem;
+  transform-origin: top left;
+
+  animation: scale-in 125ms cubic-bezier(0.19, 1, 0.22, 1);
+
+  &::backdrop {
+    background-color: rgba(0, 0, 0, 0);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    background: light-dark(rgba(0, 0, 0, 0.02), rgba(255, 255, 255, 0.05));
+    border-radius: 10px;
+    z-index: -1;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+body[data-context-menu='true'] * {
+  -webkit-app-region: no-drag !important;
+}
+
+#context-menu {
+
+  /* NOTE: We only support a single sub-menu right now with this crude css */
+  ul.sub-menu {
+    height: fit-content;
+    max-height: 24.5ch;
+    overflow-y: auto;
+    background: var(--ctx-background);
+    padding: 0.25rem;
+    border-radius: 12px;
+    border: 0.5px solid var(--ctx-border);
+    box-shadow: 0 2px 10px var(--ctx-shadow-color);
+    user-select: none;
+    position-anchor: var(--sub-id);
+
+    margin: 0px;
+
+    /* Safe area experiment 
+    &::before {
+      content: '';
+      position: fixed;
+      position-anchor: var(--sub-id);
+      top: anchor(start);
+      left: anchor(start);
+      right: anchor(end);
+      height: 100%;
+      background: rgba(0, 0, 0, 0.25);
+      clip-path: polygon(0 0, 100% 100%, 100% 0);
+
+      //animation: clip 0.1s forwards;
+    }
+    */
+    &.hidden {
+      display: none;
+    }
+
+    &:not(.anchor-left) {
+      top: anchor(top);
+      transform: translateY(var(--y-offset));
+      left: anchor(right);
+      margin-left: -3px;
+    }
+
+    &.anchor-left {
+      top: anchor(top);
+      transform: translateY(var(--y-offset));
+      right: anchor(left);
+      left: unset;
+      margin-right: -3px;
+    }
+  }
+
+  ul.sub-menu:hover {
+    display: flex;
+  }
+
+  :global(li.sub-item:hover + .sub-menu) {
+    display: flex;
+  }
+
+  :global(li.sub-item:has(+ .sub-menu:hover)) {
+    background: var(--ctx-item-submenu-open);
+  }
+
+  // Define a CSS variable for the submenu state
+  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu)>button.selected,
+  :global(body[data-has-active-submenu='true']) ul:not(.sub-menu)>li.selected {
+    // Mute the highlight when a submenu is open
+    background: rgba(var(--ctx-item-hover-rgb, 36, 151, 233), 0.3);
+    color: var(--ctx-item-text);
+  }
+
+  ul {
+    width: auto;
+    flex-direction: column;
+    outline: none;
+
+    /* Remove focus outline */
+    &:not(.sub-menu) {
+      display: flex;
+    }
+
+    >button,
+    >li {
+      display: flex;
+      align-items: center;
+      gap: 0.35em;
+      padding: 0.4em 0.55em;
+      padding-bottom: 0.385rem;
+      border-radius: 9px;
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: 0.0125rem;
+      font-size: 0.99em;
+      text-align: left;
+
+      color: var(--ctx-item-text);
+      font-family: system-ui;
+      -webkit-font-smoothing: antialiased;
+
+      &:hover:not(.hover-override) {
+        background: var(--ctx-item-hover);
+        color: var(--ctx-item-text-hover);
+        outline: none;
+
+        .item-tag {
+          opacity: 1;
+        }
+      }
+
+      &.hover-override & {
+        background: transparent;
+        color: var(--ctx-item-text);
+
+        .item-tag {
+          opacity: 0.75;
+        }
+      }
+
+      &.selected {
+        background: var(--ctx-item-hover);
+        color: var(--ctx-item-text-hover);
+        outline: none;
+
+        .item-tag {
+          opacity: 1;
+        }
+      }
+
+      &:focus {
+        // FIX: This should share with :hover, buut
+        // html autofocus the first element, so it looks weird and doesnt go away
+        // when using the mouse
+        outline: none;
+      }
+
+      &:disabled {
+        opacity: 45%;
+
+        &:hover {
+          cursor: not-allowed;
+          background: inherit;
+          color: inherit;
+        }
+      }
+
+      & * {
+        pointer-events: none;
+      }
+
+      &.danger {
+        --ctx-item-hover: var(--ctx-item-danger-hover);
+        --ctx-item-text-hover: #fff;
+      }
+
+      :global(svg) {
+        color: currentColor;
+      }
+    }
+
+    hr {
+      margin-inline: 1.2ch;
+      margin-block: 0.25rem;
+      border-top: 0.07rem solid
+        light-dark(var(--border-subtle, rgba(0, 0, 0, 0.15)), var(--border-subtle-dark, rgba(255, 255, 255, 0.18)));
+    }
+  }
+
+  .space-icon {
+    width: 1.1em;
+    height: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-tag {
+    width: fit-content;
+    margin-left: auto;
+    padding-left: 0.5rem;
+
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.75;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    font-size: 0.85em;
+    font-weight: 450;
+    letter-spacing: 0.025em;
+  }
+
+  .search-container {
+    margin-bottom: 0.25rem;
+  }
+
+  .search-input {
+    width: 100%;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid
+      light-dark(var(--border-subtle, rgba(0, 0, 0, 0.15)), var(--border-subtle-dark, rgba(255, 255, 255, 0.25)));
+    background: transparent;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--ctx-item-text);
+    outline: none;
+  }
+
+  .search-input:focus {
+    border: 1px solid
+      light-dark(var(--overlay-medium, rgba(0, 0, 0, 0.4)), var(--accent-muted-dark, rgba(129, 146, 255, 0.45)));
+  }
+}

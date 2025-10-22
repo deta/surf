@@ -1,0 +1,66 @@
+name: Frontend Changes Pull Request
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'turbo.json'
+      - 'yarn.lock'
+      - 'packages/**'
+      - 'app/src/**'
+      - '!packages/backend/**'
+      - '!packages/backend-server/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: 'blob:none'
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-${{ matrix.architecture }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-node-
+
+      - name: Cache Turbo
+        uses: actions/cache@v3
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ hashFiles('**/package.json', '**/yarn.lock', 'turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-turbo-
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Run Vite Build
+        run: yarn build:frontend --affected
+        env:
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+
+          PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/dev
+          TURBO_SCM_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}

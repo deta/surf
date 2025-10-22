@@ -1,0 +1,81 @@
+.deta-component-wrapper [data-tooltip] {
+  position: relative;
+
+  --tooltip-arrow-size: 6px;
+  --tooltip-background-color: rgba(0, 0, 0, 0.95);
+  --tooltip-border-radius: 8px;
+  --tooltip-box-shadow: 0 1px 20px rgba(0, 0, 0, 0.25);
+  --tooltip-font-family: inherit;
+  --tooltip-font-size: 14px;
+  --tooltip-font-weight: 400;
+  --tooltip-line-height: 1.25rem;
+  --tooltip-color: #fff;
+  --tooltip-offset-y: 0px;
+  --tooltip-padding: 5px 7px;
+  --tooltip-z-index: 100000;
+  --tooltip-delay: 0.5s;
+}
+
+.deta-component-wrapper [data-tooltip]:before,
+.deta-component-wrapper [data-tooltip]:after {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out var(--tooltip-delay);
+  transform: translate(-50%, 5px);
+}
+
+.deta-component-wrapper [data-tooltip]:before {
+  position: absolute;
+  z-index: var(--tooltip-z-index);
+  bottom: 100%;
+  left: 50%;
+  margin-bottom: calc(var(--tooltip-offset-y) + var(--tooltip-arrow-size));
+  padding: var(--tooltip-padding);
+  width: max-content;
+  min-width: 70px;
+  max-width: 250px;
+  border-radius: var(--tooltip-border-radius);
+  background-color: var(--tooltip-background-color);
+  color: var(--tooltip-color);
+  content: attr(data-tooltip);
+  text-align: center;
+  font-size: var(--tooltip-font-size);
+  font-weight: var(--tooltip-font-weight);
+  line-height: var(--tooltip-line-height);
+  transition: opacity 0.2s ease-out var(--tooltip-delay);
+}
+
+.deta-component-wrapper [data-tooltip]:after {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: var(--tooltip-offset-y);
+  left: 50%;
+  width: 0;
+  border-top: var(--tooltip-arrow-size) solid var(--tooltip-background-color);
+  border-right: var(--tooltip-arrow-size) solid transparent;
+  border-left: var(--tooltip-arrow-size) solid transparent;
+  content: ' ';
+  font-size: 0;
+  line-height: 0;
+}
+
+.deta-component-wrapper [data-tooltip]:hover:before,
+.deta-component-wrapper [data-tooltip]:hover:after {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.deta-component-wrapper [data-tooltip='false']:hover:before,
+.deta-component-wrapper [data-tooltip='false']:hover:after {
+  visibility: hidden;
+  opacity: 0;
+}
+
+deta-annotation.deta-annotation-highlight {
+  background-color: #ffcee4;
+}
+
+deta-annotation.deta-annotation-highlight.deta-annotion-glow {
+  background-color: #ff95c5;
+}

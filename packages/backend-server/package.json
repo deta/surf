@@ -1,0 +1,17 @@
+{
+  "name": "@deta/backend-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "dev": "npm run build-dev",
+    "build-debug": "node ./scripts/build.js",
+    "build-dev": "node ./scripts/build.js --dev",
+    "build": "node ./scripts/build.js -- --release",
+    "test": "cargo test -- --nocapture"
+  },
+  "author": "",
+  "devDependencies": {
+    "cargo-cp-artifact": "^0.1"
+  }
+}

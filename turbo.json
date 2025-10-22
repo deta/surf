@@ -1,0 +1,155 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": ["*"],
+  "ui": "tui",
+  "tasks": {
+    "@deta/utils#build": {
+      "dependsOn": ["@deta/types#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/services#build": {
+      "dependsOn": ["@deta/types#build", "@deta/utils#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/ui#build": {
+      "dependsOn": ["@deta/utils#build", "@deta/icons#build", "@deta/services#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/icons#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/editor#build": {
+      "dependsOn": ["@deta/icons#build", "@deta/utils#build", "@deta/types#build"],
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/backend#build": {
+      "cache": false
+    },
+    "@deta/backend#dev": {
+      "cache": false
+    },
+    "@deta/backend-server#build": {
+      "cache": false
+    },
+    "@deta/backend-server#dev": {
+      "cache": false
+    },
+    "desktop#build": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:frontend": {
+      "dependsOn": ["build:app:frontend"]
+    },
+    "desktop#build:mwl": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:mac": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:mac:x64": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:mac:arm": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:lin:x64": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:lin:arm": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:win:x64": {
+      "dependsOn": ["build:app"]
+    },
+    "desktop#build:linux": {
+      "dependsOn": ["build:app"]
+    },
+    "@horizon/tela#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/dragcula#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/types#build": {
+      "dependsOn": ["@deta/icons#build"],
+      "outputs": ["build/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/ui#dev:tailwind": {
+      "outputs": ["src/output.css"],
+      "outputLogs": "new-only",
+      "persistent": true
+    },
+    "@deta/ui#build:tailwind": {
+      "outputs": ["src/output.css"],
+      "outputLogs": "new-only"
+    },
+    "build:app:frontend": {
+      "dependsOn": [
+        "@deta/ui#build:tailwind",
+        "@deta/dragcula#build",
+        "@deta/utils#build",
+        "@deta/services#build",
+        "@deta/ui#build",
+        "@deta/icons#build",
+        "@deta/editor#build"
+      ]
+    },
+    "build:app:backend": {
+      "dependsOn": ["@deta/backend#build", "@deta/backend-server#build"]
+    },
+    "build:app": {
+      "dependsOn": ["build:app:frontend", "build:app:backend"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "build": {
+      "dependsOn": ["build:app"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "desktop#dev": {
+      "dependsOn": [
+        "@deta/backend#build",
+        "@deta/backend-server#dev",
+        "@deta/ui#build:tailwind",
+        "@deta/dragcula#build"
+      ],
+      "with": [
+        "@deta/utils#dev",
+        "@deta/services#dev",
+        "@deta/ui#dev",
+        "@deta/icons#dev",
+        "@deta/editor#dev"
+      ],
+      "persistent": true,
+      "cache": false
+    },
+    "dev": {
+      "dependsOn": [
+        "@deta/backend#build",
+        "@deta/backend-server#dev",
+        "@deta/ui#build:tailwind",
+        "@deta/dragcula#build"
+      ],
+      "with": [
+        "@deta/utils#dev",
+        "@deta/services#dev",
+        "@deta/ui#dev",
+        "@deta/icons#dev",
+        "@deta/editor#dev"
+      ],
+      "persistent": true,
+      "cache": false
+    }
+  }
+}

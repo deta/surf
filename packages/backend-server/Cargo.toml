@@ -1,0 +1,24 @@
+[package]
+name = "backend-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = "0.3.30"
+cxx = "1.0.124"
+thiserror = "1.0.63"
+serde_json = "1.0.121"
+serde = "1.0.204"
+usearch = { git = "https://github.com/deta/usearch", branch = "main" }
+html-escape = "0.2.13"
+unicode-normalization = "0.1.23"
+unicode-segmentation = "1.11.0"
+strum = { version = "0.26.3", features = ["strum_macros"] }
+strum_macros = "0.26.4"
+uds_windows = "1.1.0"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+fastembed = { git = "https://github.com/deta/fastembed-rs", tag = "v3.14.1-patch.1", features = ["ort-download-binaries", "online"] }
+
+[dev-dependencies]
+serial_test = "3.2.0"

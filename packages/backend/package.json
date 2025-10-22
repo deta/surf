@@ -1,0 +1,20 @@
+{
+  "name": "@deta/backend",
+  "private": true,
+  "version": "0.1.0",
+  "description": "",
+  "files": [
+    "index.node"
+  ],
+  "main": "index.node",
+  "scripts": {
+    "dev": "npm run build",
+    "build-debug": "node ./scripts/build.js",
+    "build": "node ./scripts/build.js -- --release",
+    "test": "cargo test -- --nocapture"
+  },
+  "author": "",
+  "devDependencies": {
+    "cargo-cp-artifact": "^0.1"
+  }
+}

@@ -1,0 +1,307 @@
+@import './lib/styles/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .drag {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+    /* @apply !bg-red-500; */
+  }
+
+  .select-none {
+    user-select: none;
+  }
+
+  .select-text {
+    user-select: text;
+  }
+
+  a,
+  button {
+    cursor: default;
+    user-select: none;
+  }
+}
+
+/*::-webkit-scrollbar {
+  width: 7px;
+  background-color: lime;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgb(130, 130, 130);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}*/
+
+.os__windows {
+
+  /* We only style the scrollbars on windows, as doing this on OSX results in the scrollbars being 
+   * forced shown always.
+   */
+  ::-webkit-scrollbar {
+    width: 6px;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+}
+
+.dark .os__windows {
+  ::-webkit-scrollbar {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Dark scrollbar handle that turns brighter on hover */
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* HACK: Svelte4 is weird not supporting @starting-style.
+ * For this reason they need to live here for now.
+ */
+
+
+@starting-style {
+  .context-header {
+    .headline-container {
+      opacity: 0 !important;
+      translate: 0 2px !important;
+    }
+
+    .description {
+      opacity: 0 !important;
+      translate: 0 1px !important;
+    }
+
+    .preview-section {
+      opacity: 0 !important;
+      translate: 0 3px !important;
+    }
+
+  }
+}
+
+.tooltip {
+  /* Styling for @svelte-plugins/tooltips */
+  --tooltip-arrow-size: 6px;
+  --tooltip-background-color: rgba(0, 0, 0, 0.9);
+  --tooltip-border-radius: 8px;
+  --tooltip-box-shadow: 0 1px 20px rgba(0, 0, 0, 0.25);
+  --tooltip-font-family: inherit;
+  --tooltip-font-size: 12px;
+  --tooltip-font-weight: 400;
+  --tooltip-line-height: 1.25rem;
+  --tooltip-color: #fff;
+  --tooltip-offset-x: 5px;
+  --tooltip-offset-y: 10px;
+  --tooltip-padding: 5px 7px;
+  --tooltip-white-space-hidden: nowrap;
+  --tooltip-white-space-shown: nowrap;
+  --tooltip-z-index: 100000;
+
+  &.top {
+    --tooltip-offset-y: 10px !important;
+  }
+
+  &.bottom {
+    --tooltip-offset-y: 10px !important;
+  }
+}
+
+[data-tooltip] {
+  position: relative;
+
+  --tooltip-arrow-size: 6px;
+  --tooltip-background-color: rgba(0, 0, 0, 0.95);
+  --tooltip-border-radius: 8px;
+  --tooltip-box-shadow: 0 1px 20px rgba(0, 0, 0, 0.25);
+  --tooltip-font-family: inherit;
+  --tooltip-font-size: 14px;
+  --tooltip-font-weight: 400;
+  --tooltip-line-height: 1.25rem;
+  --tooltip-color: #fff;
+  --tooltip-offset-y: 0px;
+  --tooltip-offset-x: 0px;
+  --tooltip-padding: 5px 7px;
+  --tooltip-z-index: 100000;
+  --tooltip-delay: 0.5s;
+
+  &:before,
+  &:after {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out var(--tooltip-delay);
+  }
+
+  &:before {
+    position: absolute;
+    z-index: var(--tooltip-z-index);
+    padding: var(--tooltip-padding);
+    width: max-content;
+    min-width: 70px;
+    max-width: 250px;
+    border-radius: var(--tooltip-border-radius);
+    background-color: var(--tooltip-background-color);
+    color: var(--tooltip-color);
+    content: attr(data-tooltip);
+    text-align: center;
+    font-size: var(--tooltip-font-size);
+    font-weight: var(--tooltip-font-weight);
+    line-height: var(--tooltip-line-height);
+    transition: opacity 0.2s ease-out var(--tooltip-delay);
+  }
+
+  &:after {
+    position: absolute;
+    width: 0;
+    content: ' ';
+    font-size: 0;
+    line-height: 0;
+  }
+
+  &:hover:before,
+  &:hover:after {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  &[data-tooltip-position='top'] {
+    &:before {
+      bottom: 100%;
+      left: 50%;
+      margin-bottom: calc(var(--tooltip-offset-y) + var(--tooltip-arrow-size));
+      transform: translate(-50%, 5px);
+    }
+
+    &:after {
+      bottom: 100%;
+      margin-bottom: var(--tooltip-offset-y);
+      left: 50%;
+      border-bottom: 0;
+      border-top: var(--tooltip-arrow-size) solid var(--tooltip-background-color);
+      border-right: var(--tooltip-arrow-size) solid transparent;
+      border-left: var(--tooltip-arrow-size) solid transparent;
+      transform: translate(-50%, 5px);
+    }
+
+    &:hover:before,
+    &:hover:after {
+      transform: translate(-50%, 0);
+    }
+  }
+
+  &[data-tooltip-position='bottom'] {
+    &:before {
+      top: 100%;
+      left: 50%;
+      margin-top: calc(var(--tooltip-offset-y) + var(--tooltip-arrow-size));
+      transform: translate(-50%, -5px);
+    }
+
+    &:after {
+      top: 100%;
+      margin-top: var(--tooltip-offset-y);
+      left: 50%;
+      border-top: 0;
+      border-bottom: var(--tooltip-arrow-size) solid var(--tooltip-background-color);
+      border-right: var(--tooltip-arrow-size) solid transparent;
+      border-left: var(--tooltip-arrow-size) solid transparent;
+      transform: translate(-50%, -5px);
+    }
+
+    &:hover:before,
+    &:hover:after {
+      transform: translate(-50%, 0);
+    }
+  }
+
+  &[data-tooltip-position='left'] {
+    &:before {
+      top: 50%;
+      right: 100%;
+      left: auto;
+      margin-right: calc(var(--tooltip-offset-x) + var(--tooltip-arrow-size));
+      transform: translate(0, -50%);
+    }
+
+    &:after {
+      top: 50%;
+      right: 100%;
+      margin-right: var(--tooltip-offset-x);
+      border-left: var(--tooltip-arrow-size) solid var(--tooltip-background-color);
+      border-top: var(--tooltip-arrow-size) solid transparent;
+      border-bottom: var(--tooltip-arrow-size) solid transparent;
+    }
+
+    &:hover:before,
+    &:hover:after {
+      transform: translate(0, -50%);
+    }
+  }
+
+  &[data-tooltip-position='right'] {
+    &:before {
+      top: 50%;
+      left: 100%;
+      margin-left: calc(var(--tooltip-offset-x) + var(--tooltip-arrow-size));
+      transform: translate(0, -50%);
+    }
+
+    &:after {
+      top: 50%;
+      left: 100%;
+      margin-left: var(--tooltip-offset-x);
+      border-right: var(--tooltip-arrow-size) solid var(--tooltip-background-color);
+      border-top: var(--tooltip-arrow-size) solid transparent;
+      border-bottom: var(--tooltip-arrow-size) solid transparent;
+    }
+
+    &:hover:before,
+    &:hover:after {
+      transform: translate(0, -50%);
+    }
+  }
+}
+
+[data-tooltip='false']:hover:before,
+[data-tooltip='false']:hover:after {
+  visibility: hidden;
+  opacity: 0;
+}

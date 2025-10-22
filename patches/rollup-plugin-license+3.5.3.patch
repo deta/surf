@@ -1,0 +1,32 @@
+diff --git a/node_modules/rollup-plugin-license/dist/index.d.ts b/node_modules/rollup-plugin-license/dist/index.d.ts
+index 0bbb1d9..1df7948 100644
+--- a/node_modules/rollup-plugin-license/dist/index.d.ts
++++ b/node_modules/rollup-plugin-license/dist/index.d.ts
+@@ -345,6 +345,11 @@ export interface Options {
+    * automatically
+    */
+   thirdParty?: ThirdParty;
++
++  /**
++   * Additional dependencies to include (paths to their package.json files)
++   */
++  additionalDependencies?: string[];
+ }
+ 
+ declare function rollupPluginLicense(options: Options): Plugin;
+diff --git a/node_modules/rollup-plugin-license/dist/index.js b/node_modules/rollup-plugin-license/dist/index.js
+index a5a698b..70e45c7 100644
+--- a/node_modules/rollup-plugin-license/dist/index.js
++++ b/node_modules/rollup-plugin-license/dist/index.js
+@@ -1375,6 +1375,11 @@ function rollupPluginLicense(options = {}) {
+           }
+         });
+       }
++
++      if (plugin._options.additionalDependencies) {
++        dependencies.push(...plugin._options.additionalDependencies);
++      }
++
+       plugin.scanDependencies(dependencies);
+       return plugin.prependBanner(code, outputOptions.sourcemap !== false);
+     },

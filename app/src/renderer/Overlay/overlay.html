@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" style="background: transparent;">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Surf Overlay</title>
+
+    <style>
+      .hide-everything dialog {
+        opacity: 0;
+      }
+
+      .hide-everything dialog::backdrop {
+        background: transparent;
+      }
+    </style>
+  </head>
+
+  <body class="hide-everything">
+    <div id="app"></div>
+    <script type="module" src="/Overlay/overlay.ts"></script>
+  </body>
+</html>

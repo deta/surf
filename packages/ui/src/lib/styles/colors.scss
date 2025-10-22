@@ -1,0 +1,84 @@
+/*
+ * Defines colors & theme data.
+ * NOTE: DO NOT PUT ACTUAL SELECTORS IN HERE! They might get included multiple times!
+ */
+
+:root {
+
+  // Black / White shades
+  --white: rgba(255, 255, 255, 1);
+  --white-95: rgba(255, 255, 255, 0.95);
+  --white-88: rgba(255, 255, 255, 0.88);
+  --white-85: rgba(255, 255, 255, 0.85);
+  --white-80: rgba(255, 255, 255, 0.8);
+  --white-75: rgba(255, 255, 255, 0.75);
+  --white-65: rgba(255, 255, 255, 0.65);
+  --white-60: rgba(255, 255, 255, 0.6);
+  --white-55: rgba(255, 255, 255, 0.55);
+  --white-40: rgba(255, 255, 255, 0.4);
+  --white-33: rgba(255, 255, 255, 0.33);
+  --white-26: rgba(255, 255, 255, 0.26);
+  --white-15: rgba(255, 255, 255, 0.15);
+  --white-09: rgba(255, 255, 255, 0.09);
+
+  --black: rgba(0, 0, 0, 1);
+  --black-85: rgba(0, 0, 0, 0.85);
+  --black-65: rgba(0, 0, 0, 0.65);
+  --black-55: rgba(0, 0, 0, 0.55);
+  --black-45: rgba(0, 0, 0, 0.45);
+  --black-33: rgba(0, 0, 0, 0.33);
+  --black-26: rgba(0, 0, 0, 0.26);
+
+  --black-13: rgba(0, 0, 0, 0.13);
+  --black-09: rgba(0, 0, 0, 0.09);
+  --black-08: rgba(0, 0, 0, 0.08);
+  --black-05: rgba(0, 0, 0, 0.05);
+  --black-01: rgba(0, 0, 0, 0.01);
+  --black-03: rgba(0, 0, 0, 0.03);
+  --black-00: rgba(0, 0, 0, 0);
+
+  // TODO: Not cleaned up yet
+  --red: rgba(255, 0, 0, 1);
+  --dark-on-pinned-surface: rgba(75, 85, 99, 1);
+  --dark-on-unpinned-surface-horizontal: rgb(93, 93, 108);
+  --dark-on-unpinned-surface-horizontal-hover: rgba(30, 34, 39, 0.9);
+  --dark-on-unpinned-surface: rgba(45, 55, 69, 1);
+  --ring-color: rgba(59, 130, 246, 0.75);
+  --ring-color-muted: rgba(59, 130, 246, 0.5);
+  --ring-color-shade: rgba(59, 130, 246, 0.12);
+  --dark-on-unpinned-surface-ring: inset 0px 1.5px 0px -0.75px rgba(59, 130, 246, 0.33),
+    inset 1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
+    inset -1.5px 0px 0px -0.75px rgba(59, 130, 246, 0.33),
+    inset 0px -1.5px 0px -0.75px rgba(59, 130, 246, 0.33);
+
+  --sky-gray: rgba(88, 104, 132, 1);
+  --sky-gray-09: rgba(88, 104, 132, 0.09);
+  --sky-gray-03: rgba(88, 104, 132, 0.03);
+
+  --sky-blue: #e0f2fe;
+  --dark-outline: rgba(5, 5, 25, 0.3);
+
+
+
+
+  // Base colors
+  // TODO: (@maxu): Theming
+  //--base-color-primary: #E0F2FE;
+  //--base-color-secondary: #eee;
+
+  --col-text-muted: rgb(from currentColor r g b / 0.65);
+
+  // Current Theming
+  --base-color: inherit;
+  --base-color-hue: inherit;
+  --base-color-saturation: inherit;
+  --base-color-lightness: inherit;
+  --contrast-color: inherit;
+
+  --mixed-bg: color-mix(in hsl,
+      var(--base-color),
+      hsl(var(--base-color-hue) 100%, 100%, 0.65));
+  --mixed-bg-dark: color-mix(in hsl,
+      var(--base-color),
+      hsl(var(--base-color-hue) 80%, 0%, 0.65));
+}

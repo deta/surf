@@ -1,0 +1,17 @@
+{
+  "extends": "@horizon/typescript-config/base.json",
+  "include": ["src/**/*.ts", "src/**/*.json"],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "composite": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
+  }
+}

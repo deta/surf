@@ -1,0 +1,172 @@
+name: Release
+
+permissions:
+  id-token: write
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_name:
+        type: string
+        description: 'App Name'
+        required: true
+        default: 'Surf'
+      app_version:
+        type: string
+        description: 'App Version'
+        required: true
+      is_prerelease:
+        type: boolean
+        description: 'Mark as pre-release'
+        default: false
+      run_macos_arm:
+        type: boolean
+        description: 'Run macOS ARM build'
+        default: true
+      run_macos_x64:
+        type: boolean
+        description: 'Run macOS x64 build'
+        default: false
+      run_windows_x64:
+        type: boolean
+        description: 'Run Windows x64 build'
+        default: false
+      run_linux_arm:
+        type: boolean
+        description: 'Run Linux ARM build'
+        default: false
+      run_linux_x64:
+        type: boolean
+        description: 'Run Linux x64 build'
+        default: false
+
+jobs:
+  determine_builds:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          matrix="{\"include\":["
+          if [[ "${{ inputs.run_macos_arm }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:arm\"},"
+          fi
+          if [[ "${{ inputs.run_macos_x64 }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"macos-13\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
+          fi
+          if [[ "${{ inputs.run_windows_x64 }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
+          fi
+          if [[ "${{ inputs.run_linux_arm }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"linux-arm64-large\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:lin:arm\"},"
+          fi
+          if [[ "${{ inputs.run_linux_x64 }}" == "true" ]]; then
+            matrix="$matrix{\"os\":\"ubuntu-22.04\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
+          fi
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+  build:
+    needs: determine_builds
+    strategy:
+      matrix: ${{fromJson(needs.determine_builds.outputs.matrix)}}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install cargo-about
+        run: cargo install cargo-about
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-${{ matrix.architecture }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-node-
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/backend
+            packages/backend-server
+            ~/.cargo/bin/cargo-about
+          key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Turbo
+        uses: actions/cache@v3
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ hashFiles('**/package.json', '**/yarn.lock', 'turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-turbo-
+
+      - name: Install Dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: build for ${{ matrix.os }}-${{ matrix.architecture }}
+        run: ${{ matrix.build_command }}
+        env:
+          APP_VERSION: ${{ inputs.app_version }}
+          M_VITE_APP_VERSION: ${{ inputs.app_version }}
+          P_VITE_APP_VERSION: ${{ inputs.app_version }}
+          R_VITE_APP_VERSION: ${{ inputs.app_version }}
+
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+
+          PRODUCT_NAME: ${{ inputs.product_name }}
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/prod
+
+          R_VITE_MAIN_ONBOARDING_VIDEO_URL: ${{ secrets.MAIN_ONBOARDING_VIDEO_URL }}/${{ inputs.app_version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}-${{ matrix.architecture }}
+          path: |
+            app/dist/*.dmg
+            app/dist/*.exe
+            app/dist/*.AppImage
+            app/dist/*.tar.gz
+            app/dist/surf-*.yml
+
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: build/
+      - name: create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          prerelease: ${{ inputs.is_prerelease }}
+          tag_name: ${{ inputs.app_version }}
+          files: |
+            build/**/*.dmg
+            build/**/*.exe
+            build/**/*.AppImage
+            build/**/*.tar.gz
+            build/**/surf-*.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
