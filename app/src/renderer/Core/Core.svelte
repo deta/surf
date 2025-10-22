@@ -377,7 +377,6 @@
     &.vertical-layout {
       //height: 40px;
       min-height: 32px;
-      background: var(--app-background);
       display: flex;
       align-items: center;
       justify-content: space-between;
