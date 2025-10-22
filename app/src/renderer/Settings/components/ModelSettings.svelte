@@ -287,13 +287,6 @@
         <h2 class="text-xl font-medium">Configure Models</h2>
       </div>
 
-      {#if statusMessage}
-        <div class="status-message">
-          <Icon name="check.circle" />
-          <span>{statusMessage}</span>
-        </div>
-      {/if}
-
       <div class="details-text">
         <p>
           Configure built-in providers by providing an API key which will be used for all models of
@@ -553,12 +546,21 @@
   </div>
 </div>
 
+{#if statusMessage}
+  <div class="status-message">
+    <Icon name="check.circle" />
+    <span>{statusMessage}</span>
+  </div>
+{/if}
+
 <style lang="scss">
   .status-message {
     position: absolute;
-    bottom: 10px;
-    display: flex;
-    width: 95%;
+    left: 1rem;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999999;
+
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
@@ -568,7 +570,6 @@
     color: light-dark(#065f46, #d1fae5);
     font-size: 0.875rem;
     animation: slideIn 0.3s ease-out;
-    margin-bottom: 1rem;
   }
 
   @keyframes slideIn {
@@ -583,6 +584,7 @@
   }
 
   .wrapper {
+    position: relative;
     width: 100%;
     display: flex;
     flex-direction: column;

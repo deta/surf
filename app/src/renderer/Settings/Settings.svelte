@@ -637,6 +637,7 @@
   }
 
   .content-wrapper {
+    position: relative;
     flex-grow: 1;
     overflow: auto;
     display: flex;
@@ -673,6 +674,7 @@
     flex-direction: column;
     gap: 0.5rem;
     align-items: center;
+    position: unset;
 
     .app-id {
       display: flex;
