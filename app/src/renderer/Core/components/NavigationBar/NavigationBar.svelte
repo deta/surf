@@ -153,6 +153,7 @@
   class:grey={[ViewType.Notebook, ViewType.NotebookHome].includes($activeViewType)}
   class:roundLeftCorner
   class:roundRightCorner
+  class="navbar"
 >
   {@render leftChildren?.()}
 
@@ -339,6 +340,10 @@
           margin-left: -1.5px;
         }
       }
+    }
+
+    .navbar {
+      height: 32px;
     }
 
     .breadcrumbs {
