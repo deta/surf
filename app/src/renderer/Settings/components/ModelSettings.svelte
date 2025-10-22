@@ -719,10 +719,8 @@
   .model-chip {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.45rem;
     padding: 0.375rem 0.75rem;
-    background: light-dark(rgba(237, 246, 255, 0.5), rgba(30, 41, 59, 0.5));
-    background: light-dark(oklch(96.5% 0 0), oklch(31.3% 0 0));
     border-radius: 0.5rem;
     font-size: 0.875rem;
     color: light-dark(#374151, #cbd5f5);
