@@ -5,8 +5,6 @@ import EventEmitter from 'events'
 import path, { basename } from 'path'
 import { FileWatcher } from './watcher'
 import { app } from 'electron'
-import { initializeSFFSMain, SFFSMain } from './sffs'
-import { SFFSRawResource } from '@deta/types'
 import { ipcSenders } from './ipcHandlers'
 
 export class SurfBackendServerManager extends EventEmitter {
@@ -22,7 +20,6 @@ export class SurfBackendServerManager extends EventEmitter {
   private startResolve: (() => void) | null = null
   private startReject: ((reason: Error) => void) | null = null
 
-  private sffs: SFFSMain | null = null
   private watcher: FileWatcher | null = null
 
   constructor(
@@ -46,16 +43,12 @@ export class SurfBackendServerManager extends EventEmitter {
 
     this.watcher
       .on('create', ({ filename, path }) => {
-        console.log(`File created: ${filename} at ${path}`)
-        // this.handleFileCreate({ filename, path });
         ipcSenders.resourceFileChange({
           type: 'create',
           data: { newName: filename, newPath: path }
         })
       })
       .on('delete', ({ filename, path }) => {
-        console.log(`File deleted: ${filename} at ${path}`)
-        // this.handleFileDelete({ filename, path });
         ipcSenders.resourceFileChange({
           type: 'delete',
           data: { oldName: filename, oldPath: path }
@@ -69,68 +62,6 @@ export class SurfBackendServerManager extends EventEmitter {
       })
   }
 
-  async handleFileRename({
-    oldName,
-    newName,
-    oldPath,
-    newPath
-  }: {
-    oldName: string
-    newName: string
-    oldPath: string
-    newPath: string
-  }) {
-    try {
-      console.log(`File renamed: ${oldName} -> ${newName}`)
-
-      if (!this.sffs) {
-        console.warn('SFFS not initialized. Cannot update resource path.')
-        return
-      }
-
-      const resource = await this.sffs.getResourceByPath(oldPath)
-      if (resource) {
-        console.log(
-          'Updating resource path in SFFS for renamed file',
-          resource.id,
-          oldPath,
-          newPath
-        )
-        await this.sffs.updateResource({
-          id: resource.id,
-          resource_path: newPath,
-          resource_type: resource.type,
-          created_at: resource.createdAt,
-          updated_at: new Date().toISOString(),
-          deleted: resource.deleted ? 1 : 0
-        } satisfies SFFSRawResource)
-        console.log(`Updated resource path in SFFS: ${oldPath} -> ${newPath}`)
-      }
-    } catch (error) {
-      console.error('Error updating resource path in SFFS:', error)
-    }
-  }
-
-  async handleFileDelete({ filename, path }: { filename: string; path: string }) {
-    try {
-      console.log(`File deleted: ${filename} at ${path}`)
-
-      if (!this.sffs) {
-        console.warn('SFFS not initialized. Cannot delete resource.')
-        return
-      }
-
-      const resource = await this.sffs.getResourceByPath(path)
-      if (resource) {
-        console.log('Deleting resource in SFFS for deleted file', resource.id, path)
-        await this.sffs.deleteResource(resource.id)
-        console.log(`Deleted resource in SFFS for file: ${path}`)
-      }
-    } catch (error) {
-      console.error('Error deleting resource in SFFS:', error)
-    }
-  }
-
   start(): void {
     if (this.process) {
       this.emit('warn', 'surf backend server is already running')
@@ -141,11 +72,6 @@ export class SurfBackendServerManager extends EventEmitter {
     this.initializeStartPromise()
     this.spawnProcess()
     this.isShuttingDown = false
-  }
-
-  initBackend() {
-    this.sffs = initializeSFFSMain()
-    this.initWatcher()
   }
 
   waitForStart(): Promise<void> {

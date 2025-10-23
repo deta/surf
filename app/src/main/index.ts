@@ -181,7 +181,9 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
 
   surfBackendManager.start()
   await surfBackendManager.waitForStart()
-  surfBackendManager.initBackend()
+  surfBackendManager.initWatcher()
+
+  initializeSFFSMain()
 }
 
 const initializeApp = async () => {
