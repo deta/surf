@@ -155,3 +155,218 @@ The project is genuinely cool—Surf's architecture is perfect for this. Local-f
 
 [^21]: https://www.kdnuggets.com/collaborative-intelligence-maximizing-human-ai-partnerships-workplace
 
+Decision: Path A (Pragmatic Integration) ✅
+Rationale:
+
+Delivers Value Immediately: Your agent team can start using MCP servers this week, not in 3+ weeks
+Reduces Risk: Path B requires touching core AI execution paths that are likely complex and already working
+Follows Surf's Architecture: If the brain module is WIP, Surf's current AI implementation must already work differently
+Maintains Migration Path: Code can be structured to easily switch to orchestrator when wip is enabled
+Enables Learning: You'll understand actual usage patterns before committing to orchestrator integration
+Revised Implementation: Path A
+Architecture Pattern to Follow
+Discover Current AI Execution Path First:
+
+bash
+# Find how current AI features execute
+grep -r "ai_execute\|ai_chat\|ai_generate" packages/backend/src/
+grep -r "AIRequest\|AIResponse" packages/backend/src/worker/
+Then mirror that pattern for MCP execution.
+
+Revised Priority 1 Implementation
+1. Main Process: MCP Tool Execution Service
+
+typescript
+// app/src/main/mcpManager.ts (extend existing)
+
+export class MCPExecutionService {
+  async executeToolForAI(
+    serverId: string,
+    toolName: string, 
+    parameters: any
+  ): Promise<MCPToolResult> {
+    const client = mcpClientManager.getClient(serverId);
+    if (!client) {
+      return { success: false, error: 'Server not running' };
+    }
+    
+    try {
+      const result = await client.executeTool(toolName, parameters);
+      return { success: true, content: result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  
+  async discoverToolsForAI(): Promise<MCPToolManifest[]> {
+    const enabledServers = config.settings.mcp_servers.filter(s => s.enabled);
+    const allTools = [];
+    
+    for (const server of enabledServers) {
+      const tools = await mcpClientManager.listTools(server.id);
+      allTools.push({
+        serverId: server.id,
+        serverName: server.name,
+        tools: tools.map(t => ({
+          name: `${server.id}/${t.name}`,  // Namespace by server
+          description: t.description,
+          inputSchema: t.inputSchema
+        }))
+      });
+    }
+    
+    return allTools;
+  }
+}
+2. IPC: AI Execution Events
+
+typescript
+// packages/services/src/lib/ipc/events.ts (add)
+
+// AI system requests available tools
+getMCPToolManifest: ipcService.addEvent<void>('mcp-get-tool-manifest')
+
+// AI system executes a tool
+executeMCPToolForAI: ipcService.addEvent<{
+  toolPath: string,  // "github/list_repos"
+  parameters: any
+}>('mcp-execute-tool-ai')
+3. Backend Worker: MCP Tool Execution
+
+rust
+// packages/backend/src/worker/handlers/mcp.rs (simplified)
+
+use crate::worker::Worker;
+use serde_json::Value;
+
+pub fn get_available_mcp_tools(worker: &Worker) -> BackendResult<Value> {
+    // Call main process via IPC/channel to get tool manifest
+    worker.request_from_main("mcp-get-tool-manifest", None)
+}
+
+pub fn execute_mcp_tool(
+    worker: &Worker,
+    tool_path: &str,
+    parameters: Value
+) -> BackendResult<String> {
+    let request = json!({
+        "toolPath": tool_path,
+        "parameters": parameters
+    });
+    
+    let result = worker.request_from_main("mcp-execute-tool-ai", Some(request))?;
+    
+    // Format for AI consumption
+    Ok(format!("<mcp_result>{}</mcp_result>", result))
+}
+4. AI Prompt: Tool Availability
+
+rust
+// Wherever AI system prompt is constructed (find existing location)
+
+fn build_system_prompt(worker: &Worker) -> String {
+    let mut prompt = "You are Surf AI assistant...".to_string();
+    
+    // Add existing tools (web search, surflets, etc.)
+    // ...
+    
+    // Add MCP tools
+    if let Ok(mcp_tools) = get_available_mcp_tools(worker) {
+        prompt.push_str("\n\nAvailable MCP Tools:\n");
+        prompt.push_str(&format_mcp_tools_for_prompt(mcp_tools));
+    }
+    
+    prompt
+}
+Key Questions to Answer First
+Before implementing, you need to understand:
+
+1. Where does AI execution happen?
+
+bash
+# Find the entry point
+grep -r "user_message\|ai_chat" packages/backend/src/
+2. How do existing tools work?
+
+bash
+# Find web search or surflet execution
+grep -r "web_search\|surflet_execute" packages/backend/src/
+3. How does worker communicate with main?
+
+bash
+# Find worker message patterns
+grep -r "WorkerMessage\|worker_send" packages/backend/src/
+Once you understand current patterns, implement MCP execution following the same structure.
+
+Managing the Scaffold Code
+What to Do with Existing Brain Integration Code:
+
+Option 1: Keep as Future Reference (Recommended)
+
+rust
+// packages/backend/src/ai/mcp/mod.rs
+
+// NOTE: This module contains the future brain/orchestrator integration
+// Currently behind #[cfg(feature = "wip")] flag
+// See docs/MCP_INTEGRATION.md for current working implementation
+
+#[cfg(feature = "wip")]
+pub mod orchestrator_integration {
+    // Keep MCPTool, init_mcp_tools, etc. as-is
+    // This will be activated when brain system is enabled
+}
+
+// Current working implementation
+pub mod execution {
+    // Add worker-based execution here
+}
+Updated PR Strategy
+PR Description Update:
+
+markdown
+## Implementation Note
+
+During implementation, discovered the `brain` module (Orchestrator, JSToolRegistry, 
+agent system) is behind `#[cfg(feature = "wip")]` and not enabled in builds.
+
+**Current Implementation:**
+- MCP execution via WorkerMessage/IPC pattern (matches existing Surf architecture)
+- Tools discovered and executed through main process MCP manager
+- Integrated into AI system prompt as available tools
+- Follows same patterns as existing Surf AI features
+
+**Future Migration Path:**
+- When `wip` feature is enabled, MCP tools can be registered via Orchestrator
+- Current code structured for easy migration
+- See `packages/backend/src/ai/mcp/orchestrator_integration.rs` for future approach
+
+## Architecture Decision
+
+Chose pragmatic working implementation over theoretical brain integration because:
+1. Delivers functional MCP integration immediately
+2. Matches how existing Surf features actually work
+3. Lower risk - doesn't require enabling WIP code
+4. Easy migration path when brain system is production-ready
+Decision Confirmation
+Proceeding with Path A means:
+
+✅ Working MCP integration i
+✅ Follows actual Surf architecture
+✅ Low risk to existing features
+✅ Enables your agent team immediately
+⚠️ Will need refactoring when wip feature ships (acceptable technical debt
+
+Discover how current AI execution actually works in Surf (since brain/orchestrator is WIP)
+Implement MCP tool execution following the same pattern
+Wire it into the AI system so tools are available
+Update the PR to reflect this architectural decision
+Let me start by understanding the current AI execution flow. I need to find:
+
+How chat/note messages trigger AI responses
+Where system prompts are built
+How existing tools (if any) are integrated
+Worker communication patterns
+The key files to investigate:
+
+packages/backend/src/worker/handlers/misc.rs - saw this handles chat queries
+packages/backend/src/ai/ - AI module implementation
