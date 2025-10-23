@@ -57,10 +57,6 @@
   let rafId: number | null = null
   let saveWidthTimeout: number | null = null
 
-  const toggleTreeSidebar = () => {
-    treeSidebarOpen = !treeSidebarOpen
-  }
-
   const startResize = (e: MouseEvent) => {
     e.preventDefault()
     isResizing = true
@@ -128,7 +124,7 @@
   onMount(() => {
     // Listen for toggle requests from Core renderer via IPC
     const handleToggleRequest = (data: { open: boolean }) => {
-      treeSidebarOpen = data.open
+      treeSidebarOpen = !treeSidebarOpen //data.open
     }
 
     const unsubs = [
