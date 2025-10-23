@@ -1,0 +1,149 @@
+name: Test build on PR label
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-22.04
+    if: contains(fromJSON('["pr-build-mac", "pr-build-mac-intel", "pr-build-win", "pr-build-linux"]'), github.event.label.name)
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      version_tag: ${{ steps.set-version-tag.outputs.VERSION_TAG }}
+    steps:
+      - id: set-matrix
+        run: |
+          matrix="{\"include\":["
+          if [[ "${{ github.event.label.name }}" == "pr-build-mac" ]]; then
+            matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:arm\"},"
+          fi
+          if [[ "${{ github.event.label.name }}" == "pr-build-mac-intel" ]]; then
+            matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
+          fi
+          if [[ "${{ github.event.label.name }}" == "pr-build-win" ]]; then
+            matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
+          fi
+          if [[ "${{ github.event.label.name }}" == "pr-build-linux" ]]; then
+            matrix="$matrix{\"os\":\"ubuntu-22.04\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:lin:x64\"},"
+          fi
+          matrix="${matrix%,}]}"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+      - id: set-version-tag
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c 1-7)
+          echo "VERSION_TAG=${{ github.head_ref }}-$SHORT_SHA" | sed 's/\//-/g' >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    strategy:
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.0
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-${{ matrix.architecture }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-node-
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/backend
+            packages/backend-server
+          key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache Turbo
+        uses: actions/cache@v3
+        with:
+          path: |
+            .turbo
+            node_modules/.cache/turbo
+          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ hashFiles('**/package.json', '**/yarn.lock', 'turbo.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.architecture }}-turbo-
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Build for ${{ matrix.os }}-${{ matrix.architecture }}
+        run: ${{ matrix.build_command }}
+        env:
+          APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
+          M_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
+          P_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
+          R_VITE_APP_VERSION: 0.0.1-${{ needs.prepare.outputs.version_tag }}
+
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+
+          PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/dev
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ needs.prepare.outputs.version_tag }}-build-${{ matrix.os }}-${{ matrix.architecture }}
+          path: |
+            app/dist/*.dmg
+            app/dist/*.exe
+            app/dist/*.AppImage
+            app/dist/*.tar.gz
+            app/dist/surf-*.yml
+
+  comment-on-pr:
+    needs: [prepare, build]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Comment on Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ needs.prepare.outputs.version_tag }}';
+            const runId = context.runId;
+
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId,
+            });
+
+            let artifactLinks = '';
+            for (const artifact of artifacts.data.artifacts) {
+              const downloadUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}/artifacts/${artifact.id}`;
+              artifactLinks += `- [${artifact.name}](${downloadUrl})\n`;
+            }
+
+            const body = `✅ Build completed successfully for version \`${version}\`\n\n**Download artifacts:**\n${artifactLinks}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
