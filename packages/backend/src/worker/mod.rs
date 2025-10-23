@@ -82,6 +82,7 @@ pub struct ChannelConfig {
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub channel: Channel,
     pub event_bus_rx: Arc<Root<JsFunction>>,
+    pub main_invoke: Arc<Root<JsFunction>>,
 }
 
 pub struct WorkerConfig {
@@ -99,6 +100,7 @@ pub struct Worker {
     pub ai: AI,
     pub channel: Channel,
     pub event_bus_rx: Arc<Root<JsFunction>>,
+    pub main_invoke: Arc<Root<JsFunction>>,
     pub tqueue_tx: crossbeam::Sender<ProcessorMessage>,
     pub aiqueue_tx: crossbeam::Sender<AIMessage>,
     pub app_path: String,
@@ -123,6 +125,7 @@ impl Worker {
             ai: AI::new(local_ai_socket_path)?,
             channel: config.channel_config.channel,
             event_bus_rx: config.channel_config.event_bus_rx,
+            main_invoke: config.channel_config.main_invoke,
             tqueue_tx: config.channel_config.tqueue_tx,
             aiqueue_tx: config.channel_config.aiqueue_tx,
             app_path: config.path_config.app_path.clone(),
@@ -155,6 +158,55 @@ impl Worker {
 
             Ok(())
         });
+    }
+
+    pub fn request_from_main(&self, event: &str, payload: &str) -> BackendResult<String> {
+        let (tx, rx) = crossbeam::bounded(1);
+        let cb = self.main_invoke.clone();
+        let event = event.to_string();
+        let payload = payload.to_string();
+        self.channel
+            .send(move |mut cx| {
+                let f = cb.to_inner(&mut cx);
+                let this = cx.undefined();
+                let ev = cx.string(&event);
+                let pl = cx.string(&payload);
+                let result = f.call(&mut cx, this, vec![ev.upcast(), pl.upcast()]);
+                match result {
+                    Ok(val) => {
+                        // Expect a Promise<string>
+                        let promise = val.downcast::<neon::types::JsPromise, _>(&mut cx).or_throw(&mut cx)?;
+                        let channel = cx.channel();
+                        let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
+                        let then_cb = neon::types::JsFunction::new(&mut cx, move |mut cx: FunctionContext| {
+                            let arg0 = cx.argument::<neon::types::JsString>(0)?.value(&mut cx);
+                            if let Some(sender) = tx.lock().unwrap().take() {
+                                let _ = sender.send(Ok(arg0));
+                            }
+                            Ok(cx.undefined())
+                        })?;
+                        let catch_cb = neon::types::JsFunction::new(&mut cx, move |mut cx: FunctionContext| {
+                            let arg0 = cx.argument::<neon::types::JsString>(0)?.value(&mut cx);
+                            if let Some(sender) = tx.lock().unwrap().take() {
+                                let _ = sender.send(Err(arg0));
+                            }
+                            Ok(cx.undefined())
+                        })?;
+                        promise.then(&mut cx, then_cb, Some(catch_cb))?;
+                        Ok(())
+                    }
+                    Err(err) => {
+                        let _ = tx.send(Err(format!("invoke threw: {}", err.to_string())));
+                        Ok(())
+                    }
+                }
+            })
+            .map_err(|e| BackendError::GenericError(e.to_string()))?;
+        match rx.recv() {
+            Ok(Ok(res)) => Ok(res),
+            Ok(Err(e)) => Err(BackendError::GenericError(e)),
+            Err(e) => Err(BackendError::GenericError(e.to_string())),
+        }
     }
 }
 

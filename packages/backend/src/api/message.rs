@@ -173,6 +173,7 @@ pub enum MiscMessage {
         inline_images: Option<Vec<String>>,
         general: bool,
         app_creation: bool,
+        mcp_tools_manifest: Option<String>,
     },
     NoteQuery {
         callback: Root<JsFunction>,
@@ -186,6 +187,7 @@ pub enum MiscMessage {
         general: bool,
         websearch: bool,
         surflet: bool,
+        mcp_tools_manifest: Option<String>,
     },
     CreateAppQuery {
         chunk_callback: Root<JsFunction>,
@@ -217,6 +219,13 @@ pub enum MiscMessage {
         threshold: Option<f32>,
     },
     GetYoutubeTranscript(String),
+    // MCP integration (Path A)
+    ListMCPAITools,
+    ExecuteMCPAITool {
+        server_id: String,
+        tool: String,
+        parameters: String,
+    },
     RunMigration,
     SendEventBusMessage(EventBusMessage),
     SetSurfBackendHealth(bool),

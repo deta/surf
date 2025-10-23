@@ -743,6 +743,7 @@ pub fn handle_misc_message(
             inline_images,
             general,
             app_creation,
+            mcp_tools_manifest,
         } => {
             let input = ChatInput {
                 query,
@@ -755,6 +756,7 @@ pub fn handle_misc_message(
                 note_resource_id: None,
                 websearch: false,
                 surflet: false,
+                mcp_tools_manifest,
             };
             let result = worker.send_chat_query(Some(session_id), callback, search_only, input);
 
@@ -772,6 +774,7 @@ pub fn handle_misc_message(
             general,
             surflet,
             websearch,
+            mcp_tools_manifest,
         } => {
             let input = ChatInput {
                 query,
@@ -784,6 +787,7 @@ pub fn handle_misc_message(
                 note_resource_id: Some(note_resource_id),
                 websearch,
                 surflet,
+                mcp_tools_manifest,
             };
 
             let result = worker.send_chat_query(None, callback, false, input);
@@ -847,6 +851,32 @@ pub fn handle_misc_message(
         }
         MiscMessage::RunMigration => {
             // TODO: implement migration handling
+        }
+        MiscMessage::ListMCPAITools => {
+            let result: BackendResult<serde_json::Value> = (|| {
+                let resp = worker.request_from_main("mcp-get-tool-manifest", "")?;
+                let v: serde_json::Value = serde_json::from_str(&resp)?;
+                Ok(v)
+            })();
+            send_worker_response(&mut worker.channel, oneshot, result)
+        }
+        MiscMessage::ExecuteMCPAITool { server_id, tool, parameters } => {
+            let result: BackendResult<serde_json::Value> = (|| {
+                let payload = serde_json::json!({
+                    "serverId": server_id,
+                    "tool": tool,
+                    "parameters": serde_json::from_str::<serde_json::Value>(&parameters).unwrap_or(serde_json::json!({}))
+                });
+                let resp = worker.request_from_main("mcp-execute-tool-ai", &payload.to_string())?;
+                let v: serde_json::Value = serde_json::from_str(&resp)?;
+                // wrap in <mcp_result> tags for downstream parsing
+                let wrapped = serde_json::json!({
+                    "raw": v,
+                    "as_text": format!("<mcp_result>{}</mcp_result>", resp)
+                });
+                Ok(wrapped)
+            })();
+            send_worker_response(&mut worker.channel, oneshot, result)
         }
         MiscMessage::SendEventBusMessage(message) => worker.send_event_bus_message(message),
         MiscMessage::SetSurfBackendHealth(state) => {

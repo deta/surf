@@ -15,7 +15,7 @@ import {
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
-import { getMCPManager } from './mcpManager'
+import { getMCPManager, getMCPExecutionService } from './mcpManager'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
 import { exportResource, openResourceAsFile } from './downloadManager'
@@ -347,6 +347,29 @@ function setupIpcHandlers(backendRootPath: string) {
   })
 
   // MCP Handlers
+  IPC_EVENTS_MAIN.mcpGetToolManifest.handle(async (event) => {
+    if (!validateIPCSender(event)) return { tools: [] }
+    const config = getUserConfig()
+    if (!config.settings.mcp_enabled) return { tools: [] }
+    const svc = getMCPExecutionService()
+    if (!svc) return { tools: [] }
+    const result = await svc.discoverToolsForAI()
+    try {
+      // emit discovery event per server is optional; we broadcast full list here
+      IPC_EVENTS_MAIN.mcpToolsDiscovered.sendToWebContents(event.sender, { serverId: '*', tools: result.tools })
+    } catch {}
+    return result
+  })
+
+  IPC_EVENTS_MAIN.mcpExecuteToolAI.handle(async (event, { serverId, tool, parameters }) => {
+    if (!validateIPCSender(event)) return { success: false, content: null, error: 'invalid sender' }
+    const config = getUserConfig()
+    if (!config.settings.mcp_enabled) return { success: false, content: null, error: 'MCP disabled' }
+    const svc = getMCPExecutionService()
+    if (!svc) return { success: false, content: null, error: 'service unavailable' }
+    return await svc.executeToolForAI(serverId, tool, parameters)
+  })
+
   IPC_EVENTS_MAIN.startMCPServer.on(async (event, serverId) => {
     if (!validateIPCSender(event)) return
     const mgr = getMCPManager()

@@ -16,6 +16,9 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__ai_get_docs_similarity", js_get_ai_docs_similarity)?;
     cx.export_function("js__ai_get_youtube_transcript", js_get_youtube_transcript)?;
     cx.export_function("js__ai_search_chat_resources", js_search_chat_resources)?;
+    // MCP (Path A)
+    cx.export_function("js__ai_list_mcp_ai_tools", js_list_mcp_ai_tools)?;
+    cx.export_function("js__ai_execute_mcp_ai_tool", js_execute_mcp_ai_tool)?;
     Ok(())
 }
 
@@ -58,6 +61,33 @@ fn js_get_ai_docs_similarity(mut cx: FunctionContext) -> JsResult<JsPromise> {
             docs,
             threshold,
         }),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_list_mcp_ai_tools(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::ListMCPAITools),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_execute_mcp_ai_tool(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let server_id = cx.argument::<JsString>(1)?.value(&mut cx);
+    let tool = cx.argument::<JsString>(2)?.value(&mut cx);
+    let parameters = cx.argument::<JsString>(3)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::MiscMessage(MiscMessage::ExecuteMCPAITool { server_id, tool, parameters }),
         deferred,
     );
 
@@ -200,6 +230,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub websearch: bool,
         #[serde(default)]
         pub surflet: bool,
+        pub mcp_tools_manifest: Option<String>,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -226,6 +257,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             general: opts.general,
             websearch: opts.websearch,
             surflet: opts.surflet,
+            mcp_tools_manifest: opts.mcp_tools_manifest,
         }),
         deferred,
     );
@@ -254,6 +286,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub general: bool,
         #[serde(default)]
         pub app_creation: bool,
+        pub mcp_tools_manifest: Option<String>,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -280,6 +313,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             search_only: opts.rag_only,
             general: opts.general,
             app_creation: opts.app_creation,
+            mcp_tools_manifest: opts.mcp_tools_manifest,
         }),
         deferred,
     );

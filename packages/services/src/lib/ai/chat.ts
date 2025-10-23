@@ -383,6 +383,23 @@ export class AIChat {
 
     this.log.debug('sending chat message to chat with id', this.id, model, opts, query)
 
+    // Append MCP manifest to system prompt if enabled and available
+    let mcpToolsManifest: string | undefined
+    try {
+      const settings = get(this.ai.config.settings)
+      // @ts-ignore
+      if (settings.mcp_enabled && window?.api?.getMCPToolManifest) {
+        // @ts-ignore
+        const manifest = await window.api.getMCPToolManifest()
+        const tools = (manifest?.tools ?? []) as { serverId: string; name: string; description: string }[]
+        if (tools.length > 0) {
+          mcpToolsManifest = tools
+            .map((t) => `- [${t.serverId}] ${t.name}: ${t.description ?? ''}`)
+            .join('\n')
+        }
+      }
+    } catch {}
+
     if (opts?.noteResourceId) {
       await this.sffs.sendAINoteMessage(callback, opts.noteResourceId, query, backendModel, {
         customKey: customKey,
@@ -391,7 +408,8 @@ export class AIChat {
         inlineImages: opts?.inlineImages,
         general: opts?.general,
         websearch: opts?.websearch,
-        surflet: opts?.surflet
+        surflet: opts?.surflet,
+        mcpToolsManifest
       })
     } else {
       await this.sffs.sendAIChatMessage(callback, this.id, query, backendModel, {
@@ -401,7 +419,8 @@ export class AIChat {
         resourceIds: opts?.resourceIds,
         inlineImages: opts?.inlineImages,
         general: opts?.general,
-        appCreation: opts?.appCreation
+        appCreation: opts?.appCreation,
+        mcpToolsManifest
       })
     }
 

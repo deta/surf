@@ -13,6 +13,7 @@ import {
 } from 'fs'
 
 import { getUserConfig } from '../../main/config'
+import { IPC_EVENTS_RENDERER } from '@deta/services/ipc'
 import { getResourceFileExtension, getResourceFileName } from '@deta/utils/io'
 import { SFFSRawCompositeResource } from '@deta/types'
 import { optimisticParseJSON } from '@deta/utils/data'
@@ -160,7 +161,8 @@ export const initSFFS = (opts?: SFFSOptions) => {
       language_setting,
       num_worker_threads,
       num_processor_threads,
-      js__backend_event_bus_callback
+      js__backend_event_bus_callback,
+      js__backend_invoke_main
     )
 
     if (ENABLE_DEBUG_PROXY) {
@@ -303,6 +305,23 @@ export const initSFFS = (opts?: SFFSOptions) => {
     eventSource.onerror = (error) => {
       console.error('EventSource failed:', error)
       eventSource.close()
+    }
+  }
+
+  const js__backend_invoke_main = (event: string, payload: string): Promise<string> => {
+    try {
+      const data = payload ? JSON.parse(payload) : undefined
+      if (event === 'mcp-get-tool-manifest') {
+        return IPC_EVENTS_RENDERER.mcpGetToolManifest.invoke().then((res) => JSON.stringify(res))
+      }
+      if (event === 'mcp-execute-tool-ai') {
+        return IPC_EVENTS_RENDERER.mcpExecuteToolAI
+          .invoke({ serverId: data?.serverId, tool: data?.tool, parameters: data?.parameters })
+          .then((res) => JSON.stringify(res))
+      }
+      return Promise.reject('unknown event: ' + event)
+    } catch (e) {
+      return Promise.reject(String(e))
     }
   }
 

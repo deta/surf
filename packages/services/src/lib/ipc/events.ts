@@ -14,7 +14,8 @@ import type {
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
   ControlWindow,
-  MCPTool
+  MCPTool,
+  MCPToolResult
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 
@@ -119,12 +120,14 @@ const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
 
-  // MCP (renderer → main)
+  // MCP (renderer/backends → main)
   startMCPServer: ipcService.addEvent<string>('mcp-start-server'),
   stopMCPServer: ipcService.addEvent<string>('mcp-stop-server'),
   // return types
   testMCPServer: ipcService.addEventWithReturn<{ payload: string; output: { success: boolean; error?: string } }>('mcp-test-server'),
   listMCPTools: ipcService.addEventWithReturn<{ payload: string; output: MCPTool[] }>('mcp-list-tools'),
+  mcpGetToolManifest: ipcService.addEventWithReturn<{ payload: void; output: { tools: MCPTool[] } }>('mcp-get-tool-manifest'),
+  mcpExecuteToolAI: ipcService.addEventWithReturn<{ payload: { serverId: string; tool: string; parameters: any }; output: MCPToolResult }>('mcp-execute-tool-ai'),
 
   // MCP (main → renderer)
   mcpServerStatusChange: ipcService.addEvent<{ serverId: string; status: string }>('mcp-server-status-change'),

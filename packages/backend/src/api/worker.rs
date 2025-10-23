@@ -47,6 +47,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
             .map(|n| n.value(&mut cx) as usize)
     });
     let event_bus_rx_callback = cx.argument::<JsFunction>(6)?.root(&mut cx);
+    let main_invoke = cx.argument::<JsFunction>(7)?.root(&mut cx);
 
     match std::fs::create_dir_all(&backend_root_path) {
         Ok(_) => {}
@@ -66,7 +67,7 @@ fn js_tunnel_init(mut cx: FunctionContext) -> JsResult<JsBox<tunnel::WorkerTunne
         num_worker_threads,
         num_processor_threads,
     };
-    let tunnel = tunnel::WorkerTunnel::new(&mut cx, config, event_bus_rx_callback);
+    let tunnel = tunnel::WorkerTunnel::new(&mut cx, config, event_bus_rx_callback, main_invoke);
 
     tracing::info!("rust<->node tunnel bridge initialized");
     Ok(cx.boxed(tunnel))

@@ -688,6 +688,12 @@ const api = {
   listMCPTools: (serverId: string) => {
     return IPC_EVENTS_RENDERER.listMCPTools.invoke(serverId)
   },
+  getMCPToolManifest: () => {
+    return IPC_EVENTS_RENDERER.mcpGetToolManifest.invoke()
+  },
+  executeMCPToolForAI: (serverId: string, tool: string, parameters: any) => {
+    return IPC_EVENTS_RENDERER.mcpExecuteToolAI.invoke({ serverId, tool, parameters })
+  },
 
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })

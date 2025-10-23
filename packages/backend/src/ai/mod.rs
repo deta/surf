@@ -68,6 +68,7 @@ pub struct ChatInput {
     pub general: bool,
     pub websearch: bool,
     pub surflet: bool,
+    pub mcp_tools_manifest: Option<String>,
 }
 
 // TODO: fix sources vs messages
@@ -419,13 +420,19 @@ impl AI {
 
         // system message
         let current_time = human_readable_current_time();
-        let system_message_prompt = match input.note_resource_id {
+        let mut system_message_prompt = match input.note_resource_id {
             Some(_) => note_prompt(&current_time, input.websearch, input.surflet),
             None => match input.general {
                 true => general_chat_prompt(&current_time),
                 false => chat_prompt(&current_time),
             },
         };
+        if let Some(manifest) = &input.mcp_tools_manifest {
+            if !manifest.trim().is_empty() {
+                system_message_prompt.push_str("\n\nAvailable MCP Tools:\n");
+                system_message_prompt.push_str(manifest);
+            }
+        }
 
         let mut messages = vec![Message::new_system(&system_message_prompt)];
 

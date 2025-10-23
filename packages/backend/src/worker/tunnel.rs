@@ -26,6 +26,7 @@ pub struct WorkerTunnel {
     pub tqueue_rx: crossbeam::Receiver<ProcessorMessage>,
     pub aiqueue_rx: crossbeam::Receiver<AIMessage>,
     pub event_bus_rx_callback: Arc<Root<JsFunction>>,
+    pub main_invoke: Arc<Root<JsFunction>>,
     pub surf_backend_health: SurfBackendHealth,
 }
 
@@ -85,6 +86,7 @@ impl WorkerTunnel {
         cx: &mut C,
         config: TunnelConfig,
         event_bus_rx_callback: Root<JsFunction>,
+        main_invoke: Root<JsFunction>,
     ) -> Self
     where
         C: Context<'a>,
@@ -94,11 +96,13 @@ impl WorkerTunnel {
         let (aiqueue_tx, aiqueue_rx) = crossbeam::unbounded();
         let surf_backend_health = SurfBackendHealth::new(Some(false));
         let event_bus_rx_callback = Arc::new(event_bus_rx_callback);
+        let main_invoke = Arc::new(main_invoke);
         let tunnel = Self {
             worker_tx,
             tqueue_rx,
             aiqueue_rx,
             event_bus_rx_callback: event_bus_rx_callback.clone(),
+            main_invoke: main_invoke.clone(),
             surf_backend_health: surf_backend_health.clone(),
         };
 
@@ -180,6 +184,7 @@ impl WorkerTunnel {
                         aiqueue_tx: aiqueue_tx.clone(),
                         channel: libuv_ch.clone(),
                         event_bus_rx: callback.clone(),
+                        main_invoke: tunnel.main_invoke.clone(),
                     };
 
                     let worker_config = WorkerConfig {
