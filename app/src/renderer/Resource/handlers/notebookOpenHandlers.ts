@@ -27,6 +27,9 @@ export const openNotebook = (notebookId: string, opts?: Partial<OpenNotebookOpti
 export const determineClickOpenTarget = (e: MouseEvent): OpenTarget => {
   if (e.type === 'auxclick') {
     if (e.button === 1) {
+      e.preventDefault()
+      e.stopPropagation()
+
       return 'background_tab'
     }
 
