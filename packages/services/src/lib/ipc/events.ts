@@ -13,7 +13,8 @@ import type {
   WebContentsViewEvent,
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
-  ControlWindow
+  ControlWindow,
+  MCPTool
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 
@@ -117,6 +118,17 @@ export type UpdateViewBounds = {
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
+
+  // MCP (renderer → main)
+  startMCPServer: ipcService.addEvent<string>('mcp-start-server'),
+  stopMCPServer: ipcService.addEvent<string>('mcp-stop-server'),
+  // return types
+  testMCPServer: ipcService.addEventWithReturn<{ payload: string; output: { success: boolean; error?: string } }>('mcp-test-server'),
+  listMCPTools: ipcService.addEventWithReturn<{ payload: string; output: MCPTool[] }>('mcp-list-tools'),
+
+  // MCP (main → renderer)
+  mcpServerStatusChange: ipcService.addEvent<{ serverId: string; status: string }>('mcp-server-status-change'),
+  mcpToolsDiscovered: ipcService.addEvent<{ serverId: string; tools: MCPTool[] }>('mcp-tools-discovered'),
   restartApp: ipcService.addEvent<void>('restart-app'),
   startDrag: ipcService.addEvent<StartDrag>('start-drag'),
   setAdblockerState: ipcService.addEvent<AdblockerStateChange>('set-adblocker-state'),
