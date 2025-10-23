@@ -5,6 +5,8 @@ pub mod youtube;
 #[cfg(feature = "wip")]
 pub mod brain;
 
+pub mod mcp;
+
 mod local;
 mod prompts;
 

@@ -242,6 +242,18 @@ const eventHandlers = {
     })
   },
 
+  onMcpServerStatusChange: (callback: (data: { serverId: string; status: string }) => void) => {
+    return IPC_EVENTS_RENDERER.mcpServerStatusChange.on((_, data) => {
+      try { callback(data) } catch {}
+    })
+  },
+
+  onMcpToolsDiscovered: (callback: (data: { serverId: string; tools: any[] }) => void) => {
+    return IPC_EVENTS_RENDERER.mcpToolsDiscovered.on((_, data) => {
+      try { callback(data) } catch {}
+    })
+  },
+
   onUserConfigSettingsChange: (callback: (settings: UserSettings) => void) => {
     return IPC_EVENTS_RENDERER.userConfigSettingsChange.on((_, settings) => {
       try {
@@ -662,6 +674,20 @@ const api = {
   },
 
   getUserConfig: () => userConfig,
+
+  // MCP
+  startMCPServer: (serverId: string) => {
+    IPC_EVENTS_RENDERER.startMCPServer.send(serverId)
+  },
+  stopMCPServer: (serverId: string) => {
+    IPC_EVENTS_RENDERER.stopMCPServer.send(serverId)
+  },
+  testMCPServer: (serverId: string) => {
+    return IPC_EVENTS_RENDERER.testMCPServer.invoke(serverId)
+  },
+  listMCPTools: (serverId: string) => {
+    return IPC_EVENTS_RENDERER.listMCPTools.invoke(serverId)
+  },
 
   startDrag: (resourceId: string, filePath: string, fileType: string) => {
     IPC_EVENTS_RENDERER.startDrag.send({ resourceId, filePath, fileType })

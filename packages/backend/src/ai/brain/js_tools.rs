@@ -20,6 +20,10 @@ pub enum ToolName {
     SearchDoneCallback,
     SurfletDoneCallback,
     ScrapeURL,
+    StartMCPServer,
+    StopMCPServer,
+    ListMCPTools,
+    ExecuteMCPTool,
 }
 
 impl FromStr for ToolName {
@@ -30,6 +34,10 @@ impl FromStr for ToolName {
             "web_search_done_callback" => Ok(ToolName::SearchDoneCallback),
             "scrape_url" => Ok(ToolName::ScrapeURL),
             "surflet_done_callback" => Ok(ToolName::SurfletDoneCallback),
+            "mcp_start_server" => Ok(ToolName::StartMCPServer),
+            "mcp_stop_server" => Ok(ToolName::StopMCPServer),
+            "mcp_list_tools" => Ok(ToolName::ListMCPTools),
+            "mcp_execute_tool" => Ok(ToolName::ExecuteMCPTool),
             _ => Err(BackendError::GenericError(format!(
                 "Unexpected tool name: {}",
                 s

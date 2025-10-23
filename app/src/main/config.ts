@@ -122,7 +122,11 @@ export const getUserConfig = (path?: string) => {
       experimental_note_inline_rewrite: false,
       auto_note_similarity_search: false,
       tab_bar_visible: true,
-      enable_custom_prompts: true
+      enable_custom_prompts: true,
+
+      // MCP
+      mcp_servers: [],
+      mcp_enabled: false
     }
     setUserConfig(storedConfig as UserConfig)
   }
@@ -224,6 +228,15 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.enable_custom_prompts === undefined) {
     storedConfig.settings.enable_custom_prompts = true
+    changedConfig = true
+  }
+
+  if (storedConfig.settings.mcp_servers === undefined) {
+    storedConfig.settings.mcp_servers = []
+    changedConfig = true
+  }
+  if (storedConfig.settings.mcp_enabled === undefined) {
+    storedConfig.settings.mcp_enabled = false
     changedConfig = true
   }
 

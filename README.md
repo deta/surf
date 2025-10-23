@@ -101,6 +101,10 @@ Surf can code interactive applets to help you visualize, understand or explore c
 
 [Read more](./docs/AI_MODELS.md).
 
+### MCP Integration
+
+Surf supports the Model Context Protocol (MCP), allowing you to connect to external tools and data sources. See [MCP Integration Guide](./docs/MCP_INTEGRATION.md) for setup instructions.
+
 ### Shortcuts
 
 Find the most common shortcuts [here](./docs/SHORTCUTS.md).

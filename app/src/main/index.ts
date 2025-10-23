@@ -18,6 +18,7 @@ import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 import { useLogScope } from '@deta/utils'
 import { initializeSFFSMain } from './sffs'
+import { initializeMCPManager } from './mcpManager'
 
 const log = useLogScope('Main')
 
@@ -196,6 +197,8 @@ const initializeApp = async () => {
   const userDataPath = app.getPath('userData')
   const backendRootPath = join(userDataPath, 'sffs_backend')
   const userConfig = getUserConfig()
+
+  initializeMCPManager(userConfig)
 
   setupIpc(backendRootPath)
 
