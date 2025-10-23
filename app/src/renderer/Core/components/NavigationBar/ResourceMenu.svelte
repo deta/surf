@@ -6,7 +6,13 @@
   import { useResourceManager, type Resource } from '@deta/services/resources'
   import type { TabItem } from '@deta/services/tabs'
   import { constructBreadcrumbs } from './breadcrumbs'
-  import { isWebResourceType, ResourceTypes, ViewType, type Option } from '@deta/types'
+  import {
+    isWebResourceType,
+    ResourceTypes,
+    ViewType,
+    type Option,
+    SpaceEntryOrigin
+  } from '@deta/types'
   import {
     Button,
     closeContextMenu,
@@ -90,6 +96,36 @@
     browser.openResource(resource.id, { offline, target: tab ? 'active_tab' : 'sidebar' })
   }
 
+  const handleAddToNotebook = async (notebookId: string) => {
+    if (!resource) return
+    log.debug('adding resource to notebook', notebookId, resource.id)
+    await notebookManager.addResourcesToNotebook(
+      notebookId,
+      [resource.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
+  }
+
+  const handleMoveToNotebook = async (notebookId: string) => {
+    if (!resource) return
+    log.debug('moving resource to notebook', notebookId, resource.id)
+
+    // Remove from all current notebooks
+    const currentSpaceIds = resource.spaceIdsValue
+    for (const spaceId of currentSpaceIds) {
+      await resourceManager.removeItemsFromSpace(spaceId, [resource.id])
+    }
+
+    // Add to target notebook
+    await notebookManager.addResourcesToNotebook(
+      notebookId,
+      [resource.id],
+      SpaceEntryOrigin.ManuallyAdded,
+      true
+    )
+  }
+
   const CTX_MENU_ITEMS: CtxItem[] = [
     tab !== undefined
       ? {
@@ -167,6 +203,42 @@
     }),
 
     ...conditionalArrayItem<CtxItem>(!!resource, [
+      { type: 'separator' },
+      {
+        type: 'sub-menu',
+        icon: 'add',
+        text: 'Add to Notebook',
+        anchor: 'left',
+        search: true,
+        items: notebookManager.sortedNotebooks
+          .filter((e) => e.data?.name?.toLowerCase() !== '.tempspace')
+          .filter((e) => e !== undefined)
+          .map((notebook) => ({
+            type: 'action',
+            text: notebook.nameValue,
+            action: () => handleAddToNotebook(notebook.id)
+          }))
+      },
+      {
+        type: 'sub-menu',
+        icon: 'arrow.right',
+        text: 'Move to Notebook',
+        anchor: 'left',
+        search: true,
+        items: notebookManager.sortedNotebooks
+          .filter((e) => e.data?.name?.toLowerCase() !== '.tempspace')
+          .filter((e) => e !== undefined)
+          .filter((e) => !resource?.spaceIdsValue?.includes(e.id))
+          .map((notebook) => ({
+            type: 'action',
+            text: notebook.nameValue,
+            action: () => handleMoveToNotebook(notebook.id)
+          }))
+      }
+    ]),
+
+    ...conditionalArrayItem<CtxItem>(!!resource, [
+      { type: 'separator' },
       {
         type: 'action',
         kind: 'danger',
@@ -191,7 +263,7 @@
       openContextMenu({
         key: '_note-actions',
         useOverlay: true,
-        x: rect.right - 185,
+        x: rect.right - 370,
         y: rect.bottom,
         targetEl: buttonTrigger.ref,
         items: CTX_MENU_ITEMS

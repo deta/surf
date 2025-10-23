@@ -31,6 +31,7 @@
     kind?: 'danger'
     disabled?: boolean
     search?: boolean
+    anchor?: 'left' | 'right'
     text: string
     icon?: string | [string, string] | any // TODO @BetaHuhn: rework the space icons to be independent of the OasisSpace class
     items: CtxItem[]
