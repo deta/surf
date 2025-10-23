@@ -88,6 +88,22 @@ impl Database {
             .optional()?)
     }
 
+    pub fn get_resource_by_path(&self, path: &str) -> BackendResult<Option<Resource>> {
+        let mut stmt = self.conn.prepare("SELECT id, resource_path, resource_type, created_at, updated_at, deleted FROM resources WHERE resource_path = ?1")?;
+        Ok(stmt
+            .query_row(rusqlite::params![path], |row| {
+                Ok(Resource {
+                    id: row.get(0)?,
+                    resource_path: row.get(1)?,
+                    resource_type: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    deleted: row.get(5)?,
+                })
+            })
+            .optional()?)
+    }
+
     pub fn remove_resources_tx(
         tx: &mut rusqlite::Transaction,
         ids: &[String],

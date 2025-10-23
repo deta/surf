@@ -6,6 +6,7 @@ use neon::types::JsDate;
 pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
     cx.export_function("js__store_create_resource", js_create_resource)?;
     cx.export_function("js__store_get_resource", js_get_resource)?;
+    cx.export_function("js__store_get_resource_by_path", js_get_resource_by_path)?;
     // cx.export_function("js__store_update_resource", js_update_resource)?;
     cx.export_function("js__store_remove_resources", js_remove_resources)?;
     cx.export_function(
@@ -403,6 +404,19 @@ fn js_get_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
             resource_id,
             include_annotations,
         )),
+        deferred,
+    );
+
+    Ok(promise)
+}
+
+fn js_get_resource_by_path(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
+    let resource_path = cx.argument::<JsString>(1)?.value(&mut cx);
+
+    let (deferred, promise) = cx.promise();
+    tunnel.worker_send_js(
+        WorkerMessage::ResourceMessage(ResourceMessage::GetResourceByPath(resource_path)),
         deferred,
     );
 
