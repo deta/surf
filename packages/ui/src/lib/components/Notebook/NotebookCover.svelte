@@ -142,7 +142,11 @@
   style:--color-text={colorValue[2][0]}
   style:--color-text-fallback={colorValue[2][1]}
   class:canClick={onclick !== undefined}
-  {onclick}
+  onclick={e => {
+    if (e.button !== 0) return
+
+     onclick?.(e)
+  }}
   onauxclick={(e) => {
      if (e.button !== 1) return
      onclick?.(e)
