@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { writable } from 'svelte/store'
+  import { writable, get } from 'svelte/store'
   import type { MCPServerConfig, MCPTool, UserSettings } from '@deta/types'
   import { Button, FormField, Expandable, openDialog } from '@deta/ui'
   import { Icon } from '@deta/icons'
@@ -14,9 +14,21 @@
   const statusMessage = writable<string>('')
   const tools = writable<Record<string, MCPTool[]>>({})
 
+  const manifest = writable<MCPTool[]>([])
+  const manifestFetched = writable(false)
+  const manifestError = writable<string | null>(null)
+  const isFetchingManifest = writable(false)
+  const selectedManifestTool = writable('')
+  const payloadInput = writable('{}')
+  const sampleOutput = writable('')
+  const sampleError = writable<string | null>(null)
+  const sampleRunning = writable(false)
+
   const dispatch = createEventDispatcher<{ update: void }>()
 
   $: servers.set(userConfigSettings.mcp_servers)
+
+  const encodeToolKey = (tool: MCPTool) => `${tool.serverId}::${tool.name}`
 
   const showStatus = (msg: string) => {
     statusMessage.set(msg)
@@ -87,11 +99,125 @@
     await window.api.stopMCPServer(id)
   }
 
+  const handleTryMCP = async (silent = false) => {
+    manifestError.set(null)
+    sampleError.set(null)
+    if (!userConfigSettings.mcp_enabled) {
+      manifest.set([])
+      manifestFetched.set(false)
+      selectedManifestTool.set('')
+      if (!silent) showStatus('Enable MCP to discover tools')
+      return
+    }
+
+    if (typeof window.api?.getMCPToolManifest !== 'function') {
+      manifestError.set('Manifest API unavailable in this build.')
+      return
+    }
+
+    isFetchingManifest.set(true)
+    try {
+      // @ts-ignore
+      const result = await window.api.getMCPToolManifest()
+      const toolsList: MCPTool[] = result?.tools ?? []
+      manifest.set(toolsList)
+      manifestFetched.set(true)
+      if (toolsList.length > 0) {
+        selectedManifestTool.set(encodeToolKey(toolsList[0]))
+        if (!silent) showStatus(`Found ${toolsList.length} MCP tool${toolsList.length === 1 ? '' : 's'}`)
+      } else {
+        selectedManifestTool.set('')
+        if (!silent) showStatus('No MCP tools available yet')
+      }
+    } catch (error: any) {
+      manifestError.set(error?.message ?? String(error))
+      manifestFetched.set(false)
+      if (!silent) showStatus('Failed to load MCP tools')
+    } finally {
+      isFetchingManifest.set(false)
+    }
+  }
+
+  const handleRunSample = async () => {
+    sampleError.set(null)
+    sampleOutput.set('')
+
+    if (!userConfigSettings.mcp_enabled) {
+      sampleError.set('Enable MCP before running a tool.')
+      return
+    }
+
+    if (typeof window.api?.executeMCPToolForAI !== 'function') {
+      sampleError.set('Tool execution API unavailable in this build.')
+      return
+    }
+
+    const selection = get(selectedManifestTool)
+    if (!selection) {
+      sampleError.set('Select a tool to execute.')
+      return
+    }
+
+    const [serverId, ...toolParts] = selection.split('::')
+    const toolName = toolParts.join('::')
+    if (!serverId || !toolName) {
+      sampleError.set('Invalid tool selection.')
+      return
+    }
+
+    let payload: any = {}
+    const payloadText = get(payloadInput)
+    if (payloadText?.trim()) {
+      try {
+        payload = JSON.parse(payloadText)
+      } catch (error) {
+        sampleError.set('Payload must be valid JSON.')
+        return
+      }
+    }
+
+    sampleRunning.set(true)
+    try {
+      // @ts-ignore
+      const result = await window.api.executeMCPToolForAI(serverId, toolName, payload)
+      sampleOutput.set(JSON.stringify(result, null, 2))
+      showStatus(result?.success ? 'Tool executed successfully' : result?.error ?? 'Tool execution failed')
+    } catch (error: any) {
+      sampleError.set(error?.message ?? String(error))
+    } finally {
+      sampleRunning.set(false)
+    }
+  }
+
   onMount(() => {
+    if (userConfigSettings.mcp_enabled) {
+      handleTryMCP(true)
+    }
+
     // @ts-ignore - listen to status change
-    window.api.onMcpServerStatusChange?.(({ serverId, status }) => {
+    const statusUnsub = window.api.onMcpServerStatusChange?.(({ serverId, status }) => {
       showStatus(`Server ${serverId} status: ${status}`)
     })
+
+    // @ts-ignore - keep manifest in sync when tools are discovered elsewhere
+    const toolsUnsub = window.api.onMcpToolsDiscovered?.(({ tools: discovered }) => {
+      const discoveredTools: MCPTool[] = discovered ?? []
+      manifest.set(discoveredTools)
+      manifestFetched.set(true)
+      if (discoveredTools.length === 0) {
+        selectedManifestTool.set('')
+      } else {
+        const current = get(selectedManifestTool)
+        if (!current) {
+          selectedManifestTool.set(encodeToolKey(discoveredTools[0]))
+        }
+      }
+    })
+
+    return () => {
+      statusUnsub?.()
+      toolsUnsub?.()
+    }
   })
 </script>
 
@@ -113,6 +239,68 @@
         Add Server
       </Button>
     </div>
+  </div>
+
+  {#if !userConfigSettings.mcp_enabled}
+    <div class="info-banner warning">
+      <Icon name="alert.circle" />
+      <span>MCP is disabled. Enable it above to let Surf's AI use your configured tools.</span>
+    </div>
+  {:else if $manifestError}
+    <div class="info-banner danger">
+      <Icon name="x.circle" />
+      <span>Failed to load MCP tools: {$manifestError}</span>
+    </div>
+  {:else if $manifestFetched && $manifest.length === 0}
+    <div class="info-banner info">
+      <Icon name="info" />
+      <span>No MCP tools are available yet. Start a server or click “Fetch Tools” below to refresh.</span>
+    </div>
+  {/if}
+
+  <div class="try-mcp">
+    <div class="try-header">
+      <div>
+        <h3>Quick MCP Test</h3>
+        <p class="hint">Fetch the manifest and invoke a tool directly from settings.</p>
+      </div>
+      <div class="controls">
+        <Button size="sm" kind="secondary" onclick={() => handleTryMCP()} disabled={$isFetchingManifest}>
+          <Icon name="refresh-ccw" class:spin={$isFetchingManifest} />
+          {$isFetchingManifest ? 'Fetching…' : 'Fetch Tools'}
+        </Button>
+        <Button
+          size="sm"
+          onclick={handleRunSample}
+          disabled={$sampleRunning || !$manifest.length || !userConfigSettings.mcp_enabled}
+          title={userConfigSettings.mcp_enabled ? '' : 'Enable MCP to run a tool'}
+        >
+          <Icon name="play" class:spin={$sampleRunning} />
+          {$sampleRunning ? 'Running…' : 'Run Selected Tool'}
+        </Button>
+      </div>
+    </div>
+
+    {#if userConfigSettings.mcp_enabled && $manifest.length > 0}
+      <div class="sample-form">
+        <label for="mcp-tool-select">Tool</label>
+        <select id="mcp-tool-select" bind:value={$selectedManifestTool}>
+          <option value="">Select a tool…</option>
+          {#each $manifest as tool}
+            <option value={encodeToolKey(tool)}>{tool.serverId} — {tool.name}</option>
+          {/each}
+        </select>
+        <label for="mcp-payload">Payload (JSON)</label>
+        <textarea id="mcp-payload" rows="5" bind:value={$payloadInput}></textarea>
+      </div>
+    {/if}
+
+    {#if $sampleError}
+      <p class="sample-error">{$sampleError}</p>
+    {/if}
+    {#if $sampleOutput}
+      <pre class="sample-output">{$sampleOutput}</pre>
+    {/if}
   </div>
 
   {#if $servers.length === 0}
@@ -206,8 +394,92 @@
     &.active { outline: 2px solid var(--accent, #6d82ff); }
   }
   .no-servers { opacity: 0.7; }
+  .info-banner {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+  }
+  .info-banner.warning {
+    background: light-dark(#fef3c7, rgba(250, 204, 21, 0.15));
+    color: light-dark(#92400e, #fde68a);
+  }
+  .info-banner.info {
+    background: light-dark(#e0f2fe, rgba(14, 165, 233, 0.15));
+    color: light-dark(#075985, #bae6fd);
+  }
+  .info-banner.danger {
+    background: light-dark(#fee2e2, rgba(248, 113, 113, 0.15));
+    color: light-dark(#991b1b, #fecaca);
+  }
+  .try-mcp {
+    margin-top: 1.25rem;
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.08), rgba(255, 255, 255, 0.08));
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: light-dark(#fafafa, rgba(255, 255, 255, 0.04));
+  }
+  .try-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .try-header h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+  .try-mcp .hint { font-size: 0.9rem; opacity: 0.75; margin: 0.2rem 0 0; }
+  .try-mcp .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .sample-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .sample-form select,
+  .sample-form textarea {
+    width: 100%;
+    border: 1px solid light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.12));
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+  }
+  .sample-error {
+    font-size: 0.9rem;
+    color: light-dark(#b91c1c, #fca5a5);
+  }
+  .sample-output {
+    background: light-dark(#0f172a, rgba(255, 255, 255, 0.06));
+    color: light-dark(#f8fafc, #f8fafc);
+    padding: 0.75rem;
+    border-radius: 10px;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+    font-size: 0.85rem;
+    max-height: 220px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
   .status-message {
     position: fixed; left: 1rem; bottom: 1rem; display:flex; gap:0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px;
     background: light-dark(#ecfdf5, #064e3b); color: light-dark(#065f46, #d1fae5);
   }
+</style>
 </style>
