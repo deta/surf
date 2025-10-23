@@ -8,6 +8,9 @@ pub mod brain;
 mod local;
 mod prompts;
 
+// Re-export OutputFormat so it's accessible from other modules
+pub use prompts::OutputFormat;
+
 pub const _MODULE_PREFIX: &str = "ai";
 pub const _AI_API_ENDPOINT: &str = "v1/deta-os-ai";
 
@@ -66,6 +69,7 @@ pub struct ChatInput {
     pub general: bool,
     pub websearch: bool,
     pub surflet: bool,
+    pub output_format: Option<OutputFormat>,
 }
 
 // TODO: fix sources vs messages
@@ -418,10 +422,10 @@ impl AI {
         // system message
         let current_time = human_readable_current_time();
         let system_message_prompt = match input.note_resource_id {
-            Some(_) => note_prompt(&current_time, input.websearch, input.surflet),
+            Some(_) => note_prompt(&current_time, input.websearch, input.surflet, input.output_format),
             None => match input.general {
-                true => general_chat_prompt(&current_time),
-                false => chat_prompt(&current_time),
+                true => general_chat_prompt(&current_time, input.output_format),
+                false => chat_prompt(&current_time, input.output_format),
             },
         };
 

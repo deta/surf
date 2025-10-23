@@ -1,5 +1,5 @@
 use crate::{
-    ai::llm::{client::Model, models::Message},
+    ai::{llm::{client::Model, models::Message}, OutputFormat},
     store::models::*,
     BackendResult,
 };
@@ -173,6 +173,7 @@ pub enum MiscMessage {
         inline_images: Option<Vec<String>>,
         general: bool,
         app_creation: bool,
+        output_format: Option<OutputFormat>,
     },
     NoteQuery {
         callback: Root<JsFunction>,
@@ -186,6 +187,7 @@ pub enum MiscMessage {
         general: bool,
         websearch: bool,
         surflet: bool,
+        output_format: Option<OutputFormat>,
     },
     CreateAppQuery {
         chunk_callback: Root<JsFunction>,

@@ -35,6 +35,8 @@ export interface CreateChatCompletionOptions {
   response_format?: string
 }
 
+export type OutputFormat = 'auto' | 'list' | 'table' | 'short' | 'detailed' | 'paragraph'
+
 export interface ChatMessageOptions {
   query: string
   chat_id: string
@@ -46,6 +48,7 @@ export interface ChatMessageOptions {
   inline_images?: string[]
   general?: boolean
   app_creation?: boolean
+  output_format?: OutputFormat
 }
 
 export interface NoteMessageOptions {
@@ -59,6 +62,7 @@ export interface NoteMessageOptions {
   general?: boolean
   websearch?: boolean
   surflet?: boolean
+  output_format?: OutputFormat
 }
 
 export interface QueryResourcesOptions {

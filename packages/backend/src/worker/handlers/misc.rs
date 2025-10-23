@@ -743,6 +743,7 @@ pub fn handle_misc_message(
             inline_images,
             general,
             app_creation,
+            output_format,
         } => {
             let input = ChatInput {
                 query,
@@ -755,6 +756,7 @@ pub fn handle_misc_message(
                 note_resource_id: None,
                 websearch: false,
                 surflet: false,
+                output_format,
             };
             let result = worker.send_chat_query(Some(session_id), callback, search_only, input);
 
@@ -772,6 +774,7 @@ pub fn handle_misc_message(
             general,
             surflet,
             websearch,
+            output_format,
         } => {
             let input = ChatInput {
                 query,
@@ -784,6 +787,7 @@ pub fn handle_misc_message(
                 note_resource_id: Some(note_resource_id),
                 websearch,
                 surflet,
+                output_format,
             };
 
             let result = worker.send_chat_query(None, callback, false, input);

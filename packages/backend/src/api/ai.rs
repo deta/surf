@@ -1,5 +1,5 @@
 use crate::{
-    ai::llm::{client::Model, models::Message},
+    ai::{llm::{client::Model, models::Message}, OutputFormat},
     api::message::*,
     worker::tunnel::WorkerTunnel,
 };
@@ -200,6 +200,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub websearch: bool,
         #[serde(default)]
         pub surflet: bool,
+        pub output_format: Option<OutputFormat>,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -226,6 +227,7 @@ fn js_send_note_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             general: opts.general,
             websearch: opts.websearch,
             surflet: opts.surflet,
+            output_format: opts.output_format,
         }),
         deferred,
     );
@@ -254,6 +256,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
         pub general: bool,
         #[serde(default)]
         pub app_creation: bool,
+        pub output_format: Option<OutputFormat>,
     }
 
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
@@ -280,6 +283,7 @@ fn js_send_chat_message(mut cx: FunctionContext) -> JsResult<JsPromise> {
             search_only: opts.rag_only,
             general: opts.general,
             app_creation: opts.app_creation,
+            output_format: opts.output_format,
         }),
         deferred,
     );
