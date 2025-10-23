@@ -218,7 +218,7 @@
 
     -electron-corner-smoothing: 60%;
     //font-size: 11px;
-    --text: light-dark(#586884, #ddd6d0);
+    --text: light-dark(#586884, #c7d2ff);
     --text-p3: color(display-p3 0.3571 0.406 0.5088);
     --text-light: #666666;
     --background-dark: radial-gradient(
