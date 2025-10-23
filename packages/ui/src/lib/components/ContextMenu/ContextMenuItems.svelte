@@ -8,9 +8,8 @@
   export let subMenuRef: string | undefined = undefined
   export let showSearch: boolean = false
   export let isActiveMenu: boolean = subMenuRef === undefined // Root menu is active by default
-  export let forcedAnchor: 'left' | 'right' | undefined = undefined
 
-  let anchor: 'left' | 'right' = forcedAnchor || 'right'
+  let anchor: 'left' | 'right' = 'right'
   let subMenuYOffset = 0
   let searchQuery = writable('')
   let filteredItems = items
@@ -56,8 +55,7 @@
 
       subMenu.classList.add('hidden')
 
-      // Only auto-detect anchor position if not forced
-      if (!forcedAnchor && box.left + box.width > window.innerWidth) {
+      if (box.left + box.width > window.innerWidth) {
         anchor = 'left'
       }
       if (box.top + box.height > window.innerHeight) {
@@ -380,7 +378,6 @@
           subMenuRef={`${i}`}
           showSearch={item.search === true}
           isActiveMenu={get(parentActiveSubMenuStore) === `${i}`}
-          forcedAnchor={item.anchor}
         />
       {/if}
     {/if}
