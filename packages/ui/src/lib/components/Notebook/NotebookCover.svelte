@@ -144,6 +144,7 @@
   class:canClick={onclick !== undefined}
   {onclick}
   onauxclick={(e) => {
+     if (e.button !== 1) return
      onclick?.(e)
   }}
   onmouseenter={() => isHovered = true}
