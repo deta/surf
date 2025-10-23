@@ -18,6 +18,8 @@
   import type { MentionItemsFetcher } from '@deta/editor/src/lib/extensions/Mention/suggestion'
   import { AddToContextMenu, Dropdown, ModelPicker } from '@deta/ui'
   import type { AIChatStatusMessage, AITool } from '@deta/types'
+  import { OutputFormat } from '@deta/types'
+  import { useLocalStorageStore } from '@deta/utils'
 
   const log = useLogScope('ChatInput')
   const dispatch = createEventDispatcher<{
@@ -49,6 +51,52 @@
   const { generatingPrompts, generatedPrompts } = contextManager
 
   const contextManagementDialogOpen = writable(false)
+
+  // Output format selection
+  export const selectedOutputFormat = useLocalStorageStore<OutputFormat>(
+    'chatOutputFormat',
+    OutputFormat.Auto
+  )
+
+  // Define format options with labels and icons
+  const formatOptions = [
+    { id: OutputFormat.Auto, label: 'Auto', icon: undefined },
+    { id: OutputFormat.List, label: 'List', icon: 'list' },
+    { id: OutputFormat.Table, label: 'Table', icon: 'table' },
+    { id: OutputFormat.Short, label: 'Short', icon: 'text-collapse' },
+    { id: OutputFormat.Detailed, label: 'Detailed', icon: 'list-details' },
+    { id: OutputFormat.Paragraph, label: 'Paragraph', icon: 'paragraph' }
+  ]
+
+  const formatDropdownItems = derived(selectedOutputFormat, ($selectedFormat) => {
+    return formatOptions.map((format) => ({
+      id: format.id,
+      label: format.label,
+      icon: format.icon,
+      checked: $selectedFormat === format.id,
+      type: 'radio',
+      action: () => {
+        log.debug('Selecting output format:', format.id)
+        selectedOutputFormat.set(format.id)
+      }
+    }))
+  })
+
+  const selectedFormatLabel = derived(selectedOutputFormat, ($selectedFormat) => {
+    if ($selectedFormat === OutputFormat.Auto) {
+      return 'Format'
+    }
+    const format = formatOptions.find((f) => f.id === $selectedFormat)
+    return format?.label ?? 'Format'
+  })
+
+  const selectedFormatIcon = derived(selectedOutputFormat, ($selectedFormat) => {
+    if ($selectedFormat === OutputFormat.Auto) {
+      return 'paragraph'
+    }
+    const format = formatOptions.find((f) => f.id === $selectedFormat)
+    return format?.icon
+  })
 
   const inputValue = writable('')
   $: isEditorEmpty = editor ? get(editor.isEmpty) : true
@@ -87,6 +135,11 @@
     setContent('', true)
     inputValue.set('')
     editor?.clear()
+  }
+
+  export const setOutputFormat = (format: OutputFormat) => {
+    log.debug('Setting output format from external source', format)
+    selectedOutputFormat.set(format)
   }
 
   // ==== Suggested Prompts
@@ -299,6 +352,13 @@
             items={$toolsDropdownItems}
             triggerText="Tools"
             triggerIcon="bolt"
+            align="end"
+            disabled={$isLoading}
+          />
+          <Dropdown
+            items={$formatDropdownItems}
+            triggerText={$selectedFormatLabel}
+            triggerIcon={$selectedFormatIcon}
             align="end"
             disabled={$isLoading}
           />

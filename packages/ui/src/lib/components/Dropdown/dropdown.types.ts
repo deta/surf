@@ -14,7 +14,7 @@ export type DropdownItemAction = {
     disabled?: boolean
     disabledLabel?: string
     checked?: boolean
-    type?: 'default' | 'checkbox' | 'separator' | 'title'
+    type?: 'default' | 'checkbox' | 'radio' | 'separator' | 'title'
     description?: string
     subItems?: DropdownItem[]
     bottomSeparator?: boolean

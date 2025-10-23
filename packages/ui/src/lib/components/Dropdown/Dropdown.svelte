@@ -99,6 +99,10 @@
                   <div class="toggle-thumb"></div>
                   </div>
               </button>
+          {:else if item.type === 'radio'}
+              {#if item.checked}
+                  <DynamicIcon name="check" size="14px" style="color: #6d82ff;" />
+              {/if}
           {:else if item.rightLabel || item.rightIcon}
               <div class="tool-info">
                   {#if item.rightLabel}
@@ -220,6 +224,15 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    max-width: 200px;
+    overflow: hidden;
+
+    span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
 
     &:focus {
       outline: none;

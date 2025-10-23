@@ -9,6 +9,7 @@
     generationID?: string
     screenshot?: Blob
     addActiveTab?: boolean
+    outputFormat?: OutputFormat
   };
 </script>
 
@@ -88,7 +89,7 @@
     SMART_NOTES_SUGGESTIONS_GENERATOR_PROMPT
   } from '@deta/services/constants'
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
-  import { type AITool, ModelTiers, Provider } from '@deta/types/src/ai.types'
+  import { type AITool, ModelTiers, Provider, OutputFormat } from '@deta/types/src/ai.types'
   import { Toast, useToasts } from '@deta/ui'
   import { useConfig } from '@deta/services'
   import { createWikipediaAPI, WebParser } from '@deta/web-parser'
@@ -299,11 +300,23 @@
           tools.map((tool) => ({ ...tool, active: payload.tools[tool.id] ?? tool.active }))
         ) // make sure we have the latest state
 
+        // Sync output format from teletype to chat input
+        if (payload.outputFormat && chatInputComp) {
+          log.debug('Syncing output format from teletype:', payload.outputFormat)
+          chatInputComp.setOutputFormat(payload.outputFormat)
+        }
+
         await generateAndInsertAIOutput(
           payload.query,
           payload.mentions,
           PageChatMessageSentEventTrigger.NoteUseSuggestion,
-          { focusEnd: true, autoScroll: false, showPrompt: !payload.queryLabel, focusInput: true }
+          {
+            focusEnd: true,
+            autoScroll: false,
+            showPrompt: !payload.queryLabel,
+            focusInput: true,
+            outputFormat: payload.outputFormat
+          }
         )
       }
     } catch (err) {
@@ -1253,7 +1266,8 @@
       autoScroll: opts?.autoScroll ?? false,
       showPrompt: opts?.showPrompt ?? false,
       clearContextOnMention: opts?.clearContextOnMention ?? false,
-      generationID: opts?.generationID
+      generationID: opts?.generationID,
+      outputFormat: opts?.outputFormat
     } as ChatSubmitOptions
 
     const editor = editorElem.getEditor()
@@ -1367,7 +1381,8 @@
           onboarding: showOnboarding,
           noteResourceId: resourceId,
           websearch: toolsConfiguration.websearch,
-          surflet: toolsConfiguration.surflet
+          surflet: toolsConfiguration.surflet,
+          outputFormat: options.outputFormat
         },
         renderFunction
       )
@@ -2284,7 +2299,8 @@
           focusEnd: true,
           autoScroll: showPromptAndScroll,
           showPrompt: showPromptAndScroll,
-          generationID: chatInputGenerationID
+          generationID: chatInputGenerationID,
+          outputFormat: chatInputComp ? get(chatInputComp.selectedOutputFormat) : undefined
         }
       )
     } catch (e) {

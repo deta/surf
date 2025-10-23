@@ -13,15 +13,17 @@
   import { isDev, isMac } from '@deta/utils/system'
   import { Editor, type MentionItem } from '@deta/editor'
   import { createRemoteMentionsFetcher } from '@deta/services/ai'
-  import { Button } from '@deta/ui'
+  import { Button, Dropdown } from '@deta/ui'
   import { ShortcutVisualizer } from '@deta/ui'
   import '@deta/editor/src/editor.scss'
   import { parseStringIntoBrowserLocation } from '@deta/utils/formatting'
+  import { OutputFormat } from '@deta/types'
+  import { useLocalStorageStore } from '@deta/utils'
 
   const dispatch = createEventDispatcher<{
     clear: void
-    ask: { query: string; mentions: MentionItem[] }
-    'create-note': { content: string }
+    ask: { query: string; mentions: MentionItem[]; outputFormat: OutputFormat }
+    'create-note': { content: string; outputFormat: OutputFormat }
     input: { query: string; mentions: MentionItem[] }
     'search-web': { query: string }
     'actions-rendered': boolean
@@ -61,6 +63,51 @@
   let mentions: MentionItem[] = []
   let modalContent: Action | null = null
   const inputValueWithoutMentions = writable('')
+
+  // Output format selection
+  export const selectedOutputFormat = useLocalStorageStore<OutputFormat>(
+    'teletypeOutputFormat',
+    OutputFormat.Auto
+  )
+
+  // Define format options with labels and icons
+  const formatOptions = [
+    { id: OutputFormat.Auto, label: 'Auto', icon: undefined },
+    { id: OutputFormat.List, label: 'List', icon: 'list' },
+    { id: OutputFormat.Table, label: 'Table', icon: 'table' },
+    { id: OutputFormat.Short, label: 'Short', icon: 'text-collapse' },
+    { id: OutputFormat.Detailed, label: 'Detailed', icon: 'list-details' },
+    { id: OutputFormat.Paragraph, label: 'Paragraph', icon: 'paragraph' }
+  ]
+
+  const formatDropdownItems = derived(selectedOutputFormat, ($selectedFormat) => {
+    return formatOptions.map((format) => ({
+      id: format.id,
+      label: format.label,
+      icon: format.icon,
+      checked: $selectedFormat === format.id,
+      type: 'radio',
+      action: () => {
+        selectedOutputFormat.set(format.id)
+      }
+    }))
+  })
+
+  const selectedFormatLabel = derived(selectedOutputFormat, ($selectedFormat) => {
+    if ($selectedFormat === OutputFormat.Auto) {
+      return 'Format'
+    }
+    const format = formatOptions.find((f) => f.id === $selectedFormat)
+    return format?.label ?? 'Format'
+  })
+
+  const selectedFormatIcon = derived(selectedOutputFormat, ($selectedFormat) => {
+    if ($selectedFormat === OutputFormat.Auto) {
+      return 'paragraph'
+    }
+    const format = formatOptions.find((f) => f.id === $selectedFormat)
+    return format?.icon
+  })
 
   $effect(() => {
     if (!mentions || mentions.length === 0 || !$inputValue) {
@@ -349,13 +396,16 @@
 
   const handleAsk = (query?: string) => {
     mentions = editorComponent.getMentions()
-    dispatch('ask', { query: query || $inputValue, mentions })
+    dispatch('ask', { query: query || $inputValue, mentions, outputFormat: $selectedOutputFormat })
     clearTeletype()
   }
 
   const handleCreateNote = () => {
     const content = editorComponent.getParsedEditorContent()
-    dispatch('create-note', { content: content.html ?? content.text })
+    dispatch('create-note', {
+      content: content.html ?? content.text,
+      outputFormat: $selectedOutputFormat
+    })
     clearTeletype()
   }
 
@@ -627,6 +677,13 @@
           name="tools"
           disabled={!isInMentionMode && !hasMentions && $selectedAction?.id !== 'ask-action'}
         ></slot>
+
+        <Dropdown
+          items={$formatDropdownItems}
+          triggerText={$selectedFormatLabel}
+          triggerIcon={$selectedFormatIcon}
+          align="end"
+        />
 
         <div class="send-button-wrapper" transition:fade={{ duration: 150 }}>
           {#if ttyActions.secondary}

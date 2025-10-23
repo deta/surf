@@ -7,6 +7,7 @@
   import { onMount } from 'svelte'
   import ToolsList from './ToolsList.svelte'
   import { AddToContextMenu, ModelPicker } from '@deta/ui'
+  import type { OutputFormat } from '@deta/types'
 
   const log = useLogScope('TeletypeEntry')
 
@@ -27,15 +28,19 @@
     teletypeService.setQuery(query)
   }
 
-  const handleAsk = (event: CustomEvent<{ query: string; mentions: MentionItem[] }>) => {
-    const { query, mentions } = event.detail
-    log.debug('Ask requested:', query, mentions)
-    teletypeService.ask({ query, mentions })
+  const handleAsk = (
+    event: CustomEvent<{ query: string; mentions: MentionItem[]; outputFormat: OutputFormat }>
+  ) => {
+    const { query, mentions, outputFormat } = event.detail
+    log.debug('Ask requested:', query, mentions, 'format:', outputFormat)
+    teletypeService.ask({ query, mentions, outputFormat })
   }
 
-  const handleCreateNote = (event: CustomEvent<{ content: string }>) => {
-    const { content } = event.detail
-    log.debug('Create note requested:', content)
+  const handleCreateNote = (
+    event: CustomEvent<{ content: string; outputFormat: OutputFormat }>
+  ) => {
+    const { content, outputFormat } = event.detail
+    log.debug('Create note requested:', content, 'format:', outputFormat)
     teletypeService.createNote(content)
   }
 
