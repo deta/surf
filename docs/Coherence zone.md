@@ -1,5 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
 # Very good! This will be like a coherence zone, where the documentation gets processed, redirected and analised through multiple perspectives. I still need to actually use it to see what else is possible, but i am inspired by this, project looks cool
 
 Exactly! **"Coherence zone"** is the perfect term for what you're building. It's where distributed knowledge converges, contradictions get resolved, and multiple agent perspectives synthesize into collective intelligence.[^1][^2][^3][^4]
