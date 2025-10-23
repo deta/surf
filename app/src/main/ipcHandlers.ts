@@ -15,6 +15,7 @@ import {
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { updateTabOrientationMenuItem } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
+import { getMCPManager } from './mcpManager'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
 import { exportResource, openResourceAsFile } from './downloadManager'
@@ -343,6 +344,59 @@ function setupIpcHandlers(backendRootPath: string) {
     if (!validateIPCSender(event)) return
 
     ipcSenders.resetBackgroundImage()
+  })
+
+  // MCP Handlers
+  IPC_EVENTS_MAIN.startMCPServer.on(async (event, serverId) => {
+    if (!validateIPCSender(event)) return
+    const mgr = getMCPManager()
+    const config = getUserConfig()
+    const server = config.settings.mcp_servers.find((s) => s.id === serverId)
+    if (!mgr || !server) return
+    try {
+      await mgr.startServer(server)
+      IPC_EVENTS_MAIN.mcpServerStatusChange.sendToWebContents(event.sender, { serverId, status: 'running' })
+    } catch (e) {
+      IPC_EVENTS_MAIN.mcpServerStatusChange.sendToWebContents(event.sender, { serverId, status: 'error' })
+    }
+  })
+
+  IPC_EVENTS_MAIN.stopMCPServer.on(async (event, serverId) => {
+    if (!validateIPCSender(event)) return
+    const mgr = getMCPManager()
+    if (!mgr) return
+    try {
+      await mgr.stopServer(serverId)
+      IPC_EVENTS_MAIN.mcpServerStatusChange.sendToWebContents(event.sender, { serverId, status: 'stopped' })
+    } catch (e) {
+      IPC_EVENTS_MAIN.mcpServerStatusChange.sendToWebContents(event.sender, { serverId, status: 'error' })
+    }
+  })
+
+  IPC_EVENTS_MAIN.testMCPServer.handle(async (event, serverId) => {
+    if (!validateIPCSender(event)) return { success: false, error: 'invalid sender' }
+    const mgr = getMCPManager()
+    const config = getUserConfig()
+    const server = config.settings.mcp_servers.find((s) => s.id === serverId)
+    if (!mgr || !server) return { success: false, error: 'server not found' }
+    try {
+      await mgr.startServer(server)
+      const tools = await mgr.getServerTools(serverId)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e?.message ?? String(e) }
+    }
+  })
+
+  IPC_EVENTS_MAIN.listMCPTools.handle(async (event, serverId) => {
+    if (!validateIPCSender(event)) return []
+    const mgr = getMCPManager()
+    if (!mgr) return []
+    try {
+      return await mgr.getServerTools(serverId)
+    } catch {
+      return []
+    }
   })
 
   IPC_EVENTS_MAIN.updateSpacesList.on((event, data) => {

@@ -14,6 +14,8 @@ use crate::ai::llm::client::{CancellationToken, LLMClient, Model};
 use crate::{BackendError, BackendResult};
 
 use super::tools::SurfletAgentTool;
+use crate::ai::mcp::MCPTool;
+use serde::Deserialize;
 
 #[allow(dead_code)]
 pub struct Orchestrator {
@@ -23,6 +25,14 @@ pub struct Orchestrator {
     model: Model,
     lead_agent: Option<Agent>,
     js_tool_registry: Arc<JSToolRegistry>,
+}
+
+#[derive(Deserialize)]
+pub struct MCPToolInfo {
+    pub name: String,
+    pub description: String,
+    pub server_id: String,
+    pub input_schema: serde_json::Value,
 }
 
 impl Orchestrator {
@@ -62,6 +72,22 @@ impl Orchestrator {
         orc.init_surflet_agent()?;
         orc.init_context_manager_agent()?;
         Ok(orc)
+    }
+
+    pub fn init_mcp_tools(&mut self, mcp_tools: Vec<MCPToolInfo>) -> BackendResult<()> {
+        if let Some(ref mut lead_agent) = self.lead_agent {
+            for tool_info in mcp_tools {
+                let mcp_tool = Box::new(MCPTool::new(
+                    tool_info.name,
+                    tool_info.description,
+                    tool_info.server_id,
+                    tool_info.input_schema,
+                    Arc::clone(&self.js_tool_registry),
+                ));
+                lead_agent.add_tool(mcp_tool);
+            }
+        }
+        Ok(())
     }
 
     // right now we're shortcutting to only the search engine tool directly
