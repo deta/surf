@@ -143,11 +143,13 @@
   style:--color-text-fallback={colorValue[2][1]}
   class:canClick={onclick !== undefined}
   onclick={e => {
+    console.warn("DBG button click", e.button)
     if (e.button !== 0) return
 
      onclick?.(e)
   }}
   onauxclick={(e) => {
+    console.warn("DBG button onauxclick", e.button)
      if (e.button !== 1) return
      onclick?.(e)
   }}
