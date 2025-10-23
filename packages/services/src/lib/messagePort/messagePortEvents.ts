@@ -6,7 +6,8 @@ import type {
   OpenNotebookOptions,
   OpenResourceOptions,
   OpenTarget,
-  ViewLocation
+  ViewLocation,
+  OutputFormat
 } from '@deta/types'
 
 import type {
@@ -37,6 +38,7 @@ export type AIQueryPayload = {
     websearch?: boolean
     surflet?: boolean
   }
+  outputFormat?: OutputFormat
 }
 
 export interface MPTeletypeSetQuery extends MessagePortEvent {

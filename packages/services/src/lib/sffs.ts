@@ -1088,6 +1088,7 @@ export class SFFS {
       inlineImages?: string[]
       general?: boolean
       appCreation?: boolean
+      outputFormat?: OutputFormat
     }
   ): Promise<void> {
     this.log.debug(
@@ -1118,7 +1119,8 @@ export class SFFS {
       limit: opts?.limit ?? 20,
       rag_only: opts?.ragOnly,
       general: opts?.general,
-      app_creation: opts?.appCreation
+      app_creation: opts?.appCreation,
+      output_format: opts?.outputFormat
     }
     return this.withErrorHandling(
       this.backend,
@@ -1141,6 +1143,7 @@ export class SFFS {
       general?: boolean
       websearch?: boolean
       surflet?: boolean
+      outputFormat?: OutputFormat
     }
   ): Promise<void> {
     this.log.debug(
@@ -1169,7 +1172,8 @@ export class SFFS {
       limit: opts?.limit ?? 20,
       general: opts?.general,
       websearch: opts?.websearch,
-      surflet: opts?.surflet
+      surflet: opts?.surflet,
+      output_format: opts?.outputFormat
     }
     return this.withErrorHandling(
       this.backend,

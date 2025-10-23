@@ -8,6 +8,15 @@ export enum Provider {
   Custom = 'custom'
 }
 
+export enum OutputFormat {
+  Auto = 'auto',
+  List = 'list',
+  Table = 'table',
+  Short = 'short',
+  Detailed = 'detailed',
+  Paragraph = 'paragraph'
+}
+
 export enum BuiltInModelIDs {
   GPT5 = 'gpt-5',
   GPT5_Mini = 'gpt-5-mini',
@@ -159,6 +168,7 @@ export type ChatMessageOptions = {
   trigger?: PageChatMessageSentEventTrigger
   onboarding?: boolean
   noteResourceId?: string
+  outputFormat?: OutputFormat
 }
 
 export type ChatCompletionResponse = {
