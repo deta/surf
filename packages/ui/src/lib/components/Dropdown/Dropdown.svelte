@@ -149,11 +149,23 @@
 <style lang="scss">
   // Target the button wrapper that bits-ui creates
   :global(button[data-dropdown-menu-trigger]) {
+    flex: 1 1 auto;
+    min-width: 2.5rem !important;
+    max-width: 150px !important;
     width: auto !important;
-    flex-shrink: 1;
-    min-width: 0 !important;
-    max-width: 150px;
     overflow: hidden;
+    container-type: inline-size;
+
+    // Hide text label when button is too small to show at least 3 characters
+    @container (max-width: 3.5rem) {
+      :global(.tools-trigger) {
+        justify-content: center;
+
+        span {
+          display: none;
+        }
+      }
+    }
   }
 
   :global(.tools-trigger) {
