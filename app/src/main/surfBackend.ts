@@ -2,7 +2,10 @@ import { isWindows } from '@deta/utils'
 import { spawn, type ChildProcess, execSync } from 'child_process'
 
 import EventEmitter from 'events'
-import { basename } from 'path'
+import path, { basename } from 'path'
+import { FileWatcher } from './watcher'
+import { app } from 'electron'
+import { ipcSenders } from './ipcHandlers'
 
 export class SurfBackendServerManager extends EventEmitter {
   private process: ChildProcess | null = null
@@ -17,6 +20,8 @@ export class SurfBackendServerManager extends EventEmitter {
   private startResolve: (() => void) | null = null
   private startReject: ((reason: Error) => void) | null = null
 
+  private watcher: FileWatcher | null = null
+
   constructor(
     private readonly serverPath: string,
     private readonly args: string[],
@@ -27,6 +32,34 @@ export class SurfBackendServerManager extends EventEmitter {
 
   public get isHealthy(): boolean {
     return this.lastKnownHealth
+  }
+
+  initWatcher() {
+    const USER_DATA_PATH = app.getPath('userData')
+    const BACKEND_ROOT_PATH = path.join(USER_DATA_PATH, 'sffs_backend')
+    const BACKEND_RESOURCES_PATH = path.join(BACKEND_ROOT_PATH, 'resources')
+
+    this.watcher = new FileWatcher(BACKEND_RESOURCES_PATH)
+
+    this.watcher
+      .on('create', ({ filename, path }) => {
+        ipcSenders.resourceFileChange({
+          type: 'create',
+          data: { newName: filename, newPath: path }
+        })
+      })
+      .on('delete', ({ filename, path }) => {
+        ipcSenders.resourceFileChange({
+          type: 'delete',
+          data: { oldName: filename, oldPath: path }
+        })
+      })
+      .on('rename', ({ oldName, newName, oldPath, newPath }) => {
+        ipcSenders.resourceFileChange({
+          type: 'rename',
+          data: { oldName, newName, oldPath, newPath }
+        })
+      })
   }
 
   start(): void {
@@ -65,6 +98,10 @@ export class SurfBackendServerManager extends EventEmitter {
     if (!this.process) {
       this.emit('warn', 'surf backend server is not running')
       return
+    }
+
+    if (this.watcher) {
+      this.watcher.close()
     }
 
     this.isShuttingDown = true

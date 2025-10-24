@@ -549,6 +549,12 @@ export class Resource extends EventEmitterBase<ResourceEventHandlers> {
     }
   }
 
+  deleteDataFile() {
+    this.log.debug('deleting resource data file at', this.path)
+
+    return this.sffs.deleteDataFile(this.id, this.type, this.path)
+  }
+
   updateExtractionState(state: ResourceState) {
     this.extractionState.set(state)
   }
@@ -754,7 +760,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
   constructor(config: ConfigService) {
     super()
-    this.log = useLogScope('SFFSResourceManager')
+    this.log = useLogScope('SFFSResourceManager ' + generateID())
     this.sffs = new SFFS()
     this.config = config
     this.resources = new SvelteMap()
@@ -1202,6 +1208,18 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     return resource
   }
 
+  async getResourceByPath(path: string) {
+    const resourceItem = await this.sffs.getResourceByPath(path)
+    if (!resourceItem) {
+      return null
+    }
+
+    const resource = this.findOrCreateResourceObject(resourceItem)
+    this.resources.set(resource.id, resource)
+
+    return resource
+  }
+
   async getAIChatDataSource(hash: string) {
     return this.sffs.getAIChatDataSource(hash)
   }
@@ -1307,7 +1325,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
   async updateResource(
     id: string,
-    data: Pick<Partial<SFFSRawResource>, 'created_at' | 'updated_at' | 'deleted'>
+    data: Pick<Partial<SFFSRawResource>, 'created_at' | 'updated_at' | 'deleted' | 'resource_path'>
   ) {
     const resource = await this.getResource(id)
     if (!resource) {
@@ -1326,6 +1344,10 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
     if (data.deleted) {
       resource.deleted = data.deleted === 1
+    }
+
+    if (data.resource_path) {
+      resource.path = data.resource_path
     }
 
     const fullData = {

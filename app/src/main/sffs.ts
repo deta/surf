@@ -107,8 +107,25 @@ export class SFFSMain {
 
     const stringified = JSON.stringify(resource)
 
-    const result = this.sffs.js__store_update_resource(stringified)
+    const result = await this.sffs.js__store_update_resource(stringified)
     return result
+  }
+
+  async deleteResource(id: string) {
+    console.debug('deleting resource with id', id)
+    await this.sffs.js__store_remove_resources([id])
+  }
+
+  async getResourceByPath(path: string): Promise<SFFSResource | null> {
+    console.log('getting resource by path', path)
+    const dataString = await this.sffs.js__store_get_resource_by_path(path)
+
+    const composite = optimisticParseJSON<SFFSRawCompositeResource>(dataString)
+    if (!composite) {
+      return null
+    }
+
+    return SFFSMain.convertCompositeResourceToResource(composite)
   }
 }
 

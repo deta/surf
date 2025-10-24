@@ -13,7 +13,8 @@ import type {
   WebContentsViewEvent,
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
-  ControlWindow
+  ControlWindow,
+  ResourceFileChange
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 
@@ -180,6 +181,7 @@ const IPC_EVENTS = ipcService.registerEvents({
   webContentsViewEvent: ipcService.addEvent<WebContentsViewEvent>('webcontentsview-event'),
   focusMainRenderer: ipcService.addEvent<void>('focus-main-renderer'),
   updateViewBounds: ipcService.addEvent<UpdateViewBounds>('update-view-bounds'),
+  resourceFileChange: ipcService.addEvent<ResourceFileChange>('resource-file-change'),
 
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),
