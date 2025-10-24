@@ -288,7 +288,8 @@ export const parseAIError = (e: any) => {
     content = 'API key is missing. Configure an API key in your Settings to continue.'
   } else if (e instanceof BadRequestError) {
     error = PageChatMessageSentEventError.BadRequest
-    content = 'The AI server sent a bad request error. You can try again with a different query.'
+    content =
+      e.message || 'The AI server sent a bad request response, you can try modifying your query'
   } else if (e instanceof UnauthorizedError) {
     error = PageChatMessageSentEventError.Unauthorized
     content =
