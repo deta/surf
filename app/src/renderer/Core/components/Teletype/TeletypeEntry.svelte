@@ -6,6 +6,7 @@
   import { useLogScope } from '@deta/utils/io'
   import { onMount } from 'svelte'
   import ToolsList from './ToolsList.svelte'
+  import OutputFormatSelector from './OutputFormatSelector.svelte'
   import { AddToContextMenu, ModelPicker } from '@deta/ui'
   import type { OutputFormat } from '@deta/types'
 
@@ -127,6 +128,7 @@
         <div class="controls-list">
           <AddToContextMenu {onFileSelect} {onMentionSelect} />
           <ToolsList teletype={teletypeService} />
+          <OutputFormatSelector />
           <ModelPicker />
         </div>
       </svelte:fragment>

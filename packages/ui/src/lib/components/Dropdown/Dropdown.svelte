@@ -161,6 +161,15 @@
     outline: none;
     opacity: 0.75;
     transition: background-color 150ms ease-out, opacity 150ms ease-out;
+    max-width: 150px;
+    overflow: hidden;
+
+    span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
 
     &:hover:not(:disabled) {
       background: light-dark(#f3f5ff, var(--accent-background-dark, #1e2639));
