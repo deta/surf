@@ -1375,16 +1375,7 @@
       log.debug('autocomplete response', response)
       if (response.error) {
         log.error('Error generating AI output', response.error)
-        let errorMsg = response.error.message
-        if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
-          errorMsg = 'Too many requests, please try again later'
-        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
-          errorMsg =
-            'Sorry your query did not pass our content policy, please try again with a different query.'
-        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
-          errorMsg =
-            'No relevant context found. Please add more resources or try a different query.'
-        }
+        let errorMsg = response.error.message || 'An unknown error occurred'
         aiGeneration.updateStatus('failed')
         chatInputComp?.showStatus({
           type: 'error',

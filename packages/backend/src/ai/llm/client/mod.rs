@@ -691,7 +691,7 @@ impl LLMClient {
                 }
                 // TODO: are there other cases of bad request
                 if status == reqwest::StatusCode::BAD_REQUEST {
-                    return Err(BackendError::LLMClientErrorBadRequest);
+                    return Err(BackendError::LLMClientErrorBadRequest(response.text()?));
                 }
                 if status == reqwest::StatusCode::UNAUTHORIZED {
                     return Err(BackendError::LLMClientErrorUnauthorized);

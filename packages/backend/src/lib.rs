@@ -24,8 +24,8 @@ pub enum BackendError {
     LLMClientError { r#type: String, message: String },
     #[error("LLM API Key Missing error")]
     LLMClientErrorAPIKeyMissing,
-    #[error("LLM Bad Request error")]
-    LLMClientErrorBadRequest,
+    #[error("LLM Bad Request error: {0}")]
+    LLMClientErrorBadRequest(String),
     #[error("LLM Too Many Requests error")]
     LLMClientErrorTooManyRequests,
     #[error("LLM Unauthorized error")]
