@@ -556,7 +556,12 @@ impl Worker {
         // NOTE: for Note content type for performance reasons we do not generate the embeddings
         // right away as updates are too frequent but instead do it lazily only when we need it
         // we thefore add a tag to the resource indicating that the resource needs post processing
-        if content_type == ResourceTextContentType::Note {
+        // Use lazy embeddings for Notes, PDFs, Documents, and Articles to reduce CPU load
+        if content_type == ResourceTextContentType::Note
+            || content_type == ResourceTextContentType::PDF
+            || content_type == ResourceTextContentType::Document
+            || content_type == ResourceTextContentType::Article
+        {
             let generate_embeddings_tag = ResourceTag::new_generate_lazy_embeddings(&resource_id);
             Database::create_resource_tag_tx(&mut tx, &generate_embeddings_tag)?;
             tx.commit()?;

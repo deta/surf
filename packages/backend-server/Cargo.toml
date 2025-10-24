@@ -19,6 +19,7 @@ uds_windows = "1.1.0"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 fastembed = { git = "https://github.com/deta/fastembed-rs", tag = "v3.14.1-patch.1", features = ["ort-download-binaries", "online"] }
+rayon = "1.10.0"
 
 [dev-dependencies]
 serial_test = "3.2.0"
