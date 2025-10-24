@@ -143,5 +143,8 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
   }
 </style>

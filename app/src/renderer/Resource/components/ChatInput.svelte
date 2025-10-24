@@ -665,6 +665,8 @@
           top: 0rem;
           bottom: 0.25rem;
           right: 0;
+          left: 0;
+          display: flex;
 
           &.open-context-picker {
             width: 100%;
@@ -702,6 +704,7 @@
       border: none;
       outline: none;
       opacity: 1;
+      flex-shrink: 0;
       transition:
         background-color 150ms ease-out,
         opacity 150ms ease-out;
@@ -755,6 +758,9 @@
         display: flex;
         align-items: start;
         gap: 0.75rem;
+        min-width: 0;
+        width: 100%;
+        justify-content: flex-end;
       }
 
       opacity: 1;

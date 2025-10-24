@@ -147,6 +147,15 @@
   </DropdownMenu.Root>
 
 <style lang="scss">
+  // Target the button wrapper that bits-ui creates
+  :global(button[data-dropdown-menu-trigger]) {
+    width: auto !important;
+    flex-shrink: 1;
+    min-width: 0 !important;
+    max-width: 150px;
+    overflow: hidden;
+  }
+
   :global(.tools-trigger) {
     display: flex;
     align-items: center;
@@ -161,7 +170,7 @@
     outline: none;
     opacity: 0.75;
     transition: background-color 150ms ease-out, opacity 150ms ease-out;
-    max-width: 150px;
+    width: 100%;
     overflow: hidden;
 
     span {
@@ -169,6 +178,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       min-width: 0;
+      flex: 1;
     }
 
     &:hover:not(:disabled) {
