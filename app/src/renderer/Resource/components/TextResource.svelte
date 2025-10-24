@@ -300,7 +300,7 @@
           tools.map((tool) => ({ ...tool, active: payload.tools[tool.id] ?? tool.active }))
         ) // make sure we have the latest state
 
-        // Sync output format from teletype to chat input
+        // Sync output format from teletype to chat input and localStorage
         if (payload.outputFormat && chatInputComp) {
           log.debug('Syncing output format from teletype:', payload.outputFormat)
           chatInputComp.setOutputFormat(payload.outputFormat)

@@ -65,10 +65,7 @@
   const inputValueWithoutMentions = writable('')
 
   // Access the same output format store as OutputFormatSelector
-  const selectedOutputFormat = useLocalStorageStore<OutputFormat>(
-    'teletypeOutputFormat',
-    OutputFormat.Auto
-  )
+  const selectedOutputFormat = useLocalStorageStore<OutputFormat>('outputFormat', OutputFormat.Auto)
 
   $effect(() => {
     if (!mentions || mentions.length === 0 || !$inputValue) {

@@ -54,7 +54,7 @@
 
   // Output format selection
   export const selectedOutputFormat = useLocalStorageStore<OutputFormat>(
-    'chatOutputFormat',
+    'outputFormat',
     OutputFormat.Auto
   )
 
