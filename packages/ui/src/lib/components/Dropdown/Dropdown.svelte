@@ -149,7 +149,7 @@
 <style lang="scss">
   // Target the button wrapper that bits-ui creates
   :global(button[data-dropdown-menu-trigger]) {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 2.5rem !important;
     max-width: 150px !important;
     width: auto !important;
