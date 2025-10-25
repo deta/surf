@@ -79,6 +79,9 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings = {
       search_engine: 'google',
       embedding_model: 'multilingual_small',
+      embedding_batch_size: 64,
+      embedding_max_threads: 4,
+      embedding_max_connections: 8,
       tabs_orientation: 'vertical',
       app_style: 'light',
       use_semantic_search: false,
@@ -337,6 +340,20 @@ export const getUserConfig = (path?: string) => {
 
   if (storedConfig.settings.experimental_notes_chat_input === undefined) {
     storedConfig.settings.experimental_notes_chat_input = false
+    changedConfig = true
+  }
+
+  // Embedding performance settings
+  if (storedConfig.settings.embedding_batch_size === undefined) {
+    storedConfig.settings.embedding_batch_size = 64
+    changedConfig = true
+  }
+  if (storedConfig.settings.embedding_max_threads === undefined) {
+    storedConfig.settings.embedding_max_threads = 4
+    changedConfig = true
+  }
+  if (storedConfig.settings.embedding_max_connections === undefined) {
+    storedConfig.settings.embedding_max_connections = 8
     changedConfig = true
   }
 

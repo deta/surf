@@ -44,9 +44,9 @@ fn main() {
         .ok();
 
     let args: Vec<String> = std::env::args().collect();
-    if args.len() != 4 {
+    if args.len() != 7 {
         eprintln!(
-            "Usage: {} <root_path> <local_llm_mode> <embedding_model_mode>",
+            "Usage: {} <root_path> <local_llm_mode> <embedding_model_mode> <batch_size> <max_threads> <max_connections>",
             args[0]
         );
         std::process::exit(1);
@@ -74,10 +74,31 @@ fn main() {
             std::process::exit(1);
         }
     };
+    let batch_size: usize = match args[4].parse() {
+        Ok(size) => size,
+        Err(e) => {
+            eprintln!("Bad batch_size: {:#?}, error: {:#?}", args[4], e);
+            std::process::exit(1);
+        }
+    };
+    let max_threads: usize = match args[5].parse() {
+        Ok(threads) => threads,
+        Err(e) => {
+            eprintln!("Bad max_threads: {:#?}, error: {:#?}", args[5], e);
+            std::process::exit(1);
+        }
+    };
+    let max_connections: usize = match args[6].parse() {
+        Ok(connections) => connections,
+        Err(e) => {
+            eprintln!("Bad max_connections: {:#?}, error: {:#?}", args[6], e);
+            std::process::exit(1);
+        }
+    };
 
     info!(
-        "started with socket_path: {:#?}, local_llm_mode: {:#?}",
-        socket_path, local_llm_mode
+        "started with socket_path: {:#?}, local_llm_mode: {:#?}, batch_size: {}, max_threads: {}, max_connections: {}",
+        socket_path, local_llm_mode, batch_size, max_threads, max_connections
     );
     let server = LocalAIServer::new(
         &socket_path,
@@ -85,6 +106,9 @@ fn main() {
         &model_cache_dir,
         local_llm_mode,
         embedding_model_mode,
+        batch_size,
+        max_threads,
+        max_connections,
     )
     .expect("failed to create new server");
 

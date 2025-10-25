@@ -32,6 +32,7 @@ pub struct EmbeddingModel {
     model_name: fastembed::EmbeddingModel,
     model: TextEmbedding,
     chunker: ContentChunker,
+    batch_size: usize,
 }
 
 fn new_fastembed_model(
@@ -50,15 +51,16 @@ fn new_fastembed_model(
 }
 
 impl EmbeddingModel {
-    pub fn new_remote(cache_dir: &Path, mode: EmbeddingModelMode) -> BackendResult<Self> {
+    pub fn new_remote(cache_dir: &Path, mode: EmbeddingModelMode, batch_size: usize) -> BackendResult<Self> {
         let model_name: fastembed::EmbeddingModel = mode.into();
         let model = new_fastembed_model(cache_dir, model_name.clone(), false)?;
-        let chunker = ContentChunker::new(2000, 1);
+        let chunker = ContentChunker::new(2500, 1);
 
         Ok(Self {
             model_name,
             model,
             chunker,
+            batch_size,
         })
     }
 
@@ -66,9 +68,9 @@ impl EmbeddingModel {
         TextEmbedding::get_model_info(&self.model_name).dim
     }
 
-    #[instrument(level = "debug", skip(self, sentences), fields(count = sentences.len()))]
+    #[instrument(level = "debug", skip(self, sentences), fields(count = sentences.len(), batch_size = self.batch_size))]
     pub fn encode(&self, sentences: &[String]) -> BackendResult<Vec<Vec<f32>>> {
-        self.model.embed(sentences.to_vec(), Some(1)).map_err(|e| {
+        self.model.embed(sentences.to_vec(), Some(self.batch_size)).map_err(|e| {
             error!("Failed to encode {} sentences: {}", sentences.len(), e);
             BackendError::GenericError(format!("Error encoding sentences: {}", e))
         })

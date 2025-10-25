@@ -22,6 +22,7 @@ pub struct LocalAIServer {
     index_path: String,
     embedding_model: Arc<EmbeddingModel>,
     listener: UnixListener,
+    max_connections: usize,
 }
 
 impl LocalAIServer {
@@ -32,6 +33,9 @@ impl LocalAIServer {
         model_cache_dir: &Path,
         local_llm: bool,
         embedding_model_mode: EmbeddingModelMode,
+        batch_size: usize,
+        max_threads: usize,
+        max_connections: usize,
     ) -> BackendResult<Self> {
         if socket_path.exists() {
             fs::remove_file(socket_path)?;
@@ -45,9 +49,16 @@ impl LocalAIServer {
             ));
         }
 
+        // Configure rayon thread pool for parallel processing
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(max_threads)
+            .build_global()
+            .map_err(|e| BackendError::GenericError(format!("Failed to configure thread pool: {}", e)))?;
+
         let embedding_model = Arc::new(EmbeddingModel::new_remote(
             model_cache_dir,
             embedding_model_mode,
+            batch_size,
         )?);
 
         Ok(Self {
@@ -55,6 +66,7 @@ impl LocalAIServer {
             index_path: index_path.to_string_lossy().to_string(),
             embedding_model,
             listener,
+            max_connections,
         })
     }
 
@@ -117,7 +129,7 @@ impl LocalAIServer {
     }
 
     pub fn listen(&self) {
-        info!(socket_path = ?self.socket_path, "server starting");
+        info!(socket_path = ?self.socket_path, max_connections = self.max_connections, "server starting");
         let (tx, rx) = mpsc::channel();
 
         let index_path = self.index_path.clone();
@@ -127,17 +139,32 @@ impl LocalAIServer {
             Self::handle_main_thread_messages(rx, &index_path, &embedding_dim)
         });
 
+        // Create a channel-based semaphore to limit concurrent connections
+        let (permit_tx, permit_rx) = mpsc::sync_channel(self.max_connections);
+        // Fill the channel with permits
+        for _ in 0..self.max_connections {
+            let _ = permit_tx.send(());
+        }
+
         info!("listening for incoming connections");
         for stream in self.listener.incoming() {
             match stream {
                 Ok(stream) => {
                     let embedding_model = Arc::clone(&self.embedding_model);
                     let tx = tx.clone();
+                    let permit_tx_clone = permit_tx.clone();
+                    let permit_rx_clone = permit_rx.clone();
 
                     std::thread::spawn(move || {
+                        // Acquire permit before processing (blocks if none available)
+                        let _permit = permit_rx_clone.recv();
+                        
                         if let Err(e) = handle_client(tx, &embedding_model, stream) {
                             error!(?e, "client handler error");
                         }
+                        
+                        // Return permit when done
+                        let _ = permit_tx_clone.send(());
                     });
                 }
                 Err(e) => {
