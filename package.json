@@ -55,5 +55,6 @@
     "brace-expansion": "^2.0.2",
     "tmp": "^0.2.4",
     "devalue": "^5.4.1"
-  }
+  },
+  "version": "0.0.2"
 }
