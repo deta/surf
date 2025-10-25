@@ -976,7 +976,7 @@ export class SFFS {
         typeof error === 'string' ? error : error instanceof Error ? error.message : undefined
       if (message) {
         if (message.includes('LLM Bad Request error')) {
-          throw new BadRequestError()
+          throw new BadRequestError(message.replace('LLM Bad Request error: ', ''))
         }
         if (message.includes('LLM API Key Missing error')) {
           throw new APIKeyMissingError()

@@ -99,8 +99,8 @@ export class APIKeyMissingError extends Error {
 }
 
 export class BadRequestError extends Error {
-  constructor() {
-    super('Bad request')
+  constructor(message?: string) {
+    super(message || 'Bad request')
     this.name = 'BadRequestError'
     // Maintains proper stack trace for where error was thrown (only available on V8)
     if (Error.captureStackTrace) {

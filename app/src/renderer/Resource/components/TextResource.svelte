@@ -89,7 +89,6 @@
   } from '@deta/services/constants'
   import type { MentionAction } from '@deta/editor/src/lib/extensions/Mention'
   import { type AITool, ModelTiers, Provider } from '@deta/types/src/ai.types'
-  import { Toast, useToasts } from '@deta/ui'
   import { useConfig } from '@deta/services'
   import { createWikipediaAPI, WebParser } from '@deta/web-parser'
   import EmbeddedResource from './EmbeddedResource.svelte'
@@ -137,7 +136,6 @@
   const log = useLogScope('TextCard')
   const resourceManager = useResourceManager()
   const ai = useAI()
-  const toasts = useToasts()
   const config = useConfig()
   const wikipediaAPI = createWikipediaAPI()
 
@@ -717,13 +715,8 @@
   }
 
   const handleEditorFilePaste = async (e: CustomEvent<{ files: File[]; htmlData?: string }>) => {
-    let toast: Toast | null = null
     try {
       const { files, htmlData } = e.detail
-
-      if (toasts) {
-        toast = toasts.loading('Importing pasted items…')
-      }
 
       let parsed: any[] = []
 
@@ -831,9 +824,6 @@
               }
             }
 
-            if (toast) {
-              toast.success('Items imported!')
-            }
             return
           }
         }
@@ -873,20 +863,12 @@
 
         await processDropResource(position, resource, true, { x: 0, y: 0 })
       }
-
-      if (toast) {
-        toast.success('Items imported!')
-      }
     } catch (err) {
-      if (toast) {
-        toast.error('Failed to import pasted items!')
-      }
       log.error(err)
     }
   }
 
   const handlePaste = async (e: ClipboardEvent) => {
-    let toast: Toast | null = null
     e.preventDefault()
     try {
       var parsed = await processPaste(e)
@@ -894,8 +876,6 @@
       // NOTE: We only process files as other types are already handled by tiptap
       parsed = parsed.filter((e) => e.type === 'file')
       if (parsed.length <= 0) return
-
-      toast = toasts.loading('Importing pasted items…')
 
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
         ResourceTag.paste(),
@@ -911,17 +891,12 @@
 
         await processDropResource(position, resource, true, { x: 0, y: 0 })
       }
-
-      toast.success('Items imported!')
     } catch (e) {
-      toast?.error('Failed to import pasted items!')
-
       log.error(e)
     }
   }
 
   const handleDrop = async (drag) => {
-    let toast: Toast | null = null
     try {
       const editor = editorElem.getEditor()
       const position = dragPosition ?? editor.view.state.selection.from
@@ -932,8 +907,6 @@
 
       if (drag.isNative) {
         if (drag.dataTransfer?.getData('text/html')?.includes('<img ')) {
-          toast = toasts.loading('Embedding image…')
-
           try {
             let srcUrl = drag.dataTransfer?.getData('text/html').split('<img ')[1].split('src="')[1]
             srcUrl = srcUrl.slice(0, srcUrl.indexOf('"'))
@@ -965,12 +938,10 @@
             await processDropResource(position, resource, isBlock)
           } catch (error) {
             log.error('Failed to embedd image: ', error)
-            toast.error('Failed to embedd image!')
             drag.abort()
             return
           }
 
-          toast.success('Image embedded!')
           drag.continue()
           return
         }
@@ -1004,7 +975,6 @@
         //       }
         //     } else {
         //       log.debug('Creating resource from tab', tab)
-        //       toast = toasts.loading('Processing Tab…')
         //       const { resource } = await tabsManager.createResourceFromTab(tab, { silent: true })
         //       if (resource) {
         //         log.debug('Created resource from tab', resource)
@@ -1017,7 +987,6 @@
         //             y: drag.event.clientY
         //           }
         //         )
-        //         toast.success(isBlock ? 'Tab Embedded!' : 'Tab Linked!')
         //         drag.continue()
         //         return
         //       }
@@ -1071,11 +1040,6 @@
       }
     } catch (e) {
       log.error('Error handling drop', e)
-      if (toast) {
-        toast.error('Failed to handle drop')
-      } else {
-        toasts.error('Failed to handle drop')
-      }
       drag.abort()
     }
   }
@@ -1147,7 +1111,6 @@
       true
     )
     // await tabsManager.openResourceAsTab(resource, { active: true })
-    toasts.success('Note created!')
   }
 
   const getLastNode = (type: string) => {
@@ -1375,16 +1338,7 @@
       log.debug('autocomplete response', response)
       if (response.error) {
         log.error('Error generating AI output', response.error)
-        let errorMsg = response.error.message
-        if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
-          errorMsg = 'Too many requests, please try again later'
-        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
-          errorMsg =
-            'Sorry your query did not pass our content policy, please try again with a different query.'
-        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
-          errorMsg =
-            'No relevant context found. Please add more resources or try a different query.'
-        }
+        let errorMsg = response.error.message || 'An unknown error occurred'
         aiGeneration.updateStatus('failed')
         chatInputComp?.showStatus({
           type: 'error',
@@ -1472,7 +1426,6 @@
 
       if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
         log.debug('Built-in or model mention clicked, cannot be opened')
-        toasts.info('This is a built-in mention and cannot be opened')
         return
       }
 
@@ -1501,54 +1454,8 @@
         log.debug('Cannot open mention', item, action)
         return
       }
-
-      if (action === 'overlay') {
-        if (id === INBOX_MENTION.id) {
-          openSpaceInStuff('inbox')
-        } else if (id === EVERYTHING_MENTION.id) {
-          openSpaceInStuff('all')
-        } else if (type === MentionItemType.RESOURCE) {
-          // oasis.openResourceDetailsSidebar(id, { select: true, selectedSpace: 'auto' })
-        } else if (type === MentionItemType.CONTEXT) {
-          openSpaceInStuff(id)
-        } else {
-          toasts.info('This is a built-in mention and cannot be opened')
-        }
-      } else {
-        if (type === MentionItemType.BUILT_IN || type === MentionItemType.MODEL) {
-          toasts.info('This is a built-in mention and cannot be opened')
-          return
-        }
-
-        // if (type === MentionItemType.RESOURCE) {
-        //   tabsManager.openResourcFromContextAsPageTab(id, {
-        //     active: action !== 'new-background-tab'
-        //   })
-        //   return
-        // }
-
-        // if (action === 'open') {
-        //   tabsManager.changeScope(
-        //     id === INBOX_MENTION.id || id === EVERYTHING_MENTION.id ? null : id,
-        //     ChangeContextEventTrigger.Note
-        //   )
-
-        //   return
-        // }
-
-        // const space = await oasis.getSpace(id)
-        // if (!space) {
-        //   log.error('Space not found', id)
-        //   return
-        // }
-
-        // tabsManager.addSpaceTab(space, {
-        //   active: action === 'new-tab'
-        // })
-      }
     } catch (e) {
       log.error('Error handling mention click', e)
-      toasts.error('Failed to handle mention click')
     }
   }
 
@@ -1594,20 +1501,6 @@
       if (response.error) {
         log.error('Error generating AI output', response.error)
 
-        if (response.error.type === PageChatMessageSentEventError.TooManyRequests) {
-          toasts.error('Too many requests, please try again later')
-        } else if (response.error.type === PageChatMessageSentEventError.RAGEmptyContext) {
-          toasts.error(
-            'No relevant context found. Please add more resources or try a different query.'
-          )
-        } else if (response.error.type === PageChatMessageSentEventError.BadRequest) {
-          toasts.error(
-            'Sorry your query did not pass our content policy, please try again with a different query.'
-          )
-        } else {
-          toasts.error('Something went wrong generating the AI output. Please try again.')
-        }
-
         return
       }
 
@@ -1636,7 +1529,6 @@
       showBubbleMenu.set(true)
     } catch (e) {
       log.error('Error rewriting', e)
-      toasts.error('Failed to rewrite')
       showBubbleMenu.set(false)
     }
   }
@@ -1715,7 +1607,6 @@
   const checkIfAlreadyRunning = (kind: string = 'ai generation') => {
     if ($isGeneratingAI) {
       log.debug(`Ignoring ${kind} request - AI generation already in progress`)
-      toasts.info('AI generation already running, please wait')
       return true
     }
 
@@ -1755,7 +1646,6 @@
       selectedContext.set(e.detail)
     } catch (e) {
       log.error('Error selecting context', e)
-      toasts.error('Failed to select context')
     }
   }
 
@@ -1841,7 +1731,6 @@
       }
     } catch (e) {
       log.error('Error handling note button click', e)
-      toasts.error('Failed to handle note button click')
     }
   }
 
@@ -2021,7 +1910,6 @@
       )
     } catch (e) {
       log.error('Error doing magic', e)
-      toasts.error('Failed to autocomplete')
     }
   }
 
@@ -2058,7 +1946,6 @@
 
       if (!generatedPrompts) {
         log.error('Failed to generate prompts')
-        toasts.error('Failed to generate suggestions')
         generatingPrompts.set(false)
         return
       }
@@ -2067,7 +1954,6 @@
       prompts.set(generatedPrompts)
     } catch (e) {
       log.error('Error generating prompts', e)
-      toasts.error('Failed to generate suggestions')
     } finally {
       generatingPrompts.set(false)
     }
@@ -2100,7 +1986,6 @@
       )
     } catch (e) {
       log.error('Error doing magic', e)
-      toasts.error('Failed to generate suggestion')
     }
   }
 
@@ -2391,7 +2276,6 @@
       log.debug('Inserted onboarding mention into editor', mentionItem)
     } catch (error) {
       log.error('Error inserting onboarding mention', error)
-      toasts.error('Failed to insert mention')
     }
   }
 
@@ -2425,7 +2309,6 @@
       log.debug('UseAsDefaultBrowser extension inserted successfully at the end of the document')
     } catch (err) {
       log.error('Error inserting UseAsDefaultBrowser extension', err)
-      toasts.error('Failed to insert default browser prompt')
     }
   }
 
@@ -2475,7 +2358,6 @@
       // editor.commands.focus()
     } catch (err) {
       log.error('Error inserting extension', err)
-      toasts.error('Failed to insert content')
     }
   }
 
@@ -2539,7 +2421,6 @@
       log.debug('Onboarding footer with links inserted successfully')
     } catch (err) {
       log.error('Error inserting onboarding footer', err)
-      toasts.error('Failed to insert resource links')
     }
   }
 

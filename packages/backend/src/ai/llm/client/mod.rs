@@ -318,13 +318,16 @@ impl Provider {
         messages: &[Message],
         response_format: Option<&serde_json::Value>,
     ) -> BackendResult<String> {
-        serde_json::to_string(&serde_json::json!({
+        let mut json_obj = serde_json::json!({
             "model": model,
             "stream": stream,
             "messages": messages,
-            "response_format": response_format
-        }))
-        .map_err(|err| {
+        });
+        if let Some(format) = response_format {
+            json_obj["response_format"] = serde_json::json!(format);
+        }
+
+        serde_json::to_string(&json_obj).map_err(|err| {
             BackendError::GenericError(format!(
                 "failed to serialize openai completion request: {err}"
             ))
@@ -691,7 +694,7 @@ impl LLMClient {
                 }
                 // TODO: are there other cases of bad request
                 if status == reqwest::StatusCode::BAD_REQUEST {
-                    return Err(BackendError::LLMClientErrorBadRequest);
+                    return Err(BackendError::LLMClientErrorBadRequest(response.text()?));
                 }
                 if status == reqwest::StatusCode::UNAUTHORIZED {
                     return Err(BackendError::LLMClientErrorUnauthorized);
