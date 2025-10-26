@@ -1,0 +1,73 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Development Server",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/app"
+      },
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build Application",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["build"],
+      "options": {
+        "cwd": "${workspaceFolder}/app"
+      },
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Linting",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["lint"],
+      "options": {
+        "cwd": "${workspaceFolder}/app"
+      },
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": ["$eslint-compact"]
+    },
+    {
+      "label": "Type Check",
+      "type": "shell",
+      "command": "yarn",
+      "args": ["typecheck"],
+      "options": {
+        "cwd": "${workspaceFolder}/app"
+      },
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "new"
+      },
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

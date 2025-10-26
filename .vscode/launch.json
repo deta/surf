@@ -1,0 +1,55 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Main Process",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/app",
+      "runtimeExecutable": "${workspaceFolder}/app/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/app/node_modules/.bin/electron.cmd"
+      },
+      "args": [".", "--remote-debugging-port=9222"],
+      "outputCapture": "std",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "integratedTerminal",
+      "protocol": "inspector"
+    },
+    {
+      "name": "Debug Renderer Process",
+      "type": "chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}/app/src/renderer",
+      "timeout": 30000,
+      "sourceMaps": true,
+      "url": "http://localhost:*",
+      "webview": "webview"
+    },
+    {
+      "name": "Launch and Debug Main + Renderer",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/app",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev"],
+      "outputCapture": "std",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "true"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Electron App",
+      "configurations": ["Debug Main Process", "Debug Renderer Process"],
+      "stopAll": true
+    }
+  ]
+}

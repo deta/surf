@@ -26,10 +26,13 @@ module.exports = async function afterPack(context) {
   }
   const electronBinaryPath = path.join(context.appOutDir, `${executableName}${ext}`)
 
-  await flipFuses(electronBinaryPath, {
-    version: FuseVersion.V1,
-    resetAdHocDarwinSignature:
-      context.electronPlatformName === 'darwin' && context.arch === Arch.arm64,
-    [FuseV1Options.EnableCookieEncryption]: true
-  })
+  try {
+    await flipFuses(electronBinaryPath, {
+      version: FuseVersion.V1,
+      resetAdHocDarwinSignature: false, // Disable this to prevent signing issues
+      [FuseV1Options.EnableCookieEncryption]: true
+    })
+  } catch (error) {
+    console.warn('Failed to flip fuses, continuing without them:', error.message)
+  }
 }

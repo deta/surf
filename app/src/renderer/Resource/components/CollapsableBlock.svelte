@@ -402,7 +402,7 @@
           class="resize-handle"
           on:mousedown={handleResizeStart}
           on:touchstart|preventDefault={handleResizeStart}
-        />
+        ></div>
       {/if}
 
       {#if isImage && !collapsed && imageBlockRef}

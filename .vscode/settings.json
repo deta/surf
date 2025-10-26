@@ -1,0 +1,48 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "on",
+  "svelte.enable-ts-plugin": true,
+  "svelte.plugin.css.diagnostics.enable": false,
+  "svelte.plugin.html.diagnostics.enable": false,
+  "svelte.plugin.css.globals": "",
+  "svelte.plugin.css.global": "",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.associations": {
+    "*.svelte": "svelte"
+  },
+  "emmet.includeLanguages": {
+    "svelte": "html"
+  },
+  "tailwindCSS.includeLanguages": {
+    "svelte": "html"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "svelte"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/out": true,
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/out/**": true
+  },
+  "terminal.integrated.cwd": "${workspaceFolder}/app",
+  "debug.allowBreakpointsEverywhere": true,
+  "debug.inlineValues": "on",
+  "debug.showBreakpointsInOverviewRuler": true
+}

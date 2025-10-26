@@ -34,7 +34,7 @@ function electronBuilderConfig() {
     ],
     asar: true,
     asarUnpack: ['resources/**', '**/*.node', '**/main/imageProcessor.js*'],
-    afterPack: 'build/afterpack.js',
+    // afterPack: 'build/afterpack.js', // Disabled to prevent signing issues
     protocols: [
       {
         name: 'HTTP link',
@@ -61,6 +61,8 @@ function electronBuilderConfig() {
     },
     mac: {
       identity: null, // this skips code signing
+      hardenedRuntime: false, // disable hardened runtime for unsigned builds
+      gatekeeperAssess: false, // skip gatekeeper assessment
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
