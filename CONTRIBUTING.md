@@ -188,6 +188,22 @@ Before submitting a pull request:
 - Add tests if needed
 - Include a clear description of the change
 
+### Using Claude Code
+
+If you're using [Claude Code](https://docs.claude.com/en/docs/claude-code) for development, comprehensive PR rules and workflows are available in [`.claude/PR.md`](.claude/PR.md). These rules provide:
+
+- Intelligent repository analysis and adaptive changes
+- Platform-specific optimization guidelines
+- Comprehensive testing checklists
+- Detailed commit message templates
+- Quality assurance procedures
+
+To use the PR rules with Claude Code:
+```bash
+# Reference in conversation
+"Read .claude/PR.md and create a pull request for feature X"
+```
+
 ---
 
 ## 🛡 License
