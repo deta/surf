@@ -28,7 +28,11 @@ Surf is built to be personal and open, in service of the user. This means local 
 
 Checkout the [GitHub releases](https://github.com/deta/surf/releases) for the latest stable version of Surf for MacOS, Windows and Linux.
 
-You can also download Surf with some managed & additional features (e.g. AI) from the [Deta website](https://deta.surf). That version is subject to different terms.
+You can also download Surf with some managed & additional features (e.g. AI) from the [Deta website](https://deta.surf) (That version is subject to different terms), including:
+
+### Arch Linux (AUR)
+You can run `yay -S deta-surf` or with any AUR package helper (paru, yay, pacaur, [etc.](https://wiki.archlinux.org/title/AUR_helpers#Pacman_wrappers))
+For now, it comes only with the Deta prebuilt package.
 
 For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
