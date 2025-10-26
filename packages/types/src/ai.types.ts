@@ -362,7 +362,8 @@ export enum CUSTOM_MODELS {
   Ollama = 'Ollama',
   OpenRouter = 'OpenRouter',
   HuggingFaceTogether = 'Hugging Face Together AI',
-  HuggingFace = 'Hugging Face Inference Endpoint'
+  HuggingFace = 'Hugging Face Inference Endpoint',
+  VercelAiGateway = 'Vercel AI Gateway'
 }
 
 export type CustomModelType = keyof typeof CUSTOM_MODELS
@@ -408,6 +409,14 @@ export const CUSTOM_MODEL_DEFINITIONS: Record<CUSTOM_MODELS, CustomModelDefiniti
     provider_url: 'https://api-inference.huggingface.co/models/',
     model_page: 'https://huggingface.co/models?inference_provider=together&sort=trending',
     api_key_page: 'https://huggingface.co/settings/tokens'
+  },
+  [CUSTOM_MODELS.VercelAiGateway]: {
+    id: CUSTOM_MODELS.VercelAiGateway,
+    label: 'Vercel AI Gateway',
+    icon: 'vercel',
+    provider_url: 'https://ai-gateway.vercel.sh/v1/chat/completions',
+    model_page: 'https://vercel.com/ai-gateway/models',
+    api_key_page: 'https://vercel.com/d?to=/[team]/~/ai?title=Get Started with Vercel AI Gateway',
   }
 }
 

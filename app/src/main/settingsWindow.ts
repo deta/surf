@@ -67,7 +67,9 @@ export function createSettingsWindow(tab?: SettingsWindowTab) {
       'https://openrouter.ai',
       'https://platform.openai.com',
       'https://console.anthropic.com',
-      'https://aistudio.google.com'
+      'https://aistudio.google.com',
+      'https://vercel.com',
+      'https://ai-gateway.vercel.sh'
     ]
 
     let isAllowedUrl = ALLOWED_DOMAINS.some((domain) => details.url.startsWith(domain))
