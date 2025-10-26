@@ -137,7 +137,7 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
   },
   [ShortcutActions.INCREASE_PAGE_ZOOM]: {
     action: ShortcutActions.INCREASE_PAGE_ZOOM,
-    defaultCombo: 'CmdOrCtrl++',
+    defaultCombo: 'CmdOrCtrl+=',
     description: 'Increase tab Zoom',
     priority: ShortcutPriority.Normal
   },
