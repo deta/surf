@@ -107,7 +107,7 @@ class AppMenu {
   private createDataLocationMenuItem(): MenuConfig {
     const userDataPath = app.getPath('userData')
     const surfDataPath = join(userDataPath, 'sffs_backend')
-    const label = isMac() ? 'Show Surf Data in Finder' : 'Show Surf Data in File Manager'
+    const label = isMac() ? '在访达中显示 Surf 数据' : '在文件管理器中显示 Surf 数据'
 
     return {
       label,
