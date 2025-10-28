@@ -738,68 +738,9 @@ export class AIChat {
         usedInlineScreenshot
       })
 
-      // TODO: this is not robust enough check for surflets in context
-      const hasSurfletInContext = false // contextItems.some((item) => {
-      //   const isResourceType = item.type === ContextItemTypes.RESOURCE
-      //   if (isResourceType) {
-      //     const resourceItem = item as ContextItemResource
-      //     return resourceItem?.data?.type === 'text/html'
-      //   }
-      //   return false
-      // })
-      // END TODO
-
-      this.log.debug('hasSurfletInContext', hasSurfletInContext)
-
-      // const activeTabItem = this.contextItemsValue.find(
-      //   (item) => item instanceof ContextItemActiveTab
-      // )
-      // const activeTabInContext = this.contextManager.tabsInContextValue.find(
-      //   (tab) => tab.id === this.ai.tabsManager.activeTabValue?.id
-      // )
-      // const activeTab = activeTabItem ? activeTabItem.currentTabValue : activeTabInContext
-      // const desktopVisible = get(this.ai.tabsManager.desktopManager.activeDesktopVisible)
-
-      const userMessages = previousMessages
-        .filter((message) => message.role === 'user')
-        .map((message) => message.query)
-      const query = options.query ?? prompt
-      const allQueries = [query, ...userMessages.reverse()]
-
-      const chatMode = await this.getChatModeForPromptAndTab(
-        allQueries,
-        undefined, // activeTab,
-        hasSurfletInContext
-      )
-
-      // if (chatMode === ChatMode.TextWithScreenshot || chatMode === ChatMode.AppCreation) {
-      //   // TODO: are all these conditions necessary?
-      //   // only take screenshot
-      //   // if there is an active tab  and
-      //   // there are no screenshots in context already and
-      //   // the user has not explicitly skipped the screenshot
-      //   // and the desktop is not visible
-      //   if (activeTab && !options.skipScreenshot && !usedInlineScreenshot) {
-      //     const browserTab = this.ai.tabsManager.browserTabsValue[activeTab.id]
-      //     if (browserTab) {
-      //       this.log.debug('Taking screenshot of page', activeTab)
-      //       const dataUrl = await browserTab.capturePage()
-      //       this.log.debug('Adding screenshot as inline image to chat context', dataUrl)
-      //       inlineImages.push(dataUrl)
-      //       usedPageScreenshot = true
-      //     }
-      //   } else {
-      //     this.log.debug(
-      //       'Skipping screenshot beacuse no active tab or screenshot already in context or explicitly skipped'
-      //     )
-      //   }
-      // }
-
       if (!generalMode && resourceIds.length > 0) {
         contextSize = resourceIds.length + inlineImages.length
       }
-
-      // await this.checkAndPreparePartialResources(prompt, model, resourceIds)
 
       this.updateParsedResponse(response.id, {
         status: 'pending',
@@ -865,7 +806,7 @@ export class AIChat {
         resourceIds: resourceIds,
         inlineImages: inlineImages,
         general: resourceIds.length === 0,
-        appCreation: chatMode === ChatMode.AppCreation,
+        appCreation: false,
         noteResourceId: options.noteResourceId,
         websearch: options.websearch,
         surflet: options.surflet
