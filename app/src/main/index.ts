@@ -32,7 +32,7 @@ import { SurfBackendServerManager } from './surfBackend'
 // 导入崩溃处理器
 import { CrashHandler } from './crashHandler'
 // 导入 Surf 协议 URL 处理器
-import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
+// import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 // 导入日志工具
 import { useLogScope } from '@deta/utils'
 // 导入文件系统主进程初始化函数
