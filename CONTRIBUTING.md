@@ -118,20 +118,31 @@ Check the `package.json` scripts section for more build options.
 
 # 📌 How to Contribute
 
-### 1. Fork & Branch
+### 1. Open an Issue First (for bigger changes)
+
+**Before starting work on significant features or changes**, please open an issue to discuss your proposal. This helps ensure:
+
+- The change aligns with the project's direction
+- You don't waste time on something that may not be accepted
+- We can provide guidance and feedback early in the process
+
+Small bug fixes and documentation improvements can skip this step.
+
+### 2. Fork & Branch
 
 - Fork this repository
 - Create a new branch for your changes
+
   ```bash
   git checkout -b feature/my-feature
 
   ```
 
-### 2. Make Changes
+### 3. Make Changes
 
 Write clean, well-documented code. Include tests when applicable.
 
-### 3. Commit with Signed-off-by
+### 4. Commit with Signed-off-by
 
 This project uses a **Developer Certificate of Origin (DCO)** to certify contribution rights.
 
@@ -187,6 +198,17 @@ Before submitting a pull request:
 - Follow existing code style
 - Add tests if needed
 - Include a clear description of the change
+
+### Pull Request Title Format
+
+Use the following format for PR titles: `type: description`
+
+**Available types:**
+
+- `feat`: New feature or enhancement
+- `fix`: Bug fixes
+- `chore`: Refactors, git workflow updates, dependency updates, etc.
+- `docs`: Documentation changes
 
 ---
 
