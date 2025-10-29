@@ -113,7 +113,7 @@ jobs:
           path: |
             .turbo
             node_modules/.cache/turbo
-          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ hashFiles('**/package.json', '**/yarn.lock', 'turbo.json') }}
+          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.architecture }}-turbo-
 
