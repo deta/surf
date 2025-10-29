@@ -120,6 +120,7 @@
     resource ? handleResourceClick(resource.id, e) : onclick?.(e)
   }}
   onauxclick={(e) => {
+    if (e.button !== 1) return
     resource ? handleResourceClick(resource.id, e) : onclick?.(e)
   }}
 >

@@ -1,9 +1,5 @@
 <script lang="ts">
-  import {
-    getResourcePreview,
-    Resource,
-    isGeneratedResource
-  } from '@deta/services/resources'
+  import { getResourcePreview, Resource, isGeneratedResource } from '@deta/services/resources'
   import { ResourceTypes } from '@deta/types'
   import ReadOnlyRichText from '@deta/editor/src/lib/components/ReadOnlyRichText.svelte'
   import { DynamicIcon, Icon } from '@deta/icons'
@@ -54,6 +50,11 @@
     onclick?.(e)
   }
 
+  const handleAuxClick = (e: MouseEvent) => {
+    if (e.button !== 1) return
+    handleClick(e)
+  }
+
   const handleImageError = () => {
     imageError = true
   }
@@ -65,37 +66,39 @@
 
 <svelte:boundary>
   {#snippet failed(error, reset)}
-                {console.error(error)}
-                failed
-  <article
-    role="none"
-    data-resource-id={resource.id}
-    class:interactive
-    class:permanently-tilted={permanentlyTilted}
-  >
-    <div class="card">
-      <div class="content">
-        {#if data.image && !imageError}
-          <img
-            class="cover"
-            src={data.image}
-            alt={data?.title || data?.metadata?.text}
-            decoding="async"
-            loading="eager"
-            ondragstart={(e) => e.preventDefault()}
-            onerror={handleImageError}
-          />
-        {:else if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
-          <ReadOnlyRichText content={truncate(data.content, 2000)} />
-        {:else if data.source.icon}
-          <div class="cover fallback">
-            <DynamicIcon name={data.source.icon} width="1em" height="1em" />
-          </div>
-        {:else}
-          <div class="cover fallback">
-            <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
-          </div>
-        {/if}
+    {console.error(error)}
+    failed
+    <article
+      role="none"
+      data-resource-id={resource.id}
+      class:interactive
+      class:permanently-tilted={permanentlyTilted}
+    >
+      <div class="card">
+        <div class="content">
+          {#if data.image && !imageError}
+            <img
+              class="cover"
+              src={data.image}
+              alt={data?.title || data?.metadata?.text}
+              decoding="async"
+              loading="eager"
+              ondragstart={(e) => e.preventDefault()}
+              onerror={handleImageError}
+            />
+          {:else if resource.type === ResourceTypes.DOCUMENT_SPACE_NOTE}
+            <ReadOnlyRichText content={truncate(data.content, 2000)} />
+          {:else if data.source.icon}
+            <div class="cover fallback">
+              <DynamicIcon name={data.source.icon} width="1em" height="1em" />
+            </div>
+          {:else}
+            <div class="cover fallback">
+              <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
+            </div>
+          {/if}
+        </div>
+      </div>
     </article>
   {/snippet}
 
@@ -112,10 +115,10 @@
   {:else}
     <article
       onclick={handleClick}
-      onauxclick={handleClick}
+      onauxclick={handleAuxClick}
       role="none"
       data-resource-id={resource.id}
-    {...props}
+      {...props}
     >
       <div class="card">
         <div class="content">
