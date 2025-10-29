@@ -1,6 +1,6 @@
 import { spawnSync } from 'child_process'
 import { join } from 'path'
-import { writeFileSync, readFileSync, existsSync, readdirSync } from 'fs'
+import { unlinkSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'fs'
 import type { Plugin } from 'vite'
 
 const NOTICE_FILE_VARIATIONS = [
@@ -88,9 +88,22 @@ const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => 
     )
   }
 
+  // temp file to hold cargo-about output
+  // needed because of potential encoding issues
+  const tempOutputFile = join(absoluteCargoPath, 'cargo-about-temp.json')
+
   const result = spawnSync(
     'cargo',
-    ['about', 'generate', '--all-features', '--config', 'about.toml', 'about.hbs'],
+    [
+      'about',
+      'generate',
+      '--all-features',
+      '--config',
+      'about.toml',
+      '--output-file',
+      tempOutputFile,
+      'about.hbs'
+    ],
     {
       cwd: absoluteCargoPath,
       encoding: 'utf8',
@@ -113,7 +126,19 @@ const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => 
 
   console.log(`Cargo about generated license info successfully`)
 
-  const licenses: License[] = JSON.parse(result.stdout)
+  if (!existsSync(tempOutputFile)) {
+    throw new Error(`cargo-about did not create output file at ${tempOutputFile}`)
+  }
+
+  const licenseData = readFileSync(tempOutputFile, 'utf8')
+  const licenses: License[] = JSON.parse(licenseData)
+
+  try {
+    unlinkSync(tempOutputFile)
+  } catch (err) {
+    console.warn(`Failed to delete temp file ${tempOutputFile}: ${err}`)
+  }
+
   let output = ''
 
   for (const license of licenses) {
