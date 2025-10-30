@@ -14,7 +14,7 @@ import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { pathToFileURL } from 'url'
 // 导入资源处理相关工具函数
 import { getResourceFileExtension, getResourceFileName, useLogScope } from '@deta/utils'
-// 导入 SFFS（Breakwind 文件系统）主进程相关模块
+// 导入 SFFS（Surf 文件系统）主进程相关模块
 import { SFFSMain, useSFFSMain } from './sffs'
 // 导入 SFFS 资源类型定义
 import { SFFSRawResource, SFFSResource } from '@deta/types'
