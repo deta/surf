@@ -637,7 +637,7 @@
               disabled={$inputValueWithoutMentions.length === 0}
             >
               {#if ttyActions.secondary === 'ask'}
-                Ask Surf
+                Ask Breakwind
               {:else if ttyActions.secondary === 'create-note'}
                 Create Note
               {:else if ttyActions.secondary === 'search-web'}
@@ -661,7 +661,7 @@
             disabled={$inputValueWithoutMentions.length === 0}
           >
             {#if ttyActions.primary === 'ask'}
-              Ask Surf
+              Ask Breakwind
             {:else if ttyActions.primary === 'create-note'}
               Create Note
             {:else if ttyActions.primary === 'search-web'}

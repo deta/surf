@@ -40,9 +40,9 @@
     <div class="span flex flex-col">
       <span class="headline">
         {#if $isDefault}
-          Thanks for using Surf as your default browser!
+          Thanks for using Breakwind as your default browser!
         {:else}
-          Surf gets even better the more you use it.
+          Breakwind gets even better the more you use it.
         {/if}
       </span>
       <span class="message">

@@ -57,7 +57,7 @@
 
     if ($viewTypeData.type === ViewType.Notebook || $viewTypeData.type === ViewType.NotebookHome) {
       if ($viewTitle.startsWith('surf://')) {
-        return $viewTypeData.type === ViewType.NotebookHome ? 'Surf' : 'Notebook'
+        return $viewTypeData.type === ViewType.NotebookHome ? 'Breakwind' : 'Notebook'
       }
 
       return truncate($viewTitle, 69)

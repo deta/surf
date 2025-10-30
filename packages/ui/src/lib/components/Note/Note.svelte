@@ -350,9 +350,9 @@
           return `Generating suggestions based on "${contextName}"${mentions.length > 0 ? ' and the mentioned contexts' : ''}…`
         } else if ($showPrompts) {
           if (!contextName) {
-            return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf continue writing…`
+            return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Breakwind continue writing…`
           }
-          return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Surf write based on ${contextName}`
+          return `Select a suggestion or press ${isMac() ? '⌘' : 'ctrl'} + ↵ to let Breakwind write based on ${contextName}`
         } else {
           return `Write or type / for commands…`
         }
@@ -1914,7 +1914,7 @@
           bind:editorElement
           placeholder={escapeFirstLineChat
             ? 'Start writing a note…'
-            : `Ask Surf or start writing a note (esc) …`}
+            : `Ask Breakwind or start writing a note (esc) …`}
           placeholderNewLine={$editorPlaceholder}
           autocomplete={!($isFirstLine && escapeFirstLineChat)}
           floatingMenu

@@ -1,14 +1,14 @@
-# Contributing to Deta Surf
+# Contributing to Deta Breakwind
 
-We welcome contributions from the community to help improve Deta Surf! Whether you're fixing bugs, adding new features, or improving documentation, your contributions are valuable to us.
+We welcome contributions from the community to help improve Deta Breakwind! Whether you're fixing bugs, adding new features, or improving documentation, your contributions are valuable to us.
 
-Please note that Surf has been open-sourced for transparency and community involvement, but it is still in active development. A lot of the code has been written quickly to prototype features, so please be patient and understanding when contributing.
+Please note that Breakwind has been open-sourced for transparency and community involvement, but it is still in active development. A lot of the code has been written quickly to prototype features, so please be patient and understanding when contributing.
 
 We encourage you to review the current issues and feature requests before contributing. If you find something you'd like to work on, please comment on the issue or create a new one to let us know you're interested.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the [Surf Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [hello@deta.surf](mailto:hello@deta.surf).
+This project and everyone participating in it is governed by the [Breakwind Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [hello@deta.surf](mailto:hello@deta.surf).
 
 ## I need help!
 
@@ -16,7 +16,7 @@ If you need help getting started or have questions about the codebase, feel free
 
 ## What's inside?
 
-The Deta Surf codebase is structured as a monorepo with several ´packages´ and the core Electron application in `app`. It uses Yarn Workspaces and Turborepo to manage dependencies and build processes.
+The Deta Breakwind codebase is structured as a monorepo with several ´packages´ and the core Electron application in `app`. It uses Yarn Workspaces and Turborepo to manage dependencies and build processes.
 
 ### Core App
 
@@ -24,7 +24,7 @@ The core Electron application is located in the `app` folder. It is built with [
 
 The core app is split into the different processes, `main`, `preload` and `renderer`.
 
-Within the `renderer` there are several different entrypoints for the different view types in Surf, each one essentially acts as its own web application (using Svelte):
+Within the `renderer` there are several different entrypoints for the different view types in Breakwind, each one essentially acts as its own web application (using Svelte):
 
 - `Core`: main app UI
 - `Resource`: notebooks and resource views like the notes

@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in Surf
+description: Report a bug in Breakwind
 type: 'bug'
 labels: 'bug :beetle:'
 body:
@@ -16,9 +16,9 @@ body:
           required: true
   - type: input
     attributes:
-      label: Surf Version
+      label: Breakwind Version
       description: |
-        What version of Surf are you using?
+        What version of Breakwind are you using?
       placeholder: 1.1.0-beta.0
     validations:
       required: true

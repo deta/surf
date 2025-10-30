@@ -90,7 +90,7 @@
 
   async function saveToSurf() {
     if (!$isSaved || !resource) {
-      log.debug('Bookmarking page to Surf')
+      log.debug('Bookmarking page to Breakwind')
       resource = await view.bookmarkPage()
     }
 
@@ -99,7 +99,7 @@
       return
     }
 
-    log.debug('Resource saved to Surf:', resource.id)
+    log.debug('Resource saved to Breakwind:', resource.id)
     // isMenuOpen = false
   }
 
@@ -145,7 +145,7 @@
   {/snippet}
 
   <div class="list">
-    <!-- Save to Surf option -->
+    <!-- Save to Breakwind option -->
     <div class="save-section">
       {#if $isSaved}
         {#if resource.url}
@@ -161,13 +161,13 @@
         {:else if resource.type !== ResourceTypes.DOCUMENT_SPACE_NOTE}
           <button class="list-item save-to-surf" disabled>
             <Icon name="check" size="19px" color="rgb(6, 158, 54)" />
-            <div class="list-item-label">Added to Surf!</div>
+            <div class="list-item-label">Added to Breakwind!</div>
           </button>
         {/if}
       {:else}
         <button class="list-item save-to-surf" onclick={saveToSurf}>
           <Icon name="save" />
-          <div class="list-item-label">Add to Surf</div>
+          <div class="list-item-label">Add to Breakwind</div>
         </button>
       {/if}
     </div>

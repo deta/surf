@@ -424,7 +424,7 @@ export const appendURLPath = (url: string, path: string) => {
 
 /**
  * Try to parse a surf protocol URL and return the resourceId
- * Surf protocol URL format: surf://surf/resource/<id>
+ * Breakwind protocol URL format: surf://surf/resource/<id>
  * @deprecated This is no longer valid with having other surf paths not only resource
  * @param rawUrl The URL to parse
  * @returns resourceId or null if the URL is not a surf protocol URL
@@ -450,7 +450,7 @@ export const parseSurfProtocolURL = (rawUrl: URL | string) => {
 /**
  * Returns whether a given URL if it is part of the internal "renderer" i.e:
  *  in DEV: http://localhost:XXXX/...html
- *  in PROD: file:///Users/max/Programming/Deta/surf/app/dist/mac-arm64/Surf.app/Contents/Resources/app.asar/out/renderer/Notebook/notebook.html?path=surf%3A%2F%2Fnotebook%2Fb75c4bc4-fbf9-46a0-ab35-2eca431f38e4&notebookId=b75c4bc4-fbf9-46a0-ab35-2eca431f38e4
+ *  in PROD: file:///Users/max/Programming/Deta/surf/app/dist/mac-arm64/Breakwind.app/Contents/Resources/app.asar/out/renderer/Notebook/notebook.html?path=surf%3A%2F%2Fnotebook%2Fb75c4bc4-fbf9-46a0-ab35-2eca431f38e4&notebookId=b75c4bc4-fbf9-46a0-ab35-2eca431f38e4
  *
  */
 export function isInternalRendererURL(url: string | URL): URL | null {
@@ -537,7 +537,7 @@ export const getCleanHostname = (url: string) => {
     } else if (viewType === ViewType.Notebook) {
       return 'Notebook'
     } else if (viewType === ViewType.NotebookHome) {
-      return 'Surf'
+      return 'Breakwind'
     } else {
       return getHostname(url) || url
     }
@@ -558,7 +558,7 @@ export const cleanupPageTitle = (title: string) => {
     } else if (viewType === ViewType.Notebook) {
       return 'Notebook'
     } else if (viewType === ViewType.NotebookHome) {
-      return 'Surf'
+      return 'Breakwind'
     } else {
       return title
     }

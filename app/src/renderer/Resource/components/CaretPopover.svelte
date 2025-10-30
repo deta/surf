@@ -159,7 +159,7 @@
           </div>
 
           <div bind:this={pillElement} class="pill" class:visible={isHovering}>
-            <span>Ask Surf {isMac() ? '⌘' : 'ctrl'} ↵</span>
+            <span>Ask Breakwind {isMac() ? '⌘' : 'ctrl'} ↵</span>
           </div>
         </div>
       </div>

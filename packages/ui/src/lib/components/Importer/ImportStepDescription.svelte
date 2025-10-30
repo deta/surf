@@ -10,20 +10,20 @@
 
 {#if currentStepIdx === 0}
   <p>
-    Surf can import your browser history and bookmarks from your old browser so you can continue
+    Breakwind can import your browser history and bookmarks from your old browser so you can continue
     where you left off.
   </p>
   {#if initialImport}
-    <p>Which browser did you use before Surf?</p>
+    <p>Which browser did you use before Breakwind?</p>
   {/if}
 {:else if currentStepIdx === 1}
-  <p>Choose what data you want to import from {selectedBrowser?.name} into Surf.</p>
+  <p>Choose what data you want to import from {selectedBrowser?.name} into Breakwind.</p>
 {:else if currentStepIdx === 2 && (importStatus === 'idle' || importStatus === 'importing')}
   <p>
-    We are importing your data from {selectedBrowser?.name} into Surf. This may take a couple seconds.
+    We are importing your data from {selectedBrowser?.name} into Breakwind. This may take a couple seconds.
   </p>
 {:else if currentStepIdx === 2 && importStatus === 'done'}
-  <p>Your data from {selectedBrowser?.name} has been imported to Surf successfully!</p>
+  <p>Your data from {selectedBrowser?.name} has been imported to Breakwind successfully!</p>
 {:else if currentStepIdx === 2 && importStatus === 'error'}
   <p>
     Failed to import from {selectedBrowser?.name}. Please make sure it is installed and closed, then
@@ -32,7 +32,7 @@
   <p>If the problem persists, contact us: <a href="mailto:hello@deta.surf">hello@deta.surf</a></p>
 {:else if currentStepIdx === 3}
   <p>
-    Your imported data is now saved in Stuff, Surf's central place for anything you save from the
+    Your imported data is now saved in Stuff, Breakwind's central place for anything you save from the
     web.
   </p>
 
