@@ -251,7 +251,7 @@ export const getResourceCtxItems = ({
               {
                 type: 'action',
                 icon: 'trash',
-                text: 'Delete from Surf',
+                text: 'Delete from Breakwind',
                 kind: 'danger',
                 action: () => onDeleteResource(resource.id)
               }

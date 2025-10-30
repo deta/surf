@@ -11,7 +11,7 @@ on:
         type: string
         description: 'App Name'
         required: true
-        default: 'Surf'
+        default: 'Breakwind'
       app_version:
         type: string
         description: 'App Version'
@@ -134,7 +134,7 @@ jobs:
           NODE_OPTIONS: --max_old_space_size=8192
 
           PRODUCT_NAME: ${{ inputs.product_name }}
-          M_VITE_PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Breakwind'
           BUILD_RESOURCES_DIR: build/resources/prod
 
           R_VITE_MAIN_ONBOARDING_VIDEO_URL: ${{ secrets.MAIN_ONBOARDING_VIDEO_URL }}/${{ inputs.app_version }}

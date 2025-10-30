@@ -170,7 +170,7 @@
       {
         type: 'action',
         kind: 'danger',
-        text: 'Delete from Surf',
+        text: 'Delete from Breakwind',
         icon: 'trash',
         action: onDeleteResource
       }

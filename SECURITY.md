@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-The Deta team takes the security of Surf seriously. If you discover a security vulnerability, please report it responsibly.
+The Deta team takes the security of Breakwind seriously. If you discover a security vulnerability, please report it responsibly.
 
 ### How to Report
 
@@ -45,7 +45,7 @@ The following are outside the scope of our security policy:
 
 ## Bug Bounty Program
 
-We currently **do not** offer a bug bounty program, but we deeply appreciate security reports which help keep Surf secure.
+We currently **do not** offer a bug bounty program, but we deeply appreciate security reports which help keep Breakwind secure.
 
 ## Public Disclosure Policy
 

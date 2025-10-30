@@ -113,7 +113,7 @@
       : notebookId === 'history'
         ? 'History'
         : !notebookId
-          ? 'Surf'
+          ? 'Breakwind'
           : 'Notebook'
   )
 
@@ -273,15 +273,13 @@
   }
 
   :global(body) {
-    background:
-      light-dark(
+    background: light-dark(
         linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 1)),
         linear-gradient(rgba(13, 20, 33, 0.85), rgba(13, 20, 33, 0.95))
       ),
       url('./assets/greenfield.png');
     background: light-dark(rgba(250, 250, 250, 1), #0d1421);
-    background:
-      light-dark(
+    background: light-dark(
         linear-gradient(to bottom, rgba(250, 250, 250, 1) 0%, rgba(255, 255, 255, 0.9) 10%),
         linear-gradient(to bottom, rgba(13, 20, 33, 0.95) 0%, rgba(13, 20, 33, 0.98) 12%)
       ),

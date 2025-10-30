@@ -31,7 +31,7 @@ import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 // 导入崩溃处理器
 import { CrashHandler } from './crashHandler'
-// 导入 Surf 协议 URL 处理器
+// 导入 Breakwind 协议 URL 处理器
 // import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 // 导入日志工具
 import { useLogScope } from '@deta/utils'
@@ -43,8 +43,8 @@ const log = useLogScope('Main')
 
 // 应用全局配置
 const CONFIG = {
-  // 应用名称，从环境变量获取，默认为 'Surf'
-  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
+  // 应用名称，从环境变量获取，默认为 'Breakwind'
+  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Breakwind',
   // 应用版本
   appVersion: import.meta.env.M_VITE_APP_VERSION,
   // 是否使用临时数据目录
@@ -206,7 +206,7 @@ const handleOpenUrl = (url: string) => {
 
 /**
  * 设置后端服务
- * 初始化并启动 Surf 后端服务进程，配置相关事件监听器
+ * 初始化并启动 Breakwind 后端服务进程，配置相关事件监听器
  * @param appPath 应用路径
  * @param backendRootPath 后端根路径
  * @param userConfig 用户配置
@@ -269,7 +269,7 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
   // 等待后端服务启动完成
   await surfBackendManager.waitForStart()
 
-  // 初始化 SFFS (Surf File System)
+  // 初始化 SFFS (Breakwind File System)
   initializeSFFSMain()
 }
 

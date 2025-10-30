@@ -508,7 +508,7 @@ function setupMainWindowWebContentsHandlers(
 ) {
   // Prevent direct navigation in the main window by handling the `will-navigate`
   // event and the `setWindowOpenHandler`. The main window should only host the SPA
-  // Surf frontend and not navigate away from it. Any requested navigations should
+  // Breakwind frontend and not navigate away from it. Any requested navigations should
   // be handled within the frontend.
   contents.on('will-navigate', (event) => {
     const mainWindow = getMainWindow()
@@ -569,7 +569,7 @@ function setupMainWindowWebContentsHandlers(
 
   // Handle navigation requests within webviews:
   // 1. Set up a window open handler for each webview when it's attached.
-  // 2. Send navigation requests to the main window renderer (Surf preload) for handling.
+  // 2. Send navigation requests to the main window renderer (Breakwind preload) for handling.
   // 3. Allow opening new windows but deny other requests, and handle them within the renderer.
   contents.on('did-attach-webview', (_, contents) => {
     contents.setWindowOpenHandler((details: Electron.HandlerDetails) => {
@@ -582,9 +582,9 @@ function setupMainWindowWebContentsHandlers(
       if (shouldCreateWindow) {
         // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
         // created window here. The creation of it is controlled from the renderer. Because
-        // of this, Surf won't play well with websites that for some reason utilizes more
+        // of this, Breakwind won't play well with websites that for some reason utilizes more
         // than one window. In the future, Each new window we create should receive its own
-        // instance of Surf.
+        // instance of Breakwind.
         return {
           action: 'allow',
           createWindow: undefined,
@@ -638,9 +638,9 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
       if (shouldCreateWindow) {
         // IMPORTANT NOTE: DO NOT expose any sort of Node.js capabilities to the newly
         // created window here. The creation of it is controlled from the renderer. Because
-        // of this, Surf won't play well with websites that for some reason utilizes more
+        // of this, Breakwind won't play well with websites that for some reason utilizes more
         // than one window. In the future, Each new window we create should receive its own
-        // instance of Surf.
+        // instance of Breakwind.
         return {
           action: 'allow',
           createWindow: undefined,

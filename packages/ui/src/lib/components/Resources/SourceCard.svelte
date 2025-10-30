@@ -182,7 +182,7 @@
             {#if showSaved}
               <div class="saved-info">
                 <Icon name="check" size="17px" color="rgb(6, 158, 54)" />
-                <span class="subtitle typo-title-sm">Added to Surf</span>
+                <span class="subtitle typo-title-sm">Added to Breakwind</span>
               </div>
             {/if}
           </div>

@@ -8,4 +8,4 @@ If you toggle the Surflet tool on a generation, you can ask your note to generat
 
 Surflets can store data locally that is persisted between uses so you can create little applications like a todo list tracker that stores the state of your tasks, a game that persists the high score or anything else that needs its own state.
 
-As with everything else in Surf, Surflets are stored in HTML files on your machine — so you can edit them in your favorite text editor!
+As with everything else in Breakwind, Surflets are stored in HTML files on your machine — so you can edit them in your favorite text editor!

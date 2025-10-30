@@ -347,7 +347,7 @@
     </header>
     <!--<section style="height: 4rem; padding-inline: 1.5rem; padding-block: 1rem;">
       <h1>
-        {query ? 'Search Results' : 'Surf'}
+        {query ? 'Search Results' : 'Breakwind'}
       </h1>
     </section>-->
     <MaskedScroll --padding={'0.5rem 0.5rem 0rem 0.5rem'}>

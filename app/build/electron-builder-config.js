@@ -1,4 +1,4 @@
-const productName = process.env.PRODUCT_NAME || 'Surf'
+const productName = process.env.PRODUCT_NAME || 'Breakwind'
 
 const params = {
   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,

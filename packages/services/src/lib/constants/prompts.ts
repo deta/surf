@@ -48,7 +48,7 @@ export const EXAMPLE_PROMPTS = [
     icon: 'search',
     label: "Why hasn't the computer revolution happened yet?",
     description:
-      "Ask about a topic that's interesting to you, and let Surf help you find relevant information.",
+      "Ask about a topic that's interesting to you, and let Breakwind help you find relevant information.",
     prompt: 'Search the web on why the computer revolution has not happened yet'
   },
   {
@@ -78,7 +78,7 @@ export const EXAMPLE_PROMPTS = [
     id: 'note',
     icon: 'note',
     label: 'Note Taking',
-    description: 'Compose a note directly in Surf.',
+    description: 'Compose a note directly in Breakwind.',
     prompt: ''
   }
 ]

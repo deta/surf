@@ -148,7 +148,7 @@
       metadata?.info?.['Title'] ||
       metadata?.metadata?.get('dc:title') ||
       pdfSlick.filename ||
-      'Surf PDF Viewer'
+      'Breakwind PDF Viewer'
     )
   }
 

@@ -14,7 +14,7 @@ import { IPC_EVENTS_MAIN } from '@deta/services/ipc'
 import { pathToFileURL } from 'url'
 // 导入资源处理相关工具函数
 import { getResourceFileExtension, getResourceFileName, useLogScope } from '@deta/utils'
-// 导入 SFFS（Surf 文件系统）主进程相关模块
+// 导入 SFFS（Breakwind 文件系统）主进程相关模块
 import { SFFSMain, useSFFSMain } from './sffs'
 // 导入 SFFS 资源类型定义
 import { SFFSRawResource, SFFSResource } from '@deta/types'
@@ -449,8 +449,8 @@ export const serveFile = async (req: Request, targetPath: string) => {
 }
 
 /**
- * 处理 Surf 文件请求
- * 解析 Surf 协议 URL 并提供相应的文件服务
+ * 处理 Breakwind 文件请求
+ * 解析 Breakwind 协议 URL 并提供相应的文件服务
  * @param req 全局请求对象
  * @returns Promise，解析为文件响应
  */
@@ -461,13 +461,13 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
     // 验证协议
     if (url.protocol !== 'surf-internal:' && url.protocol !== 'surf:') {
       log.error('Invalid protocol:', url.protocol)
-      return new Response('Invalid Surf protocol URL', { status: 400 })
+      return new Response('Invalid Breakwind protocol URL', { status: 400 })
     }
 
     // 验证主机名
     if (!ALLOWED_HOSTNAMES.includes(url.hostname.toLowerCase())) {
       log.error('Invalid hostname:', url.hostname)
-      return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+      return new Response('Invalid Breakwind internal protocol hostname', { status: 400 })
     }
 
     // 确定目标文件路径
@@ -478,7 +478,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
       const rootPath = HOSTNAME_TO_ROOT[url.hostname as keyof typeof HOSTNAME_TO_ROOT]
       if (!rootPath) {
         log.error('Invalid hostname for root path:', url.hostname)
-        return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+        return new Response('Invalid Breakwind internal protocol hostname', { status: 400 })
       }
       targetPath = rootPath
     }
@@ -496,14 +496,14 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
             const rootPath = HOSTNAME_TO_ROOT['surf']
             if (!rootPath) {
               log.error('Invalid hostname for root path:', url.hostname)
-              return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+              return new Response('Invalid Breakwind internal protocol hostname', { status: 400 })
             }
             targetPath = rootPath
           } else if (url.pathname === `/${type}`) {
             const rootPath = HOSTNAME_TO_ROOT['surf']
             if (!rootPath) {
               log.error('Invalid hostname for root path:', url.hostname)
-              return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+              return new Response('Invalid Breakwind internal protocol hostname', { status: 400 })
             }
             targetPath = rootPath
           } else {
@@ -514,7 +514,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
           const rootPath = HOSTNAME_TO_ROOT['surf']
           if (!rootPath) {
             log.error('Invalid hostname for root path:', url.hostname)
-            return new Response('Invalid Surf internal protocol hostname', { status: 400 })
+            return new Response('Invalid Breakwind internal protocol hostname', { status: 400 })
           }
           targetPath = rootPath
         } else {
@@ -656,7 +656,7 @@ const fetchResourceFile = async (resourceId: string, resource?: SFFSResource) =>
 }
 
 /**
- * 处理 Surf 资源数据请求
+ * 处理 Breakwind 资源数据请求
  * 根据资源类型提供相应的内容，对图像进行特殊处理
  * @param req 全局请求对象
  * @param resourceId 资源 ID
@@ -690,7 +690,7 @@ const handleSurfResourceDataRequest = async (req: GlobalRequest, resourceId: str
 
 /**
  * surf-internal 协议处理器
- * 处理内部使用的 Surf 协议请求
+ * 处理内部使用的 Breakwind 协议请求
  * @param req 全局请求对象
  * @returns Promise，解析为请求响应
  */
@@ -700,7 +700,7 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
 
 /**
  * surf 协议处理器
- * 处理外部和内部的 Surf 协议请求，支持直接资源访问
+ * 处理外部和内部的 Breakwind 协议请求，支持直接资源访问
  * @param req 全局请求对象
  * @returns Promise，解析为请求响应
  */
@@ -785,10 +785,10 @@ export const surfletProtocolHandler = async (req: GlobalRequest) => {
 }
 
 /**
- * 检查是否是有效的 Surf 协议请求
- * 验证 URL 是否符合 Surf 协议的格式要求
+ * 检查是否是有效的 Breakwind 协议请求
+ * 验证 URL 是否符合 Breakwind 协议的格式要求
  * @param url 要检查的 URL 字符串
- * @returns 布尔值，表示是否是有效的 Surf 协议请求
+ * @returns 布尔值，表示是否是有效的 Breakwind 协议请求
  */
 export const checkSurfProtocolRequest = (url: string) => {
   try {

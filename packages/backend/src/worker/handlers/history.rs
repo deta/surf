@@ -245,7 +245,7 @@ impl Worker {
                         3. Go to Privacy & Security\n\
                         4. Select Full Disk Access\n\
                         5. Click the + button\n\
-                        6. Select and add Surf\n\
+                        6. Select and add Breakwind\n\
                         7. Try importing again\n\
                         \n\
                         Note: Safari must be completely closed during the import."

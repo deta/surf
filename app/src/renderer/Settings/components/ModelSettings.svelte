@@ -274,8 +274,8 @@
 
       <div class="details-text">
         <p>
-          Your selected model will be used across all Surf features. Surf may switch to more
-          efficient models from the same provider for certain features.
+          Your selected model will be used across all Breakwind features. Breakwind may switch to
+          more efficient models from the same provider for certain features.
         </p>
       </div>
     </div>
@@ -458,7 +458,7 @@
                 <FormField
                   label="Model Label"
                   placeholder="My Custom Model"
-                  infoText="Give your custom model a name so you can identify it within Surf's UI"
+                  infoText="Give your custom model a name so you can identify it within Breakwind's UI"
                   value={model.label}
                   on:save={(e) => updateModel(model.id, { label: e.detail })}
                 />

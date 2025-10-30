@@ -24,7 +24,7 @@
     <div class="flex flex-row w-full justify-between">
       <div class="span flex flex-col">
         <span class="headline">Where did this note go?</span>
-        <span class="message">Surf has storage, called Stuff, try it out</span>
+        <span class="message">Breakwind has storage, called Stuff, try it out</span>
       </div>
       <div class="button-wrapper">
         <Button text={`Open Stuff (${isMac() ? '⌘' : 'Ctrl'} + O)`} onClick={handleOpenStuff} />

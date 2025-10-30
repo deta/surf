@@ -107,7 +107,7 @@ class AppMenu {
   private createDataLocationMenuItem(): MenuConfig {
     const userDataPath = app.getPath('userData')
     const surfDataPath = join(userDataPath, 'sffs_backend')
-    const label = isMac() ? '在访达中显示 Surf 数据' : '在文件管理器中显示 Surf 数据'
+    const label = isMac() ? '在访达中显示 Breakwind 数据' : '在文件管理器中显示 Breakwind 数据'
 
     return {
       label,
@@ -118,7 +118,7 @@ class AppMenu {
   private getSurfMenu(isMacApp = isMac()): MenuConfig {
     const surfItems = [
       ...(isMacApp
-        ? ([{ label: 'About Surf', role: 'about' }, { type: 'separator' }] as MenuConfig[])
+        ? ([{ label: 'About Breakwind', role: 'about' }, { type: 'separator' }] as MenuConfig[])
         : []),
       {
         label: 'Preferences',
@@ -137,7 +137,7 @@ class AppMenu {
             { role: 'services', label: 'Services' },
             { type: 'separator' },
             {
-              label: 'Hide Surf',
+              label: 'Hide Breakwind',
               accelerator: 'CmdOrCtrl+H',
               role: 'hide'
             },
@@ -150,11 +150,11 @@ class AppMenu {
           ]
         : []),
       { type: 'separator' },
-      { label: 'Quit Surf', role: 'quit' }
+      { label: 'Quit Breakwind', role: 'quit' }
     ]
 
     return {
-      label: isMacApp ? app.name : 'Surf',
+      label: isMacApp ? app.name : 'Breakwind',
       submenu: surfItems as MenuConfig[]
     }
   }
@@ -290,7 +290,7 @@ class AppMenu {
           accelerator: 'CmdOrCtrl+Alt+Shift+R'
         },
         {
-          label: 'Toggle Developer Tools for Surf',
+          label: 'Toggle Developer Tools for Breakwind',
           accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
           role: 'toggleDevTools'
         }

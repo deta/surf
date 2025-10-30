@@ -154,7 +154,7 @@
     const { closeType: confirmed } = await openDialog({
       title: 'Share your email with us',
       message:
-        'Accepting will share your email with us, and allow us to contact you based on your Surf usage. No spam, we promise.<br><br> (Surf will restart after accepting)',
+        'Accepting will share your email with us, and allow us to contact you based on your Breakwind usage. No spam, we promise.<br><br> (Breakwind will restart after accepting)',
       actions: [
         { title: 'Cancel', type: 'reset' },
         { title: 'Accept', type: 'submit' }
@@ -285,7 +285,7 @@
       <article class="general">
         <img src={appIcon} alt="App Icon" />
         <div class="app-id">
-          <h1>Surf</h1>
+          <h1>Breakwind</h1>
 
           <span class="version-pill">{version}</span>
         </div>
@@ -427,7 +427,7 @@
           <SettingsOption
             icon="download"
             title="Save Downloads to System Downloads Folder"
-            description="If enabled, a copy of the files you download with Surf will be saved to your system's default downloads folder in addition to your stuff in Surf."
+            description="If enabled, a copy of the files you download with Breakwind will be saved to your system's default downloads folder in addition to your stuff in Breakwind."
             bind:value={userConfigSettings.save_to_user_downloads}
             on:update={handleSettingsUpdate}
           />
@@ -453,7 +453,7 @@
           <SettingsOption
             icon="message"
             title="Auto Generate Chat Prompts"
-            description="Let Surf generate chat prompts for you based on the page content and metadata. The prompts will be shown directly in the chat sidebar."
+            description="Let Breakwind generate chat prompts for you based on the page content and metadata. The prompts will be shown directly in the chat sidebar."
             bind:value={userConfigSettings.automatic_chat_prompt_generation}
             on:update={handleSettingsUpdate}
           />

@@ -25,7 +25,7 @@ if (process.platform === 'linux') {
   process.env.ELECTRON_OZONE_PLATFORM_HINT = 'auto'
 }
 process.env.TESSDATA_PREFIX = path.resolve(__dirname, '..', 'resources', 'tessdata')
-process.env.M_VITE_PRODUCT_NAME = 'Surf-dev'
+process.env.M_VITE_PRODUCT_NAME = 'Breakwind-dev'
 process.env.RUST_LOG = process.env.RUST_LOG || 'none,backend_server=INFO,backend=DEBUG'
 
 const extraArgsIndex = process.argv.indexOf('--')

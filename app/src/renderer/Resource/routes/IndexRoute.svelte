@@ -178,7 +178,7 @@
   })
 
   onMount(() => {
-    document.title = 'Surf'
+    document.title = 'Breakwind'
     // notebookManager.loadNotebooks()
 
     if (shouldMentionActiveTab()) {
@@ -226,7 +226,7 @@
 </script>
 
 <svelte:head>
-  <title>Surf</title>
+  <title>Breakwind</title>
 </svelte:head>
 
 {#if isCustomizingNotebook}
@@ -263,7 +263,7 @@
     {/if}
   </main>
 
-  <!-- <NotebookSidebar title="Surf" bind:open={resourcesPanelOpen} /> -->
+  <!-- <NotebookSidebar title="Breakwind" bind:open={resourcesPanelOpen} /> -->
 </NotebookLayout>
 
 <style lang="scss">

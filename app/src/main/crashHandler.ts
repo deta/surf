@@ -252,7 +252,7 @@ export class CrashHandler {
           const { response } = await this.showErrorMessage(
             this.mainWindow,
             'Application Error',
-            'Surf encountered a critical error. Would you like to reload the application?',
+            'Breakwind encountered a critical error. Would you like to reload the application?',
             ['Reload', 'Close App'],
             'error'
           )
