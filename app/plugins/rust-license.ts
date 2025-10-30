@@ -1,6 +1,6 @@
 import { spawnSync } from 'child_process'
 import { join } from 'path'
-import { unlinkSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs'
 import type { Plugin } from 'vite'
 
 const NOTICE_FILE_VARIATIONS = [
@@ -51,23 +51,6 @@ const findNoticeInCargoRegistry = (packageName: string, version: string): string
   return null
 }
 
-interface UsedBy {
-  name: string
-  version: string
-  license: string
-  repository?: string
-  description?: string
-  authors: string[]
-}
-
-interface License {
-  id: string
-  name: string
-  text: string
-  source_path?: string
-  used_by: UsedBy[]
-}
-
 const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => {
   const absoluteCargoPath = join(process.cwd(), '..', cargoTomlPath)
   console.log(
@@ -88,10 +71,6 @@ const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => 
     )
   }
 
-  // temp file to hold cargo-about output
-  // needed because of potential encoding issues
-  const tempOutputFile = join(absoluteCargoPath, 'cargo-about-temp.json')
-
   const result = spawnSync(
     'cargo',
     [
@@ -101,7 +80,7 @@ const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => 
       '--config',
       'about.toml',
       '--output-file',
-      tempOutputFile,
+      outputPath,
       'about.hbs'
     ],
     {
@@ -126,63 +105,36 @@ const generateCargoLicenseFile = (cargoTomlPath: string, outputPath: string) => 
 
   console.log(`Cargo about generated license info successfully`)
 
-  if (!existsSync(tempOutputFile)) {
-    throw new Error(`cargo-about did not create output file at ${tempOutputFile}`)
+  if (!existsSync(outputPath)) {
+    throw new Error(`cargo-about did not create output file at ${outputPath}`)
   }
 
-  const licenseData = readFileSync(tempOutputFile, 'utf8')
-  const licenses: License[] = JSON.parse(licenseData)
+  let content = readFileSync(outputPath, 'utf8')
 
-  try {
-    unlinkSync(tempOutputFile)
-  } catch (err) {
-    console.warn(`Failed to delete temp file ${tempOutputFile}: ${err}`)
-  }
+  const packageRegex = /Name: (.+?)\nVersion: (.+?)\nLicense: (.+?)\n/g
+  const insertions: { index: number; content: string }[] = []
 
-  let output = ''
+  let match: RegExpExecArray | null
+  while ((match = packageRegex.exec(content)) !== null) {
+    const [fullMatch, name, version, license] = match
 
-  for (const license of licenses) {
-    for (const pkg of license.used_by) {
-      output += `Name: ${pkg.name}\n`
-      output += `Version: ${pkg.version}\n`
-      output += `License: ${pkg.license || 'Unknown'}\n`
+    if (isApacheLicense(license)) {
+      const noticeContent = findNoticeInCargoRegistry(name, version)
+      const insertIndex = match.index + fullMatch.length
 
-      if (pkg.description) {
-        output += `Description: ${pkg.description}\n`
+      if (noticeContent) {
+        const noticeBlock = `\nNOTICE:\n\`\`\`\n${noticeContent}\n\`\`\`\n`
+        insertions.push({ index: insertIndex, content: noticeBlock })
       }
-
-      if (pkg.repository) {
-        output += `Repository: ${pkg.repository}\n`
-      }
-
-      if (pkg.authors && pkg.authors.length > 0) {
-        output += `Authors: ${pkg.authors.join(', ')}\n`
-      }
-
-      // we need this for NOTICE files for Apache
-      if (isApacheLicense(pkg.license)) {
-        const noticeContent = findNoticeInCargoRegistry(pkg.name, pkg.version)
-        if (noticeContent) {
-          output += '\nNOTICE:\n```\n'
-          output += noticeContent
-          output += '\n```\n'
-        } else {
-          output += '\nNOTICE: Not found in package (Apache license may require NOTICE file)\n'
-        }
-      }
-
-      if (license.text) {
-        output += `\nLicense Text (${license.name}):\n`
-        output += '```\n'
-        output += license.text
-        output += '\n```\n'
-      }
-
-      output += '\n---\n\n'
     }
   }
 
-  writeFileSync(outputPath, output)
+  insertions.reverse()
+  for (const { index, content: insertContent } of insertions) {
+    content = content.slice(0, index) + insertContent + content.slice(index)
+  }
+
+  writeFileSync(outputPath, content)
   console.log(`License file written to ${outputPath}`)
 }
 
