@@ -33,6 +33,12 @@ Most applications are focused on a single task, or a single media type: notes, w
 Breakwind is built to be personal and open, in service of the user. This means local first data, open data formats, open source, and openness with respect to AI models. [Read more](https://deta.surf/motivation).
 Breakwind 旨在成为个性化和开放的工具，服务于用户。这意味着优先考虑本地数据、开放数据格式、开源以及对 AI 模型的开放性。[了解更多](https://deta.surf/motivation)。
 
+## 设计目标
+
+- 原生去除广告
+- 本地文件保密，支持文件锁
+- 支持代码的编辑与运行，防止安全逃逸
+
 ## Installation
 
 ## 安装
