@@ -4,8 +4,8 @@ const env = {
   HUSKY: '0',
   NODE_OPTIONS: '--max_old_space_size=8192',
 
-  PRODUCT_NAME: 'Surf',
-  M_VITE_PRODUCT_NAME: 'Surf',
+  PRODUCT_NAME: 'Distill Research',
+  M_VITE_PRODUCT_NAME: 'Distill Research',
   BUILD_RESOURCES_DIR: 'build/resources/prod'
 }
 

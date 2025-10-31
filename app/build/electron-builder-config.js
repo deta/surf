@@ -1,4 +1,4 @@
-const productName = process.env.PRODUCT_NAME || 'Surf'
+const productName = process.env.PRODUCT_NAME || 'Distill Research'
 
 const params = {
   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
@@ -8,7 +8,7 @@ const params = {
 
 function electronBuilderConfig() {
   return {
-    appId: 'surf.deta',
+    appId: 'distill-research.deta',
     productName: params.buildName,
     directories: {
       buildResources: params.buildResourcesDir || 'build/resources/prod'
@@ -63,6 +63,7 @@ function electronBuilderConfig() {
       identity: null, // this skips code signing
       hardenedRuntime: false, // disable hardened runtime for unsigned builds
       gatekeeperAssess: false, // skip gatekeeper assessment
+      icon: 'resources/icon.icns',
       extendInfo: [
         "NSCameraUsageDescription: Application requests access to the device's camera.",
         "NSMicrophoneUsageDescription: Application requests access to the device's microphone.",
@@ -76,7 +77,7 @@ function electronBuilderConfig() {
     },
     linux: {
       target: ['AppImage'],
-      maintainer: 'deta.surf',
+      maintainer: 'deta.distill-research',
       artifactName: `${params.buildName}-${params.appVersion}.\${arch}.\${ext}`,
       category: 'WebBrowser'
     },

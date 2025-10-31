@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "productName": "Surf",
+  "productName": "Distill Research",
   "version": "0.0.3",
   "main": "./out/main/index.js",
   "author": "Deta GmbH",
@@ -16,7 +16,7 @@
     "build:frontend": "electron-vite build",
     "build:mwl": "npm run build && electron-builder -mwl --config build/electron-builder-config.js --arm64 --x64 --publish always",
     "build:mac": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --x64 --publish always",
-    "pack:simple": "npm run build && npx @electron/packager . Surf --platform=darwin --arch=arm64 --out=../releases --overwrite --electron-version=38.4.0 --icon=resources/icon",
+    "pack:simple": "npm run build && npx @electron/packager . \"Distill Research\" --platform=darwin --arch=arm64 --out=../releases --overwrite --electron-version=38.4.0 --icon=resources/icon.icns",
     "build:mac:x64": "npm run build && electron-builder --mac --config build/electron-builder-config.js --x64 --publish always",
     "build:mac:arm": "npm run build && electron-builder --mac --config build/electron-builder-config.js --arm64 --publish always",
     "build:lin:x64": "npm run build && electron-builder --linux --config build/electron-builder-config.js --x64 --publish always",
