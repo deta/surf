@@ -1,5 +1,6 @@
 import { useKVTable, type BaseKVItem } from '@deta/services'
 import type { TreeState, BaseTreeNode, ExtendedTreeViewState } from './tree.types'
+import { ScopedLogger, useLogScope } from '@deta/utils'
 
 export interface TreeViewStateItem extends BaseKVItem {
   treeId: string
@@ -11,21 +12,23 @@ export interface TreeViewStateItem extends BaseKVItem {
 export class TreePersistence {
   private kvStore = useKVTable<TreeViewStateItem>('tree_view_states')
   private treeId: string
+  private log: ScopedLogger
 
   constructor(treeId: string) {
     this.treeId = treeId
-    console.log('[TreePersistence] Initialized for treeId:', treeId)
+    this.log = useLogScope('TreePersistence')
+    this.log.debug('Initialized for treeId:', treeId)
   }
 
   async waitForReady(): Promise<void> {
     await this.kvStore.ready
-    console.log('[TreePersistence] KV store is ready')
+    this.log.debug('KV store is ready')
   }
 
   async saveState<T extends BaseTreeNode>(state: TreeState<T>, customData?: Record<string, any>): Promise<void> {
     await this.kvStore.ready
 
-    console.log('[TreePersistence] Saving state:', {
+    this.log.debug('Saving state:', {
       treeId: this.treeId,
       expanded: Array.from(state.expanded),
       selected: Array.from(state.selected),
@@ -53,27 +56,27 @@ export class TreePersistence {
         customData: stateData.customData,
         updatedAt: stateData.updatedAt
       })
-      console.log('[TreePersistence] Updated existing state')
+      this.log.debug('Updated existing state')
     } else {
       // Create new
       await this.kvStore.create(stateData)
-      console.log('[TreePersistence] Created new state')
+      this.log.debug('Created new state')
     }
   }
 
   async restoreState<T extends BaseTreeNode>(): Promise<{ state: TreeState<T>; customData?: Record<string, any> } | null> {
     await this.kvStore.ready
 
-    console.log('[TreePersistence] Loading state for treeId:', this.treeId)
+    this.log.debug('Loading state for treeId:', this.treeId)
 
     const persistedState = await this.kvStore.read(this.treeId)
 
     if (!persistedState) {
-      console.log('[TreePersistence] No persisted state found')
+      this.log.debug('No persisted state found')
       return null
     }
 
-    console.log('[TreePersistence] Restored state:', {
+    this.log.debug('Restored state:', {
       expanded: persistedState.expanded,
       selected: persistedState.selected,
       customData: persistedState.customData,
@@ -93,7 +96,7 @@ export class TreePersistence {
   async saveCustomData(customData: Record<string, any>): Promise<void> {
     await this.kvStore.ready
 
-    console.log('[TreePersistence] Saving custom data:', { treeId: this.treeId, customData })
+    this.log.debug('Saving custom data:', { treeId: this.treeId, customData })
 
     const existingState = await this.kvStore.read(this.treeId)
 
@@ -123,7 +126,7 @@ export class TreePersistence {
   }
 
   async clearState(): Promise<void> {
-    console.log('[TreePersistence] Clearing state for treeId:', this.treeId)
+    this.log.debug('Clearing state for treeId:', this.treeId)
     await this.kvStore.delete(this.treeId)
   }
 }
