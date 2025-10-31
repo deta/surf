@@ -75,6 +75,17 @@ jobs:
             packages/backend-server
           key: ${{ runner.os }}-${{ matrix.architecture }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Cache cargo-about binary
+        id: cache-cargo-about
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/bin/cargo-about
+          key: ${{ runner.os }}-${{ matrix.architecture }}-cargo-about-0.8.2
+
+      - name: Install cargo-about
+        if: steps.cache-cargo-about.outputs.cache-hit != 'true'
+        run: cargo install cargo-about --version 0.8.2
+
       - name: Cache Turbo
         uses: actions/cache@v3
         with:
