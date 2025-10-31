@@ -1,6 +1,6 @@
 import { useKVTable, type BaseKVItem } from '@deta/services'
 import type { TreeState, BaseTreeNode, ExtendedTreeViewState } from './tree.types'
-import { ScopedLogger, useLogScope } from '@deta/utils'
+import { type ScopedLogger, useLogScope } from '@deta/utils'
 
 export interface TreeViewStateItem extends BaseKVItem {
   treeId: string
