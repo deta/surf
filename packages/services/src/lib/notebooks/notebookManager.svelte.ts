@@ -269,7 +269,6 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
             }
           ),
           this.messagePort.extern_state_notebooksChanged.on(() => {
-            console.log('xxxx-deinemudda')
             this.loadNotebooks()
           })
         )

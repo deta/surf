@@ -4,7 +4,17 @@
   import ColorPicker from './ColorPicker.svelte'
   import { Notebook, type NotebookCoverColor } from '@deta/services/notebooks'
 
-  let { notebook = $bindable() }: { notebook?: Notebook } = $props()
+  let {
+    notebook = $bindable(),
+    mode = 'edit',
+    oncreate,
+    oncancel
+  }: {
+    notebook?: Notebook
+    mode?: 'edit' | 'create'
+    oncreate?: () => void
+    oncancel?: () => void
+  } = $props()
 
   // Selectable colors for the notebook
   // See notebook.types.ts for explanation
@@ -69,15 +79,33 @@
       '#fff'
     ]
   )
+
+  const handleClose = () => {
+    if (mode === 'create' && oncancel) {
+      oncancel()
+    } else {
+      notebook = undefined
+    }
+  }
+
+  const handleCreate = () => {
+    if (oncreate) {
+      oncreate()
+    }
+  }
 </script>
 
-<div class="dialog-backdrop" onclick={() => (notebook = undefined)}></div>
+<div class="dialog-backdrop" onclick={handleClose}></div>
 <dialog open>
   <header>
-    <!--<span class="title">Customize Notebook</span>-->
-    <Button square size="md" onclick={() => (notebook = undefined)}>
-      <Icon name="close" size="1.085rem" />
-    </Button>
+    {#if mode === 'edit'}
+      <Button square size="md" onclick={handleClose}>
+        <Icon name="close" size="1.085rem" />
+      </Button>
+    {:else if mode === 'create'}
+      <Button onclick={handleClose}>Cancel</Button>
+      <Button onclick={handleCreate} class="create-button">Create</Button>
+    {/if}
   </header>
 
   <section class="main">
@@ -145,10 +173,6 @@
       </header>
     </section>-->
   </div>
-  <!--<footer>
-    <Button>Save</Button>
-    <Button>Reset</Button>
-  </footer>-->
 </dialog>
 
 <style lang="scss">
@@ -199,11 +223,6 @@
       font-size: 1.23rem;
       font-weight: 500;
       opacity: 0.9;
-    }
-
-    > footer {
-      display: flex;
-      gap: 0.5ch;
     }
 
     section {
@@ -275,6 +294,27 @@
         color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
         background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
       }
+    }
+  }
+
+  :global(.create-button[data-button-root]) {
+    background: light-dark(#8c9dff, #6075f1);
+    color: #fff;
+    border-radius: 12px;
+    padding: 0.25rem 0.33rem 0.25rem 0.5rem;
+    min-width: 4.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &:hover:not(&:disabled) {
+      background: light-dark(#7d8ff3, #7d8ff3);
+      color: #fff;
+    }
+
+    span.keycap {
+      background: rgba(255, 255, 255, 0.265);
+      color: #fff;
     }
   }
 </style>

@@ -5,8 +5,15 @@
   import TreeDragItem from './TreeDragItem.svelte'
   import TreeDragZone from './TreeDragZone.svelte'
   import type { Snippet } from 'svelte'
-  import type { BaseTreeNode, TreeNodeAction, TreeConfig, TreeEvents, TreeDragDropOperation } from './tree.types'
+  import type {
+    BaseTreeNode,
+    TreeNodeAction,
+    TreeConfig,
+    TreeEvents,
+    TreeDragDropOperation
+  } from './tree.types'
   import type { TreeStore } from './tree.store.svelte'
+  import { useLogScope } from '@deta/utils'
 
   type TreeNodeProps<T extends BaseTreeNode = BaseTreeNode> = {
     node: T
@@ -49,6 +56,7 @@
   const isExpanded = $derived(store.isExpanded(node.id))
   const isSelected = $derived(store.isSelected(node.id))
   const isLoading = $derived(store.isLoading(node.id))
+  const log = useLogScope(`TreeNode ${node.id}`)
 
   let isRenaming = $state(false)
 
@@ -86,9 +94,7 @@
     isRenaming = false
   }
 
-  const childNodes = $derived(
-    (node.children as typeof node[] || []).filter(Boolean)
-  )
+  const childNodes = $derived(((node.children as (typeof node)[]) || []).filter(Boolean))
 
   // DND handlers
   function handleDragStart(operation: TreeDragDropOperation) {
@@ -104,7 +110,7 @@
   }
 
   function handleChildDrop(operation: TreeDragDropOperation) {
-    console.log(`[TreeNode:${node.id}] Child drop:`, {
+    log.debug(`Child drop:`, {
       source: operation.sourceNode.label,
       target: operation.targetNode?.label,
       index: operation.targetIndex,
@@ -119,7 +125,7 @@
   }
 
   function handleChildDragEnter(operation: TreeDragDropOperation) {
-    console.log(`[TreeNode:${node.id}] Child drag enter:`, {
+    log.debug(`Child drag enter:`, {
       source: operation.sourceNode.label,
       target: operation.targetNode?.label,
       index: operation.targetIndex,
@@ -132,7 +138,7 @@
   }
 
   function handleChildDragLeave(operation: TreeDragDropOperation) {
-    console.log(`[TreeNode:${node.id}] Child drag leave:`, {
+    log.debug(`Child drag leave:`, {
       source: operation.sourceNode.label,
       target: operation.targetNode?.label,
       index: operation.targetIndex,
@@ -145,7 +151,7 @@
   }
 
   function handleChildDragOver(operation: TreeDragDropOperation) {
-    console.log(`[TreeNode:${node.id}] Child drag over:`, {
+    log.debug(`Child drag over:`, {
       source: operation.sourceNode.label,
       target: operation.targetNode?.label,
       index: operation.targetIndex,
@@ -158,13 +164,7 @@
   }
 </script>
 
-<TreeDragZone
-  node={node}
-    {treeId}
-  config={config.drag}
-  onDrop={handleChildDrop}
-  isRootLevel={false}
->
+<TreeDragZone {node} {treeId} config={config.drag} onDrop={handleChildDrop} isRootLevel={false}>
   <TreeNodeRow
     {node}
     {depth}
@@ -200,14 +200,14 @@
         <span class="tree-node-label">{node.label}</span>
       {/if}
     {/snippet}
-</TreeNodeRow>
+  </TreeNodeRow>
 </TreeDragZone>
 
 {#if hasChildren && childNodes.length > 0}
   <TreeGroup {isExpanded}>
     {#if config.drag?.enabled && config.drag.allowReorder}
       <TreeDragZone
-        node={node}
+        {node}
         {treeId}
         config={config.drag}
         onDrop={handleChildDrop}
@@ -234,7 +234,7 @@
                   config={{ ...config, drag: { ...config.drag, enabled: false } }}
                   {events}
                   {actions}
-                  contentRenderer={contentRenderer}
+                  {contentRenderer}
                   {chevron}
                   {decorator}
                   {badge}
@@ -258,7 +258,7 @@
           {config}
           {events}
           {actions}
-          contentRenderer={contentRenderer}
+          {contentRenderer}
           {chevron}
           {decorator}
           {badge}

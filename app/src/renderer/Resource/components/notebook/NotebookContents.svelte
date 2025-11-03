@@ -34,6 +34,7 @@
   const ttyQuery = teletype.query
 
   let isCustomizingNotebook = $state(undefined) as Notebook | undefined | null
+  let isNewNotebook = $state(undefined) as Notebook | undefined | null
   let activeTab = $state<'notebooks' | 'notes' | 'sources'>(
     notebookId === undefined ? 'notebooks' : 'notes'
   )
@@ -84,6 +85,10 @@
       ]
     })
     if (!confirmed) return
+    notebookManager.deleteNotebook(notebook.id, true)
+  }
+
+  const handleCancelNewNotebook = async (notebook: Notebook) => {
     notebookManager.deleteNotebook(notebook.id, true)
   }
 
@@ -285,6 +290,21 @@
   <NotebookEditor />
 {/if}
 
+{#if isNewNotebook}
+  <NotebookEditor
+    bind:notebook={isNewNotebook}
+    mode="create"
+    oncreate={() => {
+      handlePinNotebook(isNewNotebook!.id)
+      isNewNotebook = null
+    }}
+    oncancel={() => {
+      handleCancelNewNotebook(isNewNotebook!)
+      isNewNotebook = null
+    }}
+  />
+{/if}
+
 <header class="flex items-center justify-between">
   <SimpleTabs
     bind:activeTabId={activeTab}
@@ -334,14 +354,17 @@
           style="width: 100%;max-width: 11.25ch;"
           style:--delay={'100ms'}
           onclick={async (event) => {
-            const notebook = await notebookManager.createNotebook(
-              {
-                name: 'Untitled Notebook'
-              },
-              true
-            )
-
-            openNotebook(notebook.id, { target: 'auto' })
+            try {
+              const notebook = await notebookManager.createNotebook(
+                {
+                  name: 'Untitled Notebook'
+                },
+                true
+              )
+              isNewNotebook = notebook
+            } catch (e) {
+              console.error('Failed to create notebook', e)
+            }
           }}
         >
           <div class="notebook-create">

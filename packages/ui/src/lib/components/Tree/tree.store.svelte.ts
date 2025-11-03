@@ -2,12 +2,14 @@ import type { BaseTreeNode, TreeState, TreeConfig, TreeEvents, TreeDragDropOpera
 import { TreePersistence } from './TreePersistence'
 import * as treeUtils from './tree.utils'
 import { findNodePath, getNodeByPath } from './tree.dnd'
+import { useLogScope } from '@deta/utils'
 
 export function createTreeStore<T extends BaseTreeNode>(
   initialNodes: T[],
   config: TreeConfig<T> = {},
   events: Partial<TreeEvents<T>> = {}
 ) {
+  const log = useLogScope('TreeStore')
   let nodes = $state<T[]>(initialNodes)
   let state = $state<TreeState<T>>({
     expanded: new Set<string>(),
@@ -27,7 +29,7 @@ export function createTreeStore<T extends BaseTreeNode>(
       return persistence!.restoreState<T>()
     }).then(result => {
       if (result) {
-        console.log('[TreeStore] Restoring persisted state:', {
+        log.debug('Restoring persisted state:', {
           expanded: Array.from(result.state.expanded),
           selected: Array.from(result.state.selected),
           loading: Array.from(result.state.loading),
@@ -35,20 +37,20 @@ export function createTreeStore<T extends BaseTreeNode>(
         })
         state = result.state
         customData = result.customData || {}
-        console.log('[TreeStore] State after restoration:', {
+        log.debug('State after restoration:', {
           expanded: Array.from(state.expanded),
           selected: Array.from(state.selected),
           loading: Array.from(state.loading),
           customData
         })
       } else {
-        console.log('[TreeStore] No persisted state to restore')
+        log.debug('No persisted state to restore')
       }
       // Mark initial load as complete so saving can begin
       initialLoadComplete = true
-      console.log('[TreeStore] Initial load complete, saving enabled')
+      log.debug('Initial load complete, saving enabled')
     }).catch(error => {
-      console.warn('[TreeStore] Failed to restore persisted state:', error)
+      log.warn('Failed to restore persisted state:', error)
       // Even if restore fails, enable saving
       initialLoadComplete = true
     })
@@ -63,7 +65,7 @@ export function createTreeStore<T extends BaseTreeNode>(
   let saveTimeout: number | null = null
 
   $effect(() => {
-    console.log('[TreeStore] Save effect triggered:', {
+    log.debug('Save effect triggered:', {
       hasPersistence: !!persistence,
       initialLoadComplete,
       expanded: Array.from(state.expanded),
@@ -72,10 +74,10 @@ export function createTreeStore<T extends BaseTreeNode>(
     })
 
     if (persistence && initialLoadComplete) {
-      console.log('[TreeStore] Scheduling save in 500ms...')
+      log.debug('Scheduling save in 500ms...')
       if (saveTimeout) clearTimeout(saveTimeout)
       saveTimeout = setTimeout(() => {
-        console.log('[TreeStore] Executing scheduled save')
+        log.debug('Executing scheduled save')
         persistence!.saveState(state, customData)
       }, 500) as any
     }
@@ -130,7 +132,7 @@ export function createTreeStore<T extends BaseTreeNode>(
 
     state = treeUtils.toggleExpanded(nodeId, state)
 
-    console.log('[TreeStore] After toggle, expanded nodes:', Array.from(state.expanded))
+    log.debug('After toggle, expanded nodes:', Array.from(state.expanded))
 
     if (state.expanded.has(nodeId)) {
       events.expand?.(node)
@@ -287,7 +289,7 @@ export function createTreeStore<T extends BaseTreeNode>(
         )
 
         if (!success) {
-          console.error('[TreeStore] Failed to move node:', sourceNode.id)
+          log.error('Failed to move node:', sourceNode.id)
           return
         }
       }
@@ -298,7 +300,7 @@ export function createTreeStore<T extends BaseTreeNode>(
       }
 
     } catch (error) {
-      console.error('[TreeStore] Error handling drop:', error)
+      log.error('Error handling drop:', error)
       throw error
     }
   }
