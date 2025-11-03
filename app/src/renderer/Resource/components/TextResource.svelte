@@ -877,6 +877,17 @@
       parsed = parsed.filter((e) => e.type === 'file')
       if (parsed.length <= 0) return
 
+      // Check if this is a file paste that should be handled by editor-file-paste
+      if (parsed.some(item => item.metadata?.name?.match(/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i))) {
+        // Let the editor-file-paste handler deal with image files to avoid duplication
+        // But still process non-image files here
+        const nonImageFiles = parsed.filter(item =>
+          !item.metadata?.name?.match(/\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i)
+        )
+        if (nonImageFiles.length === 0) return
+        parsed = nonImageFiles
+      }
+
       const newResources = await createResourcesFromMediaItems(resourceManager, parsed, '', [
         ResourceTag.paste(),
         ResourceTag.silent()
