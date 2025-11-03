@@ -39,6 +39,7 @@
   let showMiscInfo = false
   let licenses: string
   let isDarkMode = false
+  let backgroundImageUrl = ''
 
   const tabParam = new URLSearchParams(window.location.search).get(
     'tab'
@@ -182,15 +183,34 @@
     }
   }
 
-  const handleResetBackgroundImage = () => {
+  const handleBackgroundImageApply = async () => {
+    if (!userConfigSettings) return
+    const normalized = backgroundImageUrl.trim()
+    backgroundImageUrl = normalized
+    ;(userConfigSettings as any).background_image_url = normalized
+    await handleSettingsUpdate()
+    // Wait a bit to ensure settings propagate, then trigger refresh
+    await new Promise((resolve) => setTimeout(resolve, 100))
     // @ts-ignore
-    window.api.resetBackgroundImage()
+    window.api.resetBackgroundImage?.()
+  }
+
+  const handleResetBackgroundImage = async () => {
+    backgroundImageUrl = ''
+    if (!userConfigSettings) return
+    ;(userConfigSettings as any).background_image_url = ''
+    await handleSettingsUpdate()
+    // Wait a bit to ensure settings propagate, then trigger refresh
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    // @ts-ignore
+    window.api.resetBackgroundImage?.()
   }
 
   onMount(prepareContextMenu)
   onMount(async () => {
     userConfig = await window.api.getUserConfig()
     userConfigSettings = userConfig.settings
+    backgroundImageUrl = ((userConfigSettings as any)?.background_image_url ?? '').trim()
     currentNotesSidebarValue = userConfigSettings.experimental_notes_chat_sidebar
     // @ts-ignore
     isDefaultBrowser.set(await window.api.isDefaultBrowser())
@@ -218,6 +238,7 @@
       userConfigSettings = settings
       models.set(userConfigSettings.model_settings)
       selectedModel.set(userConfigSettings.selected_model)
+      backgroundImageUrl = ((userConfigSettings as any)?.background_image_url ?? '').trim()
     })
 
     if (!isDev) {
@@ -325,6 +346,43 @@
               bind:value={userConfigSettings.teletype_default_action}
               on:update={() => handleSettingsUpdate()}
             />
+          </div>
+
+          <div class="background-wrapper">
+            <div class="header">
+              <h2>Background Image</h2>
+              <p class="description">
+                Paste an image URL to customize Surf&apos;s background. Leave this empty to use the
+                default gradient.
+              </p>
+            </div>
+
+            <div class="background-controls">
+              <input
+                type="url"
+                placeholder="https://example.com/background.jpg"
+                bind:value={backgroundImageUrl}
+                on:keydown={(event) => event.key === 'Enter' && handleBackgroundImageApply()}
+              />
+              <div class="background-actions">
+                <button
+                  type="button"
+                  class="primary"
+                  on:click={handleBackgroundImageApply}
+                  disabled={!backgroundImageUrl.trim()}
+                >
+                  Apply
+                </button>
+                <button
+                  type="button"
+                  class="reset"
+                  on:click={handleResetBackgroundImage}
+                  disabled={!backgroundImageUrl}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
           </div>
         {/if}
 
@@ -563,6 +621,20 @@
     }
   }
 
+  h2 {
+    line-height: 1;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+  }
+
+  p {
+    margin: 0;
+    color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
+    font-size: 1rem;
+    line-height: 1.4;
+  }
   .tab {
     display: flex;
     gap: var(--t-2, 0.5rem);
@@ -717,6 +789,17 @@
     }
   }
 
+  .background-actions {
+    button.primary {
+      background: var(--color-brand);
+      color: var(--color-text-light);
+
+      &:hover {
+        background: var(--color-brand-dark);
+      }
+    }
+  }
+
   .default-wrapper {
     display: flex;
     align-items: center;
@@ -784,7 +867,8 @@
   .dev-wrapper,
   .search-wrapper,
   .teletype-wrapper,
-  .dark-mode-wrapper {
+  .dark-mode-wrapper,
+  .background-wrapper {
     width: 100%;
     display: flex;
     align-items: center;
@@ -824,6 +908,13 @@
         0 1px 1px 0 rgba(0, 0, 0, 0.4),
         0 0 1px 0 rgba(0, 0, 0, 0.5);
     }
+  }
+
+  .background-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.75rem;
   }
 
   .box {
@@ -907,5 +998,52 @@
 
   .links-wrapper {
     margin-bottom: 2rem;
+  }
+
+  .background-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .background-controls input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
+    background: light-dark(var(--color-background), var(--surface-elevated-dark, #1b2435));
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+  }
+
+  .background-controls input::placeholder {
+    color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
+  }
+
+  .background-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .background-actions button {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: light-dark(var(--color-brand), var(--accent-dark, #8192ff));
+    color: var(--color-text-light);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  .background-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .background-actions .reset {
+    background: transparent;
+    border: 1px solid light-dark(var(--color-border), rgba(71, 85, 105, 0.4));
+    color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
   }
 </style>

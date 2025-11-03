@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
+  import { derived } from 'svelte/store'
 
   import { useLogScope, setLogLevel } from '@deta/utils/io'
   import { ViewLocation, ViewType, type Fn } from '@deta/types'
@@ -38,6 +39,13 @@
     resourceManager,
     ai
   } = initServices()
+
+  const customBackgroundStyle = derived(config.settings, ($settings) => {
+    const image = (($settings as any)?.background_image_url ?? '').trim()
+    return image
+      ? `background: url("${image}") center / cover no-repeat !important; backdrop-filter: blur(100px);`
+      : ''
+  })
 
   const activeTabView = $derived(tabsService.activeTab?.view)
 
@@ -266,7 +274,11 @@
 
 <svelte:window onkeydown={keyboardManager.handleKeyDown} />
 
-<div class="main" class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
+<div
+  class="main"
+  class:vertical-layout={$tabOrientation === TabOrientation.Vertical}
+  style={$customBackgroundStyle}
+>
   {#if $tabOrientation === TabOrientation.Horizontal || !isMac()}
     <div class="app-bar" class:vertical-layout={$tabOrientation === TabOrientation.Vertical}>
       <div class="tabs">

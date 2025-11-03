@@ -24,7 +24,6 @@
 		"module": "esnext",
 		"verbatimModuleSyntax": true,
 		"noUncheckedIndexedAccess": true,
-		"erasableSyntaxOnly": true
 	},
   "include": [
 		"ambient.d.ts",

@@ -83,6 +83,14 @@
       "outputs": ["build/**"],
       "outputLogs": "new-only"
     },
+    "@deta/teletype#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
+    "@deta/web-parser#build": {
+      "outputs": ["dist/**"],
+      "outputLogs": "new-only"
+    },
     "@deta/ui#dev:tailwind": {
       "outputs": ["src/output.css"],
       "outputLogs": "new-only",

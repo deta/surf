@@ -5,8 +5,8 @@
 // https://github.com/ueberdosis/tiptap/blob/main/demos/src/Experiments/GlobalDragHandle/Vue/DragHandle.js
 
 import { NodeSelection, Plugin } from 'prosemirror-state'
-// @ts-ignore
-import { __serializeForClipboard, EditorView } from 'prosemirror-view'
+import { EditorView } from 'prosemirror-view'
+import { DOMSerializer } from 'prosemirror-model'
 import tippy from 'tippy.js'
 import { DragHandleDebugTools, type DebugData } from './DragHandleDebug'
 import { useLogScope } from '@deta/utils/io'
@@ -27,7 +27,7 @@ export interface DragHandleOptions {
 function absoluteRect(
   node: Element,
   editorWrapper: Element | null,
-  debugTools?: DragHandleDebugTools
+  debugTools?: DragHandleDebugTools | null
 ) {
   const data = node.getBoundingClientRect()
   const wrapperRect = editorWrapper?.getBoundingClientRect()
@@ -152,7 +152,10 @@ export default function DragHandle(options: DragHandleOptions) {
     view.dispatch(view.state.tr.setSelection(selection))
 
     const slice = view.state.selection.content()
-    const { dom, text } = __serializeForClipboard(view, slice)
+    const serializer = DOMSerializer.fromSchema(view.state.schema)
+    const dom = document.createElement('div')
+    dom.appendChild(serializer.serializeFragment(slice.content))
+    const text = slice.content.textBetween(0, slice.content.size)
 
     event.dataTransfer.clearData()
     event.dataTransfer.setData('text/html', dom.innerHTML)
