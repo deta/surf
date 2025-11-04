@@ -6,11 +6,11 @@ import { ResourceTypes } from '@deta/types'
 import { ResourceNote, useResourceManager } from './resources'
 import { extractAndCreateWebResource } from './mediaImporter'
 import { Notebook, useNotebookManager } from './notebooks'
+import { useConfig } from './config'
 
 import { onboardingNotebook } from './constants/examples'
 import * as OnboardingNoteWelcome from './constants/onboarding/00.welcome.md'
 import * as OnboardingNoteManual from './constants/onboarding/01.manual.md'
-import * as OnboardingNoteWhatsNew from './constants/onboarding/02.whatsnew.md'
 
 const log = useLogScope('DemoItems')
 
@@ -18,17 +18,21 @@ export async function checkAndCreateDemoItems() {
   log.debug('Checking and creating demo items if needed')
   const onboardingNotebook = await createDemoNotebook()
 
-  await createDemoNotes(onboardingNotebook)
-
-  // if (!onboardingTab) {
-  //   log.debug('Creating onboarding tab')
-  //   await tabsManager.addOnboardingTab()
-  // }
+  if (onboardingNotebook) {
+    await createDemoNotes(onboardingNotebook)
+  }
 }
 
 export async function createDemoNotebook() {
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
+  const configService = useConfig()
+  const config = configService.getConfig()
+
+  if (config.settings?.onboarding?.seen_demo_notebook) {
+    log.debug('User has already seen demo notebook, skipping creation')
+    return
+  }
 
   // Check if an onboarding space with the same name already exists
   const notebooks = await notebookManager.loadNotebooks()
@@ -37,6 +41,12 @@ export async function createDemoNotebook() {
   // If an onboarding space already exists, make it active and return it
   if (existingOnboardingNotebook) {
     log.debug('Onboarding notebook already exists, skipping creation')
+    await configService.updateSettings({
+      onboarding: {
+        ...config.settings.onboarding,
+        seen_demo_notebook: true
+      }
+    })
     return existingOnboardingNotebook
   }
 
@@ -73,8 +83,13 @@ export async function createDemoNotebook() {
         return resource.id
       })
     )
-
     await notebookManager.addResourcesToNotebook(notebook.id, resources)
+    await configService.updateSettings({
+      onboarding: {
+        ...config.settings.onboarding,
+        seen_demo_notebook: true
+      }
+    })
   }
 
   return notebook
@@ -151,20 +166,11 @@ export async function createDemoNotes(notebook: Notebook) {
     notebook
   )
 
-  const whatsnewNote = await createDemoNote(
-    {
-      id: OnboardingNoteWhatsNew.attributes.id as string,
-      title: OnboardingNoteWhatsNew.attributes.title as string,
-      content: parseNoteContent(OnboardingNoteWhatsNew)
-    },
-    notebook
-  )
-
   await wait(300)
 
   await resourceManager.updateResource(welcomeResource.id, {
     updated_at: new Date().toISOString()
   })
 
-  return [welcomeResource, manualResource, whatsnewNote]
+  return [welcomeResource, manualResource]
 }

@@ -32,6 +32,7 @@ export type UserSettings = {
     completed_welcome_v2: boolean
     completed_chat: boolean
     completed_stuff: boolean
+    seen_demo_notebook: boolean
   }
   sync_base_url?: string
   sync_auth_token?: string
