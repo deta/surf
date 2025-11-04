@@ -108,27 +108,29 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "package": "svelte-package",
-    "sync": "svelte-kit sync"
+    "sync": "svelte-kit sync",
+    "test": "vitest run"
   },
   "dependencies": {
-    "fuse.js": "^7.0.0",
     "@deta/editor": "*",
-    "@deta/utils": "*",
     "@deta/teletype": "*",
-    "@deta/web-parser": "*"
+    "@deta/utils": "*",
+    "@deta/web-parser": "*",
+    "fuse.js": "^7.0.0"
   },
   "devDependencies": {
-    "@deta/types": "*",
-    "svelte": "^5.38.1",
-    "@sveltejs/kit": "^2.31.1",
-    "@sveltejs/package": "^2.4.1",
     "@deta/backend": "*",
+    "@deta/types": "*",
     "@horizon/eslint-config": "*",
     "@horizon/typescript-config": "*",
+    "@sveltejs/kit": "^2.31.1",
+    "@sveltejs/package": "^2.4.1",
     "date-fns": "^3.2.0",
     "p-queue": "^8.0.1",
+    "svelte": "^5.38.1",
     "typescript": "^5.5.0",
     "vite": "^7.1.11",
-    "vite-plugin-markdown": "^2.2.0"
+    "vite-plugin-markdown": "^2.2.0",
+    "vitest": "^4.0.6"
   }
 }

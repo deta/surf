@@ -443,7 +443,8 @@ export class TeletypeService {
         if (
           action.providerId === 'current-query' ||
           action.providerId === 'search' ||
-          action.providerId === 'hostname-search'
+          action.providerId === 'hostname-search' ||
+          action.providerId === 'navigation'
         ) {
           this.log.debug(`Always Search mode: Found Search action at index ${i}:`, action.name)
           return i
@@ -463,7 +464,8 @@ export class TeletypeService {
           intentResult.intent === 'search' &&
           (action.providerId === 'current-query' ||
             action.providerId === 'search' ||
-            action.providerId === 'hostname-search')
+            action.providerId === 'hostname-search' ||
+            action.providerId === 'navigation')
         ) {
           this.log.debug(`Auto mode: Found search-matching action at index ${i}:`, action.name)
           return i
