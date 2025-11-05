@@ -95,7 +95,8 @@ export const getUserConfig = (path?: string) => {
         completed_welcome: false,
         completed_welcome_v2: false,
         completed_chat: false,
-        completed_stuff: false
+        completed_stuff: false,
+        seen_demo_notebook: false
       },
       selected_model: DEFAULT_AI_MODEL,
       model_settings: [],
@@ -142,7 +143,8 @@ export const getUserConfig = (path?: string) => {
       completed_welcome: false,
       completed_welcome_v2: false,
       completed_chat: false,
-      completed_stuff: false
+      completed_stuff: false,
+      seen_demo_notebook: false
     }
     changedConfig = true
   }

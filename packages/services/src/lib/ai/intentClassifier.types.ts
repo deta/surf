@@ -2,7 +2,7 @@ export type IntentType = 'search' | 'llm'
 
 export type QuickGuessResult = 'search' | 'question' | 'ambiguous'
 
-export type ClassificationRoute = 'rules' | 'onnx' | 'onnx-ambiguous'
+export type ClassificationRoute = 'rules' | 'onnx' | 'onnx-ambiguous' | 'fallback'
 
 export interface ClassificationResult {
   intent: IntentType
