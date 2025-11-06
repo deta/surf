@@ -65,6 +65,7 @@ export type UserSettings = {
   /** @deprecated */
   experimental_notes_chat_sidebar: boolean
   experimental_notes_chat_input: boolean
+  background_image_url?: string
   /** @deprecated */
   experimental_chat_web_search: boolean
   /** @deprecated */

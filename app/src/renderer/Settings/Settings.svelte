@@ -39,6 +39,7 @@
   let showMiscInfo = false
   let licenses: string
   let isDarkMode = false
+  let backgroundImageUrl = ''
 
   const tabParam = new URLSearchParams(window.location.search).get(
     'tab'
@@ -182,9 +183,31 @@
     }
   }
 
-  const handleResetBackgroundImage = () => {
-    // @ts-ignore
-    window.api.resetBackgroundImage()
+  const handleResetBackgroundImage = async () => {
+    if (!userConfigSettings) return
+
+    try {
+      userConfigSettings.background_image_url = ''
+      backgroundImageUrl = ''
+      await handleSettingsUpdate()
+    } catch (error) {
+      console.error('Failed to reset background image:', error)
+      // Revert the change if it fails
+      backgroundImageUrl = userConfigSettings.background_image_url || ''
+    }
+  }
+
+  const handleApplyBackgroundImage = async () => {
+    if (!userConfigSettings || !backgroundImageUrl.trim()) return
+
+    try {
+      userConfigSettings.background_image_url = backgroundImageUrl.trim()
+      await handleSettingsUpdate()
+    } catch (error) {
+      console.error('Failed to apply background image:', error)
+      // Revert the change if it fails
+      backgroundImageUrl = userConfigSettings.background_image_url || ''
+    }
   }
 
   onMount(prepareContextMenu)
@@ -197,6 +220,8 @@
 
     // Initialize dark mode state from settings
     isDarkMode = userConfigSettings.app_style === 'dark'
+    // Initialize background image URL from settings
+    backgroundImageUrl = userConfigSettings.background_image_url || ''
     // Apply color scheme immediately
     document.documentElement.dataset.colorScheme = userConfigSettings.app_style || 'light'
     document.documentElement.style.colorScheme = userConfigSettings.app_style || 'light'
@@ -311,6 +336,40 @@
               bind:value={isDarkMode}
               on:update={handleDarkModeToggle}
             />
+          </div>
+
+          <div class="background-image-wrapper">
+            <div class="background-image-header">
+              <Icon name="photo" size="20px" />
+              <div class="background-image-title">
+                <h3>Background Image</h3>
+                <p>Set a custom background image URL for the application.</p>
+              </div>
+            </div>
+            <div class="background-image-input-group">
+              <input
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                bind:value={backgroundImageUrl}
+                class="background-image-input"
+              />
+              <div class="background-image-buttons">
+                <button
+                  on:click={handleApplyBackgroundImage}
+                  disabled={!backgroundImageUrl.trim()}
+                  class="apply-button"
+                >
+                  Apply
+                </button>
+                <button
+                  on:click={handleResetBackgroundImage}
+                  disabled={!userConfigSettings?.background_image_url}
+                  class="reset-button"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="search-wrapper">
@@ -823,6 +882,133 @@
         0 1px 2px 0 rgba(0, 0, 0, 0.2),
         0 1px 1px 0 rgba(0, 0, 0, 0.4),
         0 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  .background-image-wrapper {
+    width: 100%;
+    background: radial-gradient(
+      290.88% 100% at 50% 0%,
+      rgba(237, 246, 255, 0.96) 0%,
+      rgba(246, 251, 255, 0.93) 100%
+    );
+    border: 0.5px solid rgba(255, 255, 255, 0.8);
+    border-radius: 11px;
+    padding: 1rem;
+    margin: 1rem 0;
+    box-shadow:
+      0 -0.5px 1px 0 rgba(119, 189, 255, 0.15) inset,
+      0 1px 1px 0 #fff inset,
+      0 3px 3px 0 rgba(62, 71, 80, 0.02),
+      0 1px 2px 0 rgba(62, 71, 80, 0.02),
+      0 1px 1px 0 rgba(0, 0, 0, 0.05),
+      0 0 1px 0 rgba(0, 0, 0, 0.09);
+    transition:
+      background-color 90ms ease-out,
+      box-shadow 90ms ease-out;
+
+    @media (prefers-color-scheme: dark) {
+      background: radial-gradient(
+        290.88% 100% at 50% 0%,
+        rgba(30, 41, 59, 0.96) 0%,
+        rgba(15, 23, 42, 0.93) 100%
+      );
+      border: 0.5px solid rgba(71, 85, 105, 0.6);
+      box-shadow:
+        0 -0.5px 1px 0 rgba(129, 146, 255, 0.15) inset,
+        0 1px 1px 0 rgba(71, 85, 105, 0.3) inset,
+        0 3px 3px 0 rgba(0, 0, 0, 0.3),
+        0 1px 2px 0 rgba(0, 0, 0, 0.2),
+        0 1px 1px 0 rgba(0, 0, 0, 0.4),
+        0 0 1px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .background-image-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+
+      .background-image-title {
+        h3 {
+          margin: 0;
+          font-size: 1rem;
+          font-weight: 600;
+          color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+        }
+
+        p {
+          margin: 0;
+          font-size: 0.875rem;
+          color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
+          line-height: 1.4;
+        }
+      }
+    }
+
+    .background-image-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+
+      .background-image-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+        border-radius: 8px;
+        background: light-dark(rgba(255, 255, 255, 0.8), rgba(30, 41, 59, 0.8));
+        color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+          border-color: light-dark(var(--color-brand), var(--accent-dark, #8192ff));
+        }
+
+        &::placeholder {
+          color: light-dark(var(--color-text-muted), var(--text-subtle-dark, #94a3b8));
+        }
+      }
+
+      .background-image-buttons {
+        display: flex;
+        gap: 0.5rem;
+
+        .apply-button,
+        .reset-button {
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+          }
+        }
+
+        .apply-button {
+          background: light-dark(var(--color-brand), var(--accent-dark, #8192ff));
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: light-dark(var(--color-link-dark), var(--accent, #6d82ff));
+          }
+        }
+
+        .reset-button {
+          background: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1));
+          color: light-dark(var(--color-text), var(--on-surface-dark, #cbd5f5));
+
+          &:hover:not(:disabled) {
+            background: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2));
+          }
+        }
+      }
     }
   }
 

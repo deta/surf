@@ -64,7 +64,7 @@
       $pdfSlickStore?.pdfSlick?.setAnnotationEditorMode(mode)
     }}
   >
-    <iconify-icon height={16} icon="codicon:edit" />
+    <iconify-icon height={16} icon="codicon:edit"></iconify-icon>
   </button>
 
   <Menu class="relative" let:open>
@@ -77,7 +77,7 @@
       }}
     >
       <div class="inline-flex p-0.5">
-        <iconify-icon height={12} icon="codicon:chevron-down" />
+        <iconify-icon height={12} icon="codicon:chevron-down"></iconify-icon>
       </div>
     </MenuButton>
 
