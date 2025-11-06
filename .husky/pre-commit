@@ -6,6 +6,10 @@ echo $FILES
 
 echo "$FILES" | tr ' ' '\n' | grep -E '\.(js|ts|tsx|yml|json|md|svelte)$' | xargs ./node_modules/.bin/prettier --ignore-path .gitignore --ignore-path .prettierignore --write
 
+# Clean up any duplicate tokens files before commit
+echo "🧹 Cleaning duplicate tokens files..."
+yarn clean:tokens
+
 echo "$FILES" | xargs git add
 
 exit 0

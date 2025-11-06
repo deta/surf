@@ -27,7 +27,7 @@
     "@deta/backend": "*",
     "@deta/dragcula": "*",
     "@electron-toolkit/preload": "^2.0.0",
-    "@electron-toolkit/utils": "^2.0.0",
+    "@electron-toolkit/utils": "^4.0.0",
     "@ghostery/adblocker-electron": "2.1.1",
     "@pdfslick/core": "^3.0.0",
     "@rollup/plugin-replace": "^5.0.7",
@@ -43,7 +43,6 @@
     "svelte-portal": "^2.2.1"
   },
   "devDependencies": {
-    "7zip-min": "^1.4.4",
     "@babel/plugin-transform-arrow-functions": "^7.25.9",
     "@deta/editor": "*",
     "@deta/services": "*",
@@ -60,6 +59,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^18.17.5",
+    "7zip-min": "^1.4.4",
     "autoprefixer": "^10.4.19",
     "bits-ui": "^2.9.3",
     "debug": "^4.4.3",

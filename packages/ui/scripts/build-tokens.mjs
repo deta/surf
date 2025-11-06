@@ -1,7 +1,7 @@
 import { register } from '@tokens-studio/sd-transforms'
 import StyleDictionary from 'style-dictionary'
-import { mkdir } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { mkdir, readdir, unlink } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 register(StyleDictionary)
 
@@ -212,6 +212,23 @@ StyleDictionary.registerFormat({
 
 const OUT_DIR = 'src/lib/styles'
 
+// Clean up duplicate tokens files before building
+const cleanupDuplicateTokens = async () => {
+  try {
+    const files = await readdir(OUT_DIR)
+    const duplicatePattern = /^tokens \d+\.css$/
+
+    for (const file of files) {
+      if (duplicatePattern.test(file)) {
+        console.log(`Removing duplicate tokens file: ${file}`)
+        await unlink(join(OUT_DIR, file))
+      }
+    }
+  } catch (error) {
+    console.warn('Warning: Could not clean duplicate tokens files:', error.message)
+  }
+}
+
 const sd = new StyleDictionary({
   source: ['tokens/**/*.json'],
   preprocessors: [
@@ -242,5 +259,9 @@ const sd = new StyleDictionary({
 })
 
 await mkdir(dirname(`${OUT_DIR}/tokens.css`), { recursive: true })
+
+// Clean up duplicates before building
+await cleanupDuplicateTokens()
+
 await sd.cleanAllPlatforms()
 await sd.buildAllPlatforms()

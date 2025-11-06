@@ -29,3 +29,7 @@ dist-ssr
 # SvelteKit
 .svelte-kit
 .svelte-kit/*
+
+# Duplicate tokens files (auto-generated backups)
+tokens [0-9]*.css
+tokens [0-9]*.css.map

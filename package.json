@@ -22,8 +22,9 @@
     "build:dragcula": "yarn workspace @horizon/dragcula build",
     "lint": "turbo lint",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write \"**/*.{js,ts,tsx,yml,json,md}\"",
+    "clean:tokens": "node scripts/clean-tokens.mjs",
     "prepare": "husky",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package && yarn clean:tokens"
   },
   "devDependencies": {
     "@horizon/eslint-config": "*",
