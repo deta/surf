@@ -114,16 +114,6 @@ jobs:
         if: steps.cache-cargo-about.outputs.cache-hit != 'true'
         run: cargo install cargo-about --version 0.8.2
 
-      - name: Cache Turbo
-        uses: actions/cache@v3
-        with:
-          path: |
-            .turbo
-            node_modules/.cache/turbo
-          key: ${{ runner.os }}-${{ matrix.architecture }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.architecture }}-turbo-
-
       - name: Install Dependencies
         run: |
           yarn config set network-timeout 300000

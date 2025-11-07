@@ -288,7 +288,9 @@ export class BrowserService {
       let notebookId: string | null = null
 
       const { type, id } = view.typeDataValue
-      if (type === ViewType.Notebook && id) {
+
+      // 'drafts' is special and should be treated as no notebook
+      if (type === ViewType.Notebook && id && id !== 'drafts') {
         notebookId = id
       }
 
