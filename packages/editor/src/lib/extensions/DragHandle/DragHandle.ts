@@ -5,8 +5,9 @@
 // https://github.com/ueberdosis/tiptap/blob/main/demos/src/Experiments/GlobalDragHandle/Vue/DragHandle.js
 
 import { NodeSelection, Plugin } from 'prosemirror-state'
+import { DOMSerializer } from 'prosemirror-model'
 // @ts-ignore
-import { __serializeForClipboard, EditorView } from 'prosemirror-view'
+import { EditorView } from 'prosemirror-view'
 import tippy from 'tippy.js'
 import { DragHandleDebugTools, type DebugData } from './DragHandleDebug'
 import { useLogScope } from '@deta/utils/io'
@@ -152,10 +153,16 @@ export default function DragHandle(options: DragHandleOptions) {
     view.dispatch(view.state.tr.setSelection(selection))
 
     const slice = view.state.selection.content()
-    const { dom, text } = __serializeForClipboard(view, slice)
+
+    // Create a temporary div to serialize the slice content
+    const tempDiv = document.createElement('div')
+    const fragment = DOMSerializer.fromSchema(view.state.schema).serializeFragment(slice.content)
+    tempDiv.appendChild(fragment)
+
+    const text = tempDiv.textContent || ''
 
     event.dataTransfer.clearData()
-    event.dataTransfer.setData('text/html', dom.innerHTML)
+    event.dataTransfer.setData('text/html', tempDiv.innerHTML)
     event.dataTransfer.setData('text/plain', text)
     event.dataTransfer.effectAllowed = 'copyMove'
 
