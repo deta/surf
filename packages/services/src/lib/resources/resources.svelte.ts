@@ -1937,6 +1937,14 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
       // TODO: add support for refreshing PDFs, currently not possible without the full BrowserTab logic
       const webParser = new WebParser(canonicalUrl)
+
+      // Check if document is available before using it
+      if (typeof document === 'undefined' || !document) {
+        this.log.error('Document is not available for resource refresh')
+        resource.updateExtractionState('idle')
+        return
+      }
+
       const detectedResource = await webParser.extractResourceUsingWebview(document)
 
       this.log.debug('extracted resource data', detectedResource)

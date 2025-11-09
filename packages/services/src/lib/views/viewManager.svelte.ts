@@ -213,12 +213,18 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       return null
     }
 
-    const url = new URL(data.url)
+    let url: URL | null = null
+    try {
+      url = new URL(data.url)
+    } catch (error) {
+      this.log.warn('Invalid URL provided to reusePooledViewIfPossible:', data.url, error)
+      return null
+    }
 
     let view: WebContentsView | undefined
-    if (url.protocol === 'http:' || url.protocol === 'https:') {
+    if (url?.protocol === 'http:' || url?.protocol === 'https:') {
       view = this.viewPoolWebPages.pop()
-    } else if (url.protocol === 'surf:') {
+    } else if (url?.protocol === 'surf:') {
       view = this.viewPoolSurfProtocol.pop()
     }
 
