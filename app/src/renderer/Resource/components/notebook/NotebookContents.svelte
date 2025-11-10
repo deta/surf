@@ -32,7 +32,7 @@
 
   let searchQuery = $state('')
   let categoryScrollContainer = $state<HTMLElement>()
-  let collapsedCategories = $state<Set<string>>(new Set())
+  let collapsedCategories = $state<Set<string>>(new Set(['notes', 'sources']))
 
   let resourceRenderCnt = $state(20)
   const handleMediaWheel = useThrottle(() => {
@@ -174,18 +174,16 @@
       label: 'Notebooks',
       icon: 'notebook'
     }),
-    ...conditionalArrayItem(notebookId !== undefined, [
-      {
-        id: 'notes',
-        label: 'Notes',
-        icon: 'note'
-      },
-      {
-        id: 'sources',
-        label: 'Media',
-        icon: 'link'
-      }
-    ])
+    {
+      id: 'notes',
+      label: 'Notes',
+      icon: 'note'
+    },
+    {
+      id: 'sources',
+      label: 'Media',
+      icon: 'link'
+    }
   ])
 
   const getAddButtonAction = (categoryId: string) => {
@@ -226,12 +224,23 @@
   })
 </script>
 
+{#snippet loadingSnippet()}
+  <div class="loading">
+    <Icon name="spinner" />
+    <p class="typo-title-sm">Loading…</p>
+  </div>
+{/snippet}
+
+{#snippet noResultsSnippet()}
+  <section class="empty">
+    <p>Nothing found for "{searchQuery}"</p>
+  </section>
+{/snippet}
+
 {#snippet notesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
     {#if searchQuery.length > 0}
-      <section class="empty">
-        <p>Nothing found for "{searchQuery}"</p>
-      </section>
+      {@render noResultsSnippet()}
     {:else}
       <div class="px py">
         <section class="empty">
@@ -265,9 +274,7 @@
 {#snippet sourcesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
     {#if searchQuery.length > 0}
-      <section class="empty">
-        <p>Nothing found for "{searchQuery}"</p>
-      </section>
+      {@render noResultsSnippet()}
     {:else}
       <div class="px py">
         <div class="empty">
@@ -355,18 +362,20 @@
                 style="margin-left: auto; font-size: 0.8rem; opacity: 0.5;"
               />
             </button>
-            <Button
-              size="sm"
-              tooltip={getAddButtonTooltip(category.id)}
-              onclick={getAddButtonAction(category.id)}
-              class="category-add-btn"
-            >
-              <Icon name="add" />
-            </Button>
+            {#if !isCategoryCollapsed(category.id)}
+              <Button
+                size="sm"
+                tooltip={getAddButtonTooltip(category.id)}
+                onclick={getAddButtonAction(category.id)}
+                class="category-add-btn"
+              >
+                <Icon name="add" />
+              </Button>
+            {/if}
           </div>
 
           {#if !isCategoryCollapsed(category.id)}
-            <div class="category-content">
+            <div class={'category-content'}>
               {#if category.id === 'notebooks'}
                 {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
                   <div class="notebook-grid">
@@ -464,10 +473,7 @@
                       {/snippet}
 
                       {#snippet loading()}
-                        <div class="loading">
-                          <Icon name="spinner" />
-                          <p class="typo-title-sm">Loading…</p>
-                        </div>
+                        {@render loadingSnippet()}
                       {/snippet}
                     </SurfLoader>
                   {:else if notebookId === 'drafts'}
@@ -491,10 +497,7 @@
                       {/snippet}
 
                       {#snippet loading()}
-                        <div class="loading">
-                          <Icon name="spinner" />
-                          <p class="typo-title-sm">Loading…</p>
-                        </div>
+                        {@render loadingSnippet()}
                       {/snippet}
                     </SurfLoader>
                   {:else}
@@ -520,10 +523,7 @@
                       {/snippet}
 
                       {#snippet loading()}
-                        <div class="loading">
-                          <Icon name="spinner" />
-                          <p class="typo-title-sm">Loading…</p>
-                        </div>
+                        {@render loadingSnippet()}
                       {/snippet}
                     </NotebookLoader>
                   {/if}
@@ -549,10 +549,7 @@
                     {/snippet}
 
                     {#snippet loading()}
-                      <div class="loading">
-                        <Icon name="spinner" />
-                        <p class="typo-title-sm">Loading…</p>
-                      </div>
+                      {@render loadingSnippet()}
                     {/snippet}
                   </SurfLoader>
                 {:else if notebookId === 'drafts'}
@@ -576,10 +573,7 @@
                     {/snippet}
 
                     {#snippet loading()}
-                      <div class="loading">
-                        <Icon name="spinner" />
-                        <p class="typo-title-sm">Loading…</p>
-                      </div>
+                      {@render loadingSnippet()}
                     {/snippet}
                   </SurfLoader>
                 {:else}
@@ -605,10 +599,7 @@
                     {/snippet}
 
                     {#snippet loading()}
-                      <div class="loading">
-                        <Icon name="spinner" />
-                        <p class="typo-title-sm">Loading…</p>
-                      </div>
+                      {@render loadingSnippet()}
                     {/snippet}
                   </NotebookLoader>
                 {/if}
@@ -712,14 +703,14 @@
   }
 
   .category-content {
-    max-height: 400px;
+    max-height: 360px;
     overflow-y: auto;
   }
 
   .notebook-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(11.25ch, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(11.3ch, 1fr));
+    gap: 0.5rem;
   }
 
   .sources-grid {
