@@ -1,16 +1,20 @@
 <script lang="ts" context="module">
-    export type Tab = {
-        id: string
-        label: string
-        icon?: string
-        disabled?: boolean
-    };
+  export type Tab = {
+    id: string
+    label: string
+    icon?: string
+    disabled?: boolean
+  }
 </script>
 
 <script lang="ts">
-  import { DynamicIcon } from "@deta/icons"
+  import { DynamicIcon } from '@deta/icons'
 
-  let { tabs, activeTabId = $bindable(''), onSelect }: { tabs: Tab[]; activeTabId: string; onSelect?: (tab: Tab) => void } = $props()
+  let {
+    tabs,
+    activeTabId = $bindable(''),
+    onSelect
+  }: { tabs: Tab[]; activeTabId: string; onSelect?: (tab: Tab) => void } = $props()
 </script>
 
 <div class="tabs-container">
@@ -27,7 +31,7 @@
       }}
     >
       {#if tab.icon}
-       <DynamicIcon name={tab.icon} size="1rem" />
+        <DynamicIcon name={tab.icon} size="1rem" />
       {/if}
       <span class="label">{tab.label}</span>
     </div>
@@ -61,7 +65,7 @@
 
     &:hover:not(.disabled):not(.active) {
       background: light-dark(rgba(0, 0, 0, 0.075), rgba(255, 255, 255, 0.1));
-    cursor: pointer;
+      cursor: pointer;
     }
 
     &.active {

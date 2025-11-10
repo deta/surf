@@ -9,7 +9,6 @@
     openDialog,
     ResourceLoader,
     SearchInput,
-    SimpleTabs,
     SourceCard,
     SurfLoader
   } from '@deta/ui'
@@ -25,21 +24,17 @@
   import { useResourceManager, Resource, getResourceCtxItems } from '@deta/services/resources'
   import { useMessagePortClient } from '@deta/services/messagePort'
   import { promptForFilesAndTurnIntoResources } from '@deta/services'
-  import { tick } from 'svelte'
 
   let { notebookId }: { notebookId?: string } = $props()
 
   let isCustomizingNotebook = $state(undefined) as Notebook | undefined | null
   let isNewNotebook = $state(undefined) as Notebook | undefined | null
-  let activeTab = $state<'notebooks' | 'notes' | 'sources'>(
-    notebookId === undefined ? 'notebooks' : 'notes'
-  )
 
   let searchQuery = $state('')
-  let searchCollapsed = $state(true)
+  let categoryScrollContainer = $state<HTMLElement>()
+  let collapsedCategories = $state<Set<string>>(new Set())
 
   let resourceRenderCnt = $state(20)
-  // TODO: Put this into lazy scroll component, no need for rawdogging crude js
   const handleMediaWheel = useThrottle(() => {
     resourceRenderCnt += 4
   }, 5)
@@ -123,18 +118,8 @@
     notebookManager.removeResourcesFromNotebook(notebookId, [resourceId], true)
   }
 
-  const handleSearchCollapsedToggle = () => {
-    searchCollapsed = !searchCollapsed
-  }
-
   const handleUploadFiles = async () => {
     await promptForFilesAndTurnIntoResources(resourceManager, notebookId)
-
-    if (!notebookId || notebookId === 'drafts') {
-      activeTab = 'notes'
-      await tick()
-      activeTab = 'sources'
-    }
   }
 
   const handleOpenAsFile = (resourceId: string) => {
@@ -182,6 +167,63 @@
       return searchResults.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
     } else return resources.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
   }
+
+  const categories = $derived([
+    ...conditionalArrayItem(notebookId === undefined, {
+      id: 'notebooks',
+      label: 'Notebooks',
+      icon: 'notebook'
+    }),
+    ...conditionalArrayItem(notebookId !== undefined, [
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: 'note'
+      },
+      {
+        id: 'sources',
+        label: 'Media',
+        icon: 'link'
+      }
+    ])
+  ])
+
+  const getAddButtonAction = (categoryId: string) => {
+    if (categoryId === 'notebooks') return handleCreateNotebook
+    if (categoryId === 'notes') return handleCreateNote
+    if (categoryId === 'sources') return handleUploadFiles
+  }
+
+  const getAddButtonTooltip = (categoryId: string) => {
+    if (categoryId === 'notebooks') return 'Create Notebook'
+    if (categoryId === 'notes') return 'Create Note'
+    if (categoryId === 'sources') return 'Import Media'
+  }
+
+  const toggleCategoryCollapse = (categoryId: string) => {
+    const newCollapsed = new Set(collapsedCategories)
+    if (newCollapsed.has(categoryId)) {
+      newCollapsed.delete(categoryId)
+    } else {
+      newCollapsed.add(categoryId)
+    }
+    collapsedCategories = newCollapsed
+  }
+
+  const resetCollapsedCategories = () => {
+    collapsedCategories = new Set()
+  }
+
+  const isCategoryCollapsed = (categoryId: string) => collapsedCategories.has(categoryId)
+
+  $effect(() => {
+    if (searchQuery.length > 0) {
+      if (categoryScrollContainer) {
+        categoryScrollContainer.scrollTo({ left: 0, behavior: 'smooth' })
+      }
+      resetCollapsedCategories()
+    }
+  })
 </script>
 
 {#snippet notesList(visibleItems, allItems)}
@@ -204,19 +246,19 @@
             Jump start a new note by asking Surf's AI something in the input box above or create a
             blank note using the button.
           </p>
-
-          <!-- <Button size="md" onclick={handleUploadFiles}>Import Local Files</Button> -->
         </section>
       </div>
     {/if}
   {:else}
-    {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
-      <ResourceLoader {resource}>
-        {#snippet children(resource: Resource)}
-          <NotebookSidebarNoteName {resource} sourceNotebookId={notebookId} />
-        {/snippet}
-      </ResourceLoader>
-    {/each}
+    <div class="sources-grid" onwheel={handleMediaWheel}>
+      {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
+        <ResourceLoader {resource}>
+          {#snippet children(resource: Resource)}
+            <NotebookSidebarNoteName {resource} sourceNotebookId={notebookId} />
+          {/snippet}
+        </ResourceLoader>
+      {/each}
+    </div>
   {/if}
 {/snippet}
 
@@ -240,18 +282,6 @@
             Save web pages using the "Save" button while browsing, import local files or add
             existing media from other notebooks by right-clicking them.
           </p>
-
-          <!-- <h2>
-            What you can add:
-          </h2> -->
-
-          <!-- <ul>
-            <li>Web pages (articles, PDFs, YouTube Videos, documents, & more)</li>
-            <li>Local files (PDFs)</li>
-            <li>Existing media from other notebooks</li>
-          </ul> -->
-
-          <!-- <Button size="md" onclick={handleUploadFiles}>Import Local Files</Button> -->
         </div>
       </div>
     {/if}
@@ -261,7 +291,8 @@
         <ResourceLoader {resource}>
           {#snippet children(resource: Resource)}
             <SourceCard
-              --width={'5rem'}
+              --width={'34px'}
+              --height={'41px'}
               --max-width={''}
               {resource}
               text
@@ -276,7 +307,7 @@
         </ResourceLoader>
       {/each}
     </div>
-    {#if resourceRenderCnt < allItems.length}
+    {#if resourceRenderCnt < allItems.length && !searchQuery}
       <div style="text-align:center;width:100%;margin-top:1rem;">
         <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
       </div>
@@ -305,353 +336,397 @@
   />
 {/if}
 
-<header class="flex items-center justify-between">
-  <SimpleTabs
-    bind:activeTabId={activeTab}
-    tabs={[
-      ...conditionalArrayItem(notebookId === undefined, {
-        id: 'notebooks',
-        label: 'Notebooks',
-        icon: 'notebook'
-      }),
-      ...conditionalArrayItem(notebookId !== undefined, [
-        {
-          id: 'notes',
-          label: 'Notes',
-          icon: 'note'
-        },
-        {
-          id: 'sources',
-          label: 'Media',
-          icon: 'link'
-        }
-      ])
-    ]}
-  />
+<div class="library-container">
+  <header class="library-header">
+    <h3 class="library-title">Your Library</h3>
+    <SearchInput bind:value={searchQuery} />
+  </header>
 
-  <div class="header-btns">
-    {#if searchCollapsed}
-      <Button tooltip="Search" size="md" onclick={handleSearchCollapsedToggle} class="hdr-btn">
-        <Icon name="search" />
-      </Button>
-    {/if}
-    <SearchInput bind:value={searchQuery} collapsed={searchCollapsed} />
-    <Button
-      size="md"
-      tooltip={activeTab === 'notebooks'
-        ? 'Create Notebook'
-        : activeTab === 'notes'
-          ? 'Create Note'
-          : 'Import Media'}
-      onclick={activeTab === 'notebooks'
-        ? handleCreateNotebook
-        : activeTab === 'notes'
-          ? handleCreateNote
-          : handleUploadFiles}
-      class="hdr-btn"
-    >
-      <Icon name="add" />
-    </Button>
-  </div>
-</header>
+  <div class="categories-scroll-container" bind:this={categoryScrollContainer}>
+    <div class="categories-scroll-content">
+      {#each categories as category}
+        <div class="category-section">
+          <div class="category-header">
+            <button class="category-tab" onclick={() => toggleCategoryCollapse(category.id)}>
+              <Icon name={category.icon} />
+              <span>{category.label}</span>
+              <Icon
+                name={isCategoryCollapsed(category.id) ? 'chevron.down' : 'chevron.up'}
+                style="margin-left: auto; font-size: 0.8rem; opacity: 0.5;"
+              />
+            </button>
+            <Button
+              size="sm"
+              tooltip={getAddButtonTooltip(category.id)}
+              onclick={getAddButtonAction(category.id)}
+              class="category-add-btn"
+            >
+              <Icon name="add" />
+            </Button>
+          </div>
 
-{#if activeTab === 'notebooks'}
-  {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
-    <div class="notebook-grid">
-      {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
-        <div
-          class="notebook-wrapper"
-          style="width: 100%;max-width: 11.25ch;"
-          style:--delay={'100ms'}
-          onclick={async (event) => {
-            handleNotebookClick('drafts', event)
-          }}
-        >
-          <NotebookCover
-            title="Drafts"
-            height="17.25ch"
-            fontSize="0.85rem"
-            color={[
-              ['#5d5d62', '5d5d62'],
-              ['#2e2f34', '#2e2f34'],
-              ['#efefef', '#efefef']
-            ]}
-            onclick={() => {}}
-          />
-        </div>
-      {/if}
+          {#if !isCategoryCollapsed(category.id)}
+            <div class="category-content">
+              {#if category.id === 'notebooks'}
+                {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
+                  <div class="notebook-grid">
+                    {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
+                      <div
+                        class="notebook-wrapper"
+                        style="width: 100%;max-width: 11.25ch;"
+                        style:--delay={'100ms'}
+                        onclick={async (event) => {
+                          handleNotebookClick('drafts', event)
+                        }}
+                      >
+                        <NotebookCover
+                          title="Drafts"
+                          height="17.25ch"
+                          fontSize="0.85rem"
+                          color={[
+                            ['#5d5d62', '5d5d62'],
+                            ['#2e2f34', '#2e2f34'],
+                            ['#efefef', '#efefef']
+                          ]}
+                          onclick={() => {}}
+                        />
+                      </div>
+                    {/if}
 
-      {#each notebooksList as notebook, i (notebook.id + i)}
-        <div
-          class="notebook-wrapper"
-          style="width: 100%;max-width: 11.25ch;"
-          style:--delay={100 + i * 10 + 'ms'}
-        >
-          <NotebookCover
-            {notebook}
-            height="17.25ch"
-            fontSize="0.85rem"
-            onclick={(e) => handleNotebookClick(notebook.id, e)}
-            onpin={() => handlePinNotebook(notebook.id)}
-            onunpin={() => handleUnPinNotebook(notebook.id)}
-            {@attach contextMenu({
-              canOpen: true,
-              items: [
-                !notebook.data.pinned
-                  ? {
-                      type: 'action',
-                      text: 'Add to Favorites',
-                      icon: 'heart',
-                      action: () => handlePinNotebook(notebook.id)
-                    }
-                  : {
-                      type: 'action',
-                      text: 'Remove from Favorites',
-                      icon: 'heart.off',
-                      action: () => handleUnPinNotebook(notebook.id)
-                    },
-                /*{
-                        type: 'action',
-                        text: 'Rename',
-                      icon: 'edit',
-                        action: () => (isRenamingNotebook = notebook.id)
-                      },*/
-                {
-                  type: 'action',
-                  text: 'Customize',
-                  icon: 'edit',
-                  action: () => (isCustomizingNotebook = notebook)
-                },
+                    {#each notebooksList as notebook, i (notebook.id + i)}
+                      <div
+                        class="notebook-wrapper"
+                        style="width: 100%;max-width: 11.25ch;"
+                        style:--delay={100 + i * 10 + 'ms'}
+                      >
+                        <NotebookCover
+                          {notebook}
+                          height="17.25ch"
+                          fontSize="0.85rem"
+                          onclick={(e) => handleNotebookClick(notebook.id, e)}
+                          onpin={() => handlePinNotebook(notebook.id)}
+                          onunpin={() => handleUnPinNotebook(notebook.id)}
+                          {@attach contextMenu({
+                            canOpen: true,
+                            items: [
+                              !notebook.data.pinned
+                                ? {
+                                    type: 'action',
+                                    text: 'Add to Favorites',
+                                    icon: 'heart',
+                                    action: () => handlePinNotebook(notebook.id)
+                                  }
+                                : {
+                                    type: 'action',
+                                    text: 'Remove from Favorites',
+                                    icon: 'heart.off',
+                                    action: () => handleUnPinNotebook(notebook.id)
+                                  },
+                              {
+                                type: 'action',
+                                text: 'Customize',
+                                icon: 'edit',
+                                action: () => (isCustomizingNotebook = notebook)
+                              },
+                              {
+                                type: 'action',
+                                kind: 'danger',
+                                text: 'Delete',
+                                icon: 'trash',
+                                action: () => handleDeleteNotebook(notebook)
+                              }
+                            ]
+                          })}
+                        />
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+              {:else if category.id === 'notes'}
+                <ul>
+                  {#if !notebookId}
+                    <SurfLoader
+                      tags={[
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                      ]}
+                      search={{
+                        query: searchQuery,
+                        tags: [
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        ],
+                        parameters: {
+                          semanticSearch: false
+                        }
+                      }}
+                    >
+                      {#snippet children([resources, searchResult, searching])}
+                        {@render notesList(searchResult ?? resources, resources)}
+                      {/snippet}
 
-                {
-                  type: 'action',
-                  kind: 'danger',
-                  text: 'Delete',
-                  icon: 'trash',
-                  action: () => handleDeleteNotebook(notebook)
-                }
-              ]
-            })}
-          />
+                      {#snippet loading()}
+                        <div class="loading">
+                          <Icon name="spinner" />
+                          <p class="typo-title-sm">Loading…</p>
+                        </div>
+                      {/snippet}
+                    </SurfLoader>
+                  {:else if notebookId === 'drafts'}
+                    <SurfLoader
+                      excludeWithinSpaces
+                      tags={[
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                      ]}
+                      search={{
+                        query: searchQuery,
+                        tags: [
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        ],
+                        parameters: {
+                          semanticSearch: false
+                        }
+                      }}
+                    >
+                      {#snippet children([resources, searchResult, searching])}
+                        {@render notesList(searchResult ?? resources, resources)}
+                      {/snippet}
+
+                      {#snippet loading()}
+                        <div class="loading">
+                          <Icon name="spinner" />
+                          <p class="typo-title-sm">Loading…</p>
+                        </div>
+                      {/snippet}
+                    </SurfLoader>
+                  {:else}
+                    <NotebookLoader
+                      {notebookId}
+                      search={{
+                        query: searchQuery,
+                        parameters: {
+                          semanticSearch: false
+                        }
+                      }}
+                      fetchContents
+                    >
+                      {#snippet children([notebook, searchResult, searching])}
+                        {@render notesList(
+                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
+                            (e) => e.entry_id
+                          ),
+                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
+                            (e) => e.entry_id
+                          )
+                        )}
+                      {/snippet}
+
+                      {#snippet loading()}
+                        <div class="loading">
+                          <Icon name="spinner" />
+                          <p class="typo-title-sm">Loading…</p>
+                        </div>
+                      {/snippet}
+                    </NotebookLoader>
+                  {/if}
+                </ul>
+              {:else if category.id === 'sources'}
+                {#if !notebookId}
+                  <SurfLoader
+                    tags={[
+                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+                    ]}
+                    search={{
+                      query: searchQuery,
+                      tags: [
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+                      ],
+                      parameters: {
+                        semanticSearch: false
+                      }
+                    }}
+                  >
+                    {#snippet children([resources, searchResult, searching])}
+                      {@render sourcesList(searchResult ?? resources, resources)}
+                    {/snippet}
+
+                    {#snippet loading()}
+                      <div class="loading">
+                        <Icon name="spinner" />
+                        <p class="typo-title-sm">Loading…</p>
+                      </div>
+                    {/snippet}
+                  </SurfLoader>
+                {:else if notebookId === 'drafts'}
+                  <SurfLoader
+                    excludeWithinSpaces
+                    tags={[
+                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+                    ]}
+                    search={{
+                      query: searchQuery,
+                      tags: [
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
+                      ],
+                      parameters: {
+                        semanticSearch: false
+                      }
+                    }}
+                  >
+                    {#snippet children([resources, searchResult, searching])}
+                      {@render sourcesList(searchResult ?? resources, resources)}
+                    {/snippet}
+
+                    {#snippet loading()}
+                      <div class="loading">
+                        <Icon name="spinner" />
+                        <p class="typo-title-sm">Loading…</p>
+                      </div>
+                    {/snippet}
+                  </SurfLoader>
+                {:else}
+                  <NotebookLoader
+                    {notebookId}
+                    search={{
+                      query: searchQuery,
+                      parameters: {
+                        semanticSearch: false
+                      }
+                    }}
+                    fetchContents
+                  >
+                    {#snippet children([notebook, searchResult, searching])}
+                      {@render sourcesList(
+                        filterOtherResources(notebook?.contents ?? [], searchResult)
+                          .slice(0, resourceRenderCnt)
+                          .map((e) => e.entry_id),
+                        filterOtherResources(notebook?.contents ?? [], searchResult).map(
+                          (e) => e.entry_id
+                        )
+                      )}
+                    {/snippet}
+
+                    {#snippet loading()}
+                      <div class="loading">
+                        <Icon name="spinner" />
+                        <p class="typo-title-sm">Loading…</p>
+                      </div>
+                    {/snippet}
+                  </NotebookLoader>
+                {/if}
+              {/if}
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
-  {/if}
-{:else if activeTab === 'notes'}
-  <ul>
-    <!-- {#if !searchQuery}
-      <NotebookSidebarNoteName onclick={() => handleCreateNote()} />
-    {/if} -->
-
-    {#if !notebookId}
-      <SurfLoader
-        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
-        search={{
-          query: searchQuery,
-          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
-          parameters: {
-            semanticSearch: false
-          }
-        }}
-      >
-        {#snippet children([resources, searchResult, searching])}
-          {@render notesList(searchResult ?? resources, resources)}
-        {/snippet}
-
-        {#snippet loading()}
-          <div class="loading">
-            <Icon name="spinner" />
-            <p class="typo-title-sm">Loading…</p>
-          </div>
-        {/snippet}
-      </SurfLoader>
-    {:else if notebookId === 'drafts'}
-      <SurfLoader
-        excludeWithinSpaces
-        tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
-        search={{
-          query: searchQuery,
-          tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
-          parameters: {
-            semanticSearch: false
-          }
-        }}
-      >
-        {#snippet children([resources, searchResult, searching])}
-          {@render notesList(searchResult ?? resources, resources)}
-        {/snippet}
-
-        {#snippet loading()}
-          <div class="loading">
-            <Icon name="spinner" />
-            <p class="typo-title-sm">Loading…</p>
-          </div>
-        {/snippet}
-      </SurfLoader>
-    {:else}
-      <NotebookLoader
-        {notebookId}
-        search={{
-          query: searchQuery,
-          parameters: {
-            semanticSearch: false
-          }
-        }}
-        fetchContents
-      >
-        {#snippet children([notebook, searchResult, searching])}
-          {@render notesList(
-            filterNoteResources(notebook?.contents ?? [], searchResult).map((e) => e.entry_id),
-            filterNoteResources(notebook?.contents ?? [], searchResult).map((e) => e.entry_id)
-          )}
-        {/snippet}
-
-        {#snippet loading()}
-          <div class="loading">
-            <Icon name="spinner" />
-            <p class="typo-title-sm">Loading…</p>
-          </div>
-        {/snippet}
-      </NotebookLoader>
-    {/if}
-  </ul>
-{:else if activeTab === 'sources'}
-  <!-- {#if !searchQuery}
-    <NotebookSidebarNoteName fallbackIcon="folder.open" fallbackText="Import Local Files" onclick={() => handleUploadFiles()} />
-  {/if} -->
-
-  {#if !notebookId}
-    <SurfLoader
-      tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
-      search={{
-        query: searchQuery,
-        tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')],
-        parameters: {
-          semanticSearch: false
-        }
-      }}
-    >
-      {#snippet children([resources, searchResult, searching])}
-        {@render sourcesList(searchResult ?? resources, resources)}
-      {/snippet}
-
-      {#snippet loading()}
-        <div class="loading">
-          <Icon name="spinner" />
-          <p class="typo-title-sm">Loading…</p>
-        </div>
-      {/snippet}
-    </SurfLoader>
-  {:else if notebookId === 'drafts'}
-    <SurfLoader
-      excludeWithinSpaces
-      tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
-      search={{
-        query: searchQuery,
-        tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')],
-        parameters: {
-          semanticSearch: false
-        }
-      }}
-    >
-      {#snippet children([resources, searchResult, searching])}
-        {@render sourcesList(searchResult ?? resources, resources)}
-      {/snippet}
-
-      {#snippet loading()}
-        <div class="loading">
-          <Icon name="spinner" />
-          <p class="typo-title-sm">Loading…</p>
-        </div>
-      {/snippet}
-    </SurfLoader>
-  {:else}
-    <NotebookLoader
-      {notebookId}
-      search={{
-        query: searchQuery,
-        parameters: {
-          semanticSearch: false
-        }
-      }}
-      fetchContents
-    >
-      {#snippet children([notebook, searchResult, searching])}
-        {@render sourcesList(
-          filterOtherResources(notebook?.contents ?? [], searchResult)
-            .slice(0, resourceRenderCnt)
-            .map((e) => e.entry_id),
-          filterOtherResources(notebook?.contents ?? [], searchResult).map((e) => e.entry_id)
-        )}
-      {/snippet}
-
-      {#snippet loading()}
-        <div class="loading">
-          <Icon name="spinner" />
-          <p class="typo-title-sm">Loading…</p>
-        </div>
-      {/snippet}
-    </NotebookLoader>
-  {/if}
-{/if}
+  </div>
+</div>
 
 <style lang="scss">
-  header {
-    margin-bottom: 1rem;
-    margin-inline: -0.25rem;
-    padding-bottom: 0.75rem;
+  .library-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-right: 10px !important;
   }
 
-  .header-btns {
+  .library-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .library-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .categories-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2)) transparent;
+
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2));
+      border-radius: 4px;
+    }
+  }
+
+  .categories-scroll-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 1rem;
+  }
+
+  .category-section {
+    flex-shrink: 0;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+  }
+
+  .category-tab {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: light-dark(rgba(0, 0, 0, 0.8), rgba(255, 255, 255, 0.8));
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
+    }
+  }
+
+  :global(.category-add-btn[data-button-root]) {
+    padding: 0.35rem 0.5rem;
+    opacity: 0.6;
+    flex-shrink: 0;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  .category-content {
+    max-height: 400px;
+    overflow-y: auto;
   }
 
   .notebook-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(11.25ch, 1fr));
     gap: 1rem;
-
-    display: flex;
-    flex-wrap: wrap;
-    //justify-content: space-between;
-    justify-items: center;
-  }
-
-  .notebook-create {
-    margin-left: 0.2rem;
-    height: 100%;
-    --color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
-    border: 1px dashed var(--color);
-    border-radius: 12px;
-    background: light-dark(rgba(0, 0, 0, 0.015), rgba(255, 255, 255, 0.02));
-
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: var(--color);
-
-    transition: transform 123ms ease-out;
-
-    > span {
-      font-size: 0.9rem;
-      text-align: center;
-    }
-
-    &:hover {
-      transform: scale(1.025) rotate3d(1, 2, 4, 1.5deg);
-    }
-  }
-  .notebook-wrapper.new {
-    padding: 0.5rem 0.25rem;
   }
 
   .sources-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
+    grid-auto-rows: 60px;
   }
 
   .empty,
@@ -665,7 +740,7 @@
     text-align: center;
     text-wrap: pretty;
 
-    h1 {
+    h3 {
       color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.8));
     }
 
@@ -692,44 +767,5 @@
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
-  }
-
-  .import-btn {
-    --color-link: light-dark(rgba(96, 117, 241, 1), rgba(129, 146, 255, 1));
-    --color-link-muted: light-dark(rgba(96, 117, 241, 0.6), rgba(129, 146, 255, 0.6));
-    --color-link-hover: light-dark(rgb(125, 143, 243), rgb(150, 165, 255));
-
-    background: none;
-    border: none;
-    padding: 0;
-
-    font-weight: normal;
-    letter-spacing: 0.02em;
-    color: var(--color-link);
-    text-decoration: underline;
-
-    text-decoration-thickness: 1.25px;
-    text-decoration-color: var(--color-link-muted);
-    text-underline-offset: 2px;
-    text-decoration-style: dashed;
-
-    spellcheck: false;
-
-    &:hover {
-      color: var(--color-link-hover);
-    }
-  }
-
-  :global(.hdr-btn[data-button-root]) {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.33rem 0.25rem 0.5rem;
-    font-size: 0.9rem;
-    opacity: 0.5;
-
-    &:hover {
-      opacity: 0.5 !important;
-    }
   }
 </style>
