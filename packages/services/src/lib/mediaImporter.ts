@@ -542,16 +542,6 @@ export const extractAndCreateWebResource = async (
 
   const webParser = new WebParser(url)
 
-  // Check if document is available before using it
-  if (typeof document === 'undefined' || !document) {
-    log.error('Document is not available for media import')
-    const resource = await resourceManager.createResourceLink({ url: url }, metadata, allTags)
-    return {
-      resource,
-      content: undefined
-    }
-  }
-
   // Extract a resource from the web page using a webview, this should happen only when saving the resource
   const extractedResource = await webParser.extractResourceUsingWebview(document)
   log.debug('extractedResource', extractedResource)

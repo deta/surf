@@ -1820,37 +1820,23 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
     let detectedResource: DetectedResource | null = null
 
-    try {
-      if (freshWebview) {
-        // Check if document is available before using it
-        if (typeof document === 'undefined' || !document) {
-          this.log.warn('Document is not available, falling back to webContents detection')
-          if (!this.webContents) {
-            return null
-          }
-          detectedResource = await this.webContents.detectResource()
-        } else {
-          const webParser = new WebParser(url)
-          detectedResource = await webParser.extractResourceUsingWebview(document)
-        }
-      } else {
-        if (!this.webContents) {
-          return null
-        }
-
-        detectedResource = await this.webContents.detectResource()
-      }
-
-      if (!detectedResource) {
-        this.log.debug('no resource detected')
+    if (freshWebview) {
+      const webParser = new WebParser(url)
+      detectedResource = await webParser.extractResourceUsingWebview(document)
+    } else {
+      if (!this.webContents) {
         return null
       }
 
-      return detectedResource
-    } catch (error) {
-      this.log.error('Error extracting resource:', error)
+      detectedResource = await this.webContents.detectResource()
+    }
+
+    if (!detectedResource) {
+      this.log.debug('no resource detected')
       return null
     }
+
+    return detectedResource
   }
 
   async createBookmarkResource(url: string, opts?: BookmarkPageOpts): Promise<Resource> {
@@ -2082,12 +2068,8 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
       'www.youtu.be',
       'www.youtube.de'
     ]
-    try {
-      if (youtubeHostnames.includes(new URL(url).host)) {
-        url = url.replace(/&t.*/g, '')
-      }
-    } catch (error) {
-      this.log.warn('Failed to parse URL for YouTube hostname check:', url, error)
+    if (youtubeHostnames.includes(new URL(url).host)) {
+      url = url.replace(/&t.*/g, '')
     }
 
     if (this.extractedResourceIdValue) {
@@ -2124,7 +2106,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
               .then((resource) => {
                 this.log.debug('refreshed resource', resource)
               })
-              .catch(() => {
+              .catch((e) => {
                 fetchedResource.updateExtractionState('idle') // TODO: support error state
               })
           }
