@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DynamicIcon, Icon } from '@deta/icons'
+  import { Icon } from '@deta/icons'
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
   import {
     Button,
@@ -16,7 +16,6 @@
   import {
     handleNotebookClick,
     handleResourceClick,
-    openNotebook,
     openResource
   } from '../../handlers/notebookOpenHandlers'
   import NotebookEditor from './NotebookEditor/NotebookEditor.svelte'
@@ -25,26 +24,19 @@
   import NotebookSidebarNoteName from './NotebookSidebarNoteName.svelte'
   import { useResourceManager, Resource, getResourceCtxItems } from '@deta/services/resources'
   import { useMessagePortClient } from '@deta/services/messagePort'
-  import { promptForFilesAndTurnIntoResources, useTeletypeService } from '@deta/services'
+  import { promptForFilesAndTurnIntoResources } from '@deta/services'
   import { tick } from 'svelte'
 
   let { notebookId }: { notebookId?: string } = $props()
-
-  const teletype = useTeletypeService()
-  const ttyQuery = teletype.query
 
   let isCustomizingNotebook = $state(undefined) as Notebook | undefined | null
   let isNewNotebook = $state(undefined) as Notebook | undefined | null
   let activeTab = $state<'notebooks' | 'notes' | 'sources'>(
     notebookId === undefined ? 'notebooks' : 'notes'
   )
-  let showAll = $state(false)
-  $effect(() => {
-    if (activeTab) showAll = false
-  })
 
-  const query = $derived($ttyQuery)
   let searchQuery = $state('')
+  let searchCollapsed = $state(true)
 
   let resourceRenderCnt = $state(20)
   // TODO: Put this into lazy scroll component, no need for rawdogging crude js
@@ -66,6 +58,20 @@
 
   const handleCreateNote = () => {
     useMessagePortClient().createNote.send({ isNewTabPage: true })
+  }
+
+  const handleCreateNotebook = async () => {
+    try {
+      const notebook = await notebookManager.createNotebook(
+        {
+          name: 'Untitled Notebook'
+        },
+        true
+      )
+      isNewNotebook = notebook
+    } catch (e) {
+      console.error('Failed to create notebook', e)
+    }
   }
 
   const handlePinNotebook = (notebookId: string) => {
@@ -115,6 +121,10 @@
   }
   const handleRemoveFromNotebook = (notebookId: string, resourceId: string) => {
     notebookManager.removeResourcesFromNotebook(notebookId, [resourceId], true)
+  }
+
+  const handleSearchCollapsedToggle = () => {
+    searchCollapsed = !searchCollapsed
   }
 
   const handleUploadFiles = async () => {
@@ -172,15 +182,13 @@
       return searchResults.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
     } else return resources.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
   }
-
-  let showAllNotes = true
 </script>
 
 {#snippet notesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
-    {#if (notebookId ? $ttyQuery : searchQuery).length > 0}
+    {#if searchQuery.length > 0}
       <section class="empty">
-        <p>Nothing found for "{notebookId ? $ttyQuery : searchQuery}"</p>
+        <p>Nothing found for "{searchQuery}"</p>
       </section>
     {:else}
       <div class="px py">
@@ -209,22 +217,14 @@
         {/snippet}
       </ResourceLoader>
     {/each}
-
-    {#if allItems.length > visibleItems.length}
-      <div style="margin-top: 0.75rem;" onclick={() => (showAll = !showAll)}>
-        <Button size="md"
-          >{#if showAll}Hide{:else}Show All{/if}</Button
-        >
-      </div>
-    {/if}
   {/if}
 {/snippet}
 
 {#snippet sourcesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
-    {#if (notebookId ? $ttyQuery : searchQuery).length > 0}
+    {#if searchQuery.length > 0}
       <section class="empty">
-        <p>Nothing found for "{notebookId ? $ttyQuery : searchQuery}"</p>
+        <p>Nothing found for "{searchQuery}"</p>
       </section>
     {:else}
       <div class="px py">
@@ -308,74 +308,56 @@
 <header class="flex items-center justify-between">
   <SimpleTabs
     bind:activeTabId={activeTab}
-    onSelect={() => (showAllNotes = false)}
     tabs={[
       ...conditionalArrayItem(notebookId === undefined, {
         id: 'notebooks',
         label: 'Notebooks',
         icon: 'notebook'
       }),
-      {
-        id: 'notes',
-        label: 'Notes',
-        icon: 'note'
-      },
-      {
-        id: 'sources',
-        label: 'Media',
-        icon: 'link'
-      }
+      ...conditionalArrayItem(notebookId !== undefined, [
+        {
+          id: 'notes',
+          label: 'Notes',
+          icon: 'note'
+        },
+        {
+          id: 'sources',
+          label: 'Media',
+          icon: 'link'
+        }
+      ])
     ]}
   />
 
-  <!-- {#if !notebookId}
-    <SearchInput bind:value={searchQuery} placeholder="Search stuff..." />
-  {/if} -->
-
-  {#if activeTab === 'notes'}
-    <Button size="md" onclick={handleCreateNote} class="add-btn">
+  <div class="header-btns">
+    {#if searchCollapsed}
+      <Button tooltip="Search" size="md" onclick={handleSearchCollapsedToggle} class="hdr-btn">
+        <Icon name="search" />
+      </Button>
+    {/if}
+    <SearchInput bind:value={searchQuery} collapsed={searchCollapsed} />
+    <Button
+      size="md"
+      tooltip={activeTab === 'notebooks'
+        ? 'Create Notebook'
+        : activeTab === 'notes'
+          ? 'Create Note'
+          : 'Import Media'}
+      onclick={activeTab === 'notebooks'
+        ? handleCreateNotebook
+        : activeTab === 'notes'
+          ? handleCreateNote
+          : handleUploadFiles}
+      class="hdr-btn"
+    >
       <Icon name="add" />
-      <span> New Note </span>
     </Button>
-  {:else if activeTab === 'sources'}
-    <Button size="md" onclick={handleUploadFiles} class="add-btn">
-      <Icon name="folder.open" />
-      Import Files
-    </Button>
-  {/if}
+  </div>
 </header>
 
 {#if activeTab === 'notebooks'}
   {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
     <div class="notebook-grid">
-      {#if !searchQuery}
-        <div
-          class="notebook-wrapper new"
-          style="width: 100%;max-width: 11.25ch;"
-          style:--delay={'100ms'}
-          onclick={async (event) => {
-            try {
-              const notebook = await notebookManager.createNotebook(
-                {
-                  name: 'Untitled Notebook'
-                },
-                true
-              )
-              isNewNotebook = notebook
-            } catch (e) {
-              console.error('Failed to create notebook', e)
-            }
-          }}
-        >
-          <div class="notebook-create">
-            <Icon name="add" size="1.75rem" />
-            <!--<small style="text-align:center;font-size:0.8em;margin-top:0.2em;"
-              >Create Notebook</small
-            >-->
-          </div>
-        </div>
-      {/if}
-
       {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
         <div
           class="notebook-wrapper"
@@ -399,7 +381,7 @@
         </div>
       {/if}
 
-      {#each notebooksList.slice(0, showAll ? Infinity : notebooksList.filter((e) => e.data.pinned).length) as notebook, i (notebook.id + i)}
+      {#each notebooksList as notebook, i (notebook.id + i)}
         <div
           class="notebook-wrapper"
           style="width: 100%;max-width: 11.25ch;"
@@ -454,14 +436,6 @@
         </div>
       {/each}
     </div>
-
-    {#if notebooksList.length > notebooksList.slice(0, showAll ? Infinity : notebooksList.filter((e) => e.data.pinned).length).length}
-      <div style="margin-top: 0.75rem;" onclick={() => (showAll = !showAll)}>
-        <Button size="md"
-          >{#if showAll}Hide{:else}Show All{/if}</Button
-        >
-      </div>
-    {/if}
   {/if}
 {:else if activeTab === 'notes'}
   <ul>
@@ -481,10 +455,7 @@
         }}
       >
         {#snippet children([resources, searchResult, searching])}
-          {@render notesList(
-            (searchResult ?? resources).slice(0, showAll ? Infinity : 6),
-            resources
-          )}
+          {@render notesList(searchResult ?? resources, resources)}
         {/snippet}
 
         {#snippet loading()}
@@ -499,7 +470,7 @@
         excludeWithinSpaces
         tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
         search={{
-          query: $ttyQuery,
+          query: searchQuery,
           tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')],
           parameters: {
             semanticSearch: false
@@ -507,10 +478,7 @@
         }}
       >
         {#snippet children([resources, searchResult, searching])}
-          {@render notesList(
-            (searchResult ?? resources).slice(0, showAll ? Infinity : 6),
-            resources
-          )}
+          {@render notesList(searchResult ?? resources, resources)}
         {/snippet}
 
         {#snippet loading()}
@@ -524,7 +492,7 @@
       <NotebookLoader
         {notebookId}
         search={{
-          query: $ttyQuery,
+          query: searchQuery,
           parameters: {
             semanticSearch: false
           }
@@ -564,13 +532,7 @@
       }}
     >
       {#snippet children([resources, searchResult, searching])}
-        {@render sourcesList(
-          (searchResult ?? resources).slice(
-            0,
-            searchResult ? Infinity : showAll ? Infinity : resourceRenderCnt
-          ),
-          resources
-        )}
+        {@render sourcesList(searchResult ?? resources, resources)}
       {/snippet}
 
       {#snippet loading()}
@@ -585,7 +547,7 @@
       excludeWithinSpaces
       tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
       search={{
-        query: $ttyQuery,
+        query: searchQuery,
         tags: [SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')],
         parameters: {
           semanticSearch: false
@@ -593,13 +555,7 @@
       }}
     >
       {#snippet children([resources, searchResult, searching])}
-        {@render sourcesList(
-          (searchResult ?? resources).slice(
-            0,
-            searchResult ? Infinity : showAll ? Infinity : resourceRenderCnt
-          ),
-          resources
-        )}
+        {@render sourcesList(searchResult ?? resources, resources)}
       {/snippet}
 
       {#snippet loading()}
@@ -613,7 +569,7 @@
     <NotebookLoader
       {notebookId}
       search={{
-        query: $ttyQuery,
+        query: searchQuery,
         parameters: {
           semanticSearch: false
         }
@@ -644,6 +600,12 @@
     margin-bottom: 1rem;
     margin-inline: -0.25rem;
     padding-bottom: 0.75rem;
+  }
+
+  .header-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .notebook-grid {
@@ -758,7 +720,7 @@
     }
   }
 
-  :global(.add-btn[data-button-root]) {
+  :global(.hdr-btn[data-button-root]) {
     display: flex;
     align-items: center;
     gap: 0.25rem;
