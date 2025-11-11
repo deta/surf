@@ -54,7 +54,7 @@ jobs:
             matrix="$matrix{\"os\":\"macos-14\",\"architecture\":\"arm\",\"build_command\":\"yarn build:desktop:mac:arm\"},"
           fi
           if [[ "${{ inputs.run_macos_x64 }}" == "true" ]]; then
-            matrix="$matrix{\"os\":\"macos-13\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
+            matrix="$matrix{\"os\":\"macos-15-intel\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:mac:x64\"},"
           fi
           if [[ "${{ inputs.run_windows_x64 }}" == "true" ]]; then
             matrix="$matrix{\"os\":\"windows-latest\",\"architecture\":\"x64\",\"build_command\":\"yarn build:desktop:win:x64\"},"
