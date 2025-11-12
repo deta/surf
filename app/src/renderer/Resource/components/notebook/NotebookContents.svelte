@@ -703,8 +703,16 @@
   }
 
   .category-content {
-    max-height: 360px;
+    max-height: min(360px, 40vh);
     overflow-y: auto;
+
+    @media screen and (min-width: 1440px) {
+      max-height: 50vh;
+    }
+
+    @media screen and (min-width: 1920px) {
+      max-height: 60vh;
+    }
   }
 
   .notebook-grid {
