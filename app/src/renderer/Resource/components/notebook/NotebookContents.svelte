@@ -19,9 +19,14 @@
   } from '../../handlers/notebookOpenHandlers'
   import NotebookEditor from './NotebookEditor/NotebookEditor.svelte'
   import { conditionalArrayItem, SearchResourceTags, truncate, useThrottle } from '@deta/utils'
-  import { type OpenTarget, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
+  import { type OpenTarget, type Option, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import NotebookSidebarNoteName from './NotebookSidebarNoteName.svelte'
-  import { useResourceManager, Resource, getResourceCtxItems } from '@deta/services/resources'
+  import {
+    useResourceManager,
+    Resource,
+    getResourceCtxItems,
+    type ResourceSearchResult
+  } from '@deta/services/resources'
   import { useMessagePortClient } from '@deta/services/messagePort'
   import { promptForFilesAndTurnIntoResources } from '@deta/services'
 
@@ -43,13 +48,35 @@
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
 
+  // TODO: have a sane way to manage `Drafts` in the notebook manager itself
   const notebooksList = $derived(
-    notebookManager.sortedNotebooks
-      .filter((e) => {
-        if (!searchQuery) return true
-        return e.nameValue.toLowerCase().includes(searchQuery.toLowerCase())
-      })
-      .sort((a, b) => (b.data.pinned === true) - (a.data.pinned === true))
+    (() => {
+      const draftsNotebook = {
+        id: 'drafts',
+        nameValue: 'Drafts',
+        colorValue: [
+          ['#5d5d62', '5d5d62'],
+          ['#2e2f34', '#2e2f34'],
+          ['#efefef', '#efefef']
+        ]
+      }
+
+      const filtered = notebookManager.sortedNotebooks
+        .filter((e) => {
+          if (!searchQuery) return true
+          return e.nameValue.toLowerCase().includes(searchQuery.toLowerCase())
+        })
+        .sort((a, b) => (b.data.pinned === true) - (a.data.pinned === true))
+
+      if (!searchQuery) {
+        return [draftsNotebook, ...filtered]
+      } else {
+        if (draftsNotebook.nameValue.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return [draftsNotebook, ...filtered]
+        }
+        return filtered
+      }
+    })()
   )
 
   const handleCreateNote = () => {
@@ -233,16 +260,16 @@
   })
 </script>
 
-{#snippet noResultsSnippet()}
+{#snippet noResultsSnippet(categoryLabel: string)}
   <section class="empty">
-    <p>Nothing found for "{searchQuery}"</p>
+    <p>No {categoryLabel} found for "{searchQuery}"</p>
   </section>
 {/snippet}
 
 {#snippet notesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
     {#if searchQuery.length > 0}
-      {@render noResultsSnippet()}
+      {@render noResultsSnippet('notes')}
     {:else}
       <div class="px py">
         <section class="empty">
@@ -276,7 +303,7 @@
 {#snippet sourcesList(visibleItems, allItems)}
   {#if allItems.length <= 0}
     {#if searchQuery.length > 0}
-      {@render noResultsSnippet()}
+      {@render noResultsSnippet('media')}
     {:else}
       <div class="px py">
         <div class="empty">
@@ -388,80 +415,58 @@
             {#if !isCategoryCollapsed(category.id)}
               <div class={'category-content'}>
                 {#if category.id === 'notebooks'}
-                  {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
-                    <div class="notebook-grid">
-                      {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
-                        <div
-                          class="notebook-wrapper"
-                          style="width: 100%;max-width: 11.25ch;"
-                          style:--delay={'100ms'}
-                          onclick={async (event) => {
-                            handleNotebookClick('drafts', event)
-                          }}
-                        >
-                          <NotebookCover
-                            title="Drafts"
-                            height="17.25ch"
-                            fontSize="0.85rem"
-                            color={[
-                              ['#5d5d62', '5d5d62'],
-                              ['#2e2f34', '#2e2f34'],
-                              ['#efefef', '#efefef']
-                            ]}
-                            onclick={() => {}}
-                          />
-                        </div>
-                      {/if}
-
-                      {#each notebooksList as notebook, i (notebook.id + i)}
-                        <div
-                          class="notebook-wrapper"
-                          style="width: 100%;max-width: 11.25ch;"
-                          style:--delay={100 + i * 10 + 'ms'}
-                        >
-                          <NotebookCover
-                            {notebook}
-                            height="17.25ch"
-                            fontSize="0.85rem"
-                            onclick={(e) => handleNotebookClick(notebook.id, e)}
-                            onpin={() => handlePinNotebook(notebook.id)}
-                            onunpin={() => handleUnPinNotebook(notebook.id)}
-                            {@attach contextMenu({
-                              canOpen: true,
-                              items: [
-                                !notebook.data.pinned
-                                  ? {
-                                      type: 'action',
-                                      text: 'Add to Favorites',
-                                      icon: 'heart',
-                                      action: () => handlePinNotebook(notebook.id)
-                                    }
-                                  : {
-                                      type: 'action',
-                                      text: 'Remove from Favorites',
-                                      icon: 'heart.off',
-                                      action: () => handleUnPinNotebook(notebook.id)
-                                    },
-                                {
-                                  type: 'action',
-                                  text: 'Customize',
-                                  icon: 'edit',
-                                  action: () => (isCustomizingNotebook = notebook)
-                                },
-                                {
-                                  type: 'action',
-                                  kind: 'danger',
-                                  text: 'Delete',
-                                  icon: 'trash',
-                                  action: () => handleDeleteNotebook(notebook)
-                                }
-                              ]
-                            })}
-                          />
-                        </div>
-                      {/each}
-                    </div>
+                  {#if notebooksList.length <= 0 && searchQuery.length > 0}
+                    {@render noResultsSnippet('notebooks')}
                   {/if}
+                  <div class="notebook-grid">
+                    {#each notebooksList as notebook, i (notebook.id + i)}
+                      <div
+                        class="notebook-wrapper"
+                        style="width: 100%;max-width: 11.25ch;"
+                        style:--delay={100 + i * 10 + 'ms'}
+                      >
+                        <NotebookCover
+                          {notebook}
+                          height="17.25ch"
+                          fontSize="0.85rem"
+                          onclick={(e) => handleNotebookClick(notebook.id, e)}
+                          onpin={() => handlePinNotebook(notebook.id)}
+                          onunpin={() => handleUnPinNotebook(notebook.id)}
+                          {@attach contextMenu({
+                            canOpen: notebook.id !== 'drafts',
+                            items: [
+                              !notebook.data.pinned
+                                ? {
+                                    type: 'action',
+                                    text: 'Add to Favorites',
+                                    icon: 'heart',
+                                    action: () => handlePinNotebook(notebook.id)
+                                  }
+                                : {
+                                    type: 'action',
+                                    text: 'Remove from Favorites',
+                                    icon: 'heart.off',
+                                    action: () => handleUnPinNotebook(notebook.id)
+                                  },
+                              {
+                                type: 'action',
+                                text: 'Customize',
+                                icon: 'edit',
+                                action: () => (isCustomizingNotebook = notebook)
+                              },
+                              {
+                                type: 'action',
+                                kind: 'danger',
+                                text: 'Delete',
+                                icon: 'trash',
+                                action: () => handleDeleteNotebook(notebook)
+                              }
+                            ]
+                          })}
+                        />
+                      </div>
+                    {/each}
+                  </div>
                 {:else if category.id === 'notes'}
                   <ul>
                     {#if !notebookId}
@@ -834,6 +839,10 @@
     color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.3));
     text-align: center;
     text-wrap: pretty;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 
     h3 {
       color: light-dark(rgba(0, 0, 0, 0.75), rgba(255, 255, 255, 0.8));
