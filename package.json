@@ -55,7 +55,7 @@
     "cookie": "^0.7.0",
     "brace-expansion": "^2.0.2",
     "tmp": "^0.2.4",
-    "devalue": "^5.4.1"
-  },
-  "version": "0.0.2"
+    "devalue": "^5.4.1",
+    "expr-eval-fork": "^3.0.0"
+  }
 }
