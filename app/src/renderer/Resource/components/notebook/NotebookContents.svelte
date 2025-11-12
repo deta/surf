@@ -33,6 +33,7 @@
   let searchQuery = $state('')
   let categoryScrollContainer = $state<HTMLElement>()
   let collapsedCategories = $state<Set<string>>(new Set(['notes', 'sources']))
+  let isLibraryCollapsed = $state(true)
 
   let resourceRenderCnt = $state(20)
   const handleMediaWheel = useThrottle(() => {
@@ -208,6 +209,10 @@
     collapsedCategories = newCollapsed
   }
 
+  const toggleLibraryCollapse = () => {
+    isLibraryCollapsed = !isLibraryCollapsed
+  }
+
   const resetCollapsedCategories = () => {
     collapsedCategories = new Set()
   }
@@ -220,16 +225,13 @@
         categoryScrollContainer.scrollTo({ left: 0, behavior: 'smooth' })
       }
       resetCollapsedCategories()
+      // Auto-expand library when searching
+      if (isLibraryCollapsed) {
+        isLibraryCollapsed = false
+      }
     }
   })
 </script>
-
-{#snippet loadingSnippet()}
-  <div class="loading">
-    <Icon name="spinner" />
-    <p class="typo-title-sm">Loading…</p>
-  </div>
-{/snippet}
 
 {#snippet noResultsSnippet()}
   <section class="empty">
@@ -345,123 +347,196 @@
 
 <div class="library-container">
   <header class="library-header">
-    <h3 class="library-title">Your Library</h3>
-    <SearchInput bind:value={searchQuery} />
+    <button class="library-title-button" onclick={toggleLibraryCollapse}>
+      <h3 class="library-title">Your Library</h3>
+      <Icon
+        name={isLibraryCollapsed ? 'chevron.down' : 'chevron.up'}
+        style="font-size: 0.9rem; opacity: 0.5;"
+      />
+    </button>
+    {#if !isLibraryCollapsed}
+      <SearchInput bind:value={searchQuery} />
+    {/if}
   </header>
 
-  <div class="categories-scroll-container" bind:this={categoryScrollContainer}>
-    <div class="categories-scroll-content">
-      {#each categories as category}
-        <div class="category-section">
-          <div class="category-header">
-            <button class="category-tab" onclick={() => toggleCategoryCollapse(category.id)}>
-              <Icon name={category.icon} />
-              <span>{category.label}</span>
-              <Icon
-                name={isCategoryCollapsed(category.id) ? 'chevron.down' : 'chevron.up'}
-                style="margin-left: auto; font-size: 0.8rem; opacity: 0.5;"
-              />
-            </button>
-            {#if !isCategoryCollapsed(category.id)}
-              <Button
-                size="sm"
-                tooltip={getAddButtonTooltip(category.id)}
-                onclick={getAddButtonAction(category.id)}
-                class="category-add-btn"
-              >
-                <Icon name="add" />
-              </Button>
-            {/if}
-          </div>
+  {#if !isLibraryCollapsed}
+    <div class="categories-scroll-container" bind:this={categoryScrollContainer}>
+      <div class="categories-scroll-content">
+        {#each categories as category}
+          <div class="category-section">
+            <div class="category-header">
+              <button class="category-tab" onclick={() => toggleCategoryCollapse(category.id)}>
+                <Icon name={category.icon} />
+                <span>{category.label}</span>
+                <Icon
+                  name={isCategoryCollapsed(category.id) ? 'chevron.down' : 'chevron.up'}
+                  style="margin-left: auto; font-size: 0.8rem; opacity: 0.5;"
+                />
+              </button>
+              {#if !isCategoryCollapsed(category.id)}
+                <Button
+                  size="sm"
+                  tooltip={getAddButtonTooltip(category.id)}
+                  onclick={getAddButtonAction(category.id)}
+                  class="category-add-btn"
+                >
+                  <Icon name="add" />
+                </Button>
+              {/if}
+            </div>
 
-          {#if !isCategoryCollapsed(category.id)}
-            <div class={'category-content'}>
-              {#if category.id === 'notebooks'}
-                {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
-                  <div class="notebook-grid">
-                    {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
-                      <div
-                        class="notebook-wrapper"
-                        style="width: 100%;max-width: 11.25ch;"
-                        style:--delay={'100ms'}
-                        onclick={async (event) => {
-                          handleNotebookClick('drafts', event)
+            {#if !isCategoryCollapsed(category.id)}
+              <div class={'category-content'}>
+                {#if category.id === 'notebooks'}
+                  {#if !searchQuery || (searchQuery !== null && searchQuery.length > 0)}
+                    <div class="notebook-grid">
+                      {#if !searchQuery || 'drafts'.includes(searchQuery.trim().toLowerCase())}
+                        <div
+                          class="notebook-wrapper"
+                          style="width: 100%;max-width: 11.25ch;"
+                          style:--delay={'100ms'}
+                          onclick={async (event) => {
+                            handleNotebookClick('drafts', event)
+                          }}
+                        >
+                          <NotebookCover
+                            title="Drafts"
+                            height="17.25ch"
+                            fontSize="0.85rem"
+                            color={[
+                              ['#5d5d62', '5d5d62'],
+                              ['#2e2f34', '#2e2f34'],
+                              ['#efefef', '#efefef']
+                            ]}
+                            onclick={() => {}}
+                          />
+                        </div>
+                      {/if}
+
+                      {#each notebooksList as notebook, i (notebook.id + i)}
+                        <div
+                          class="notebook-wrapper"
+                          style="width: 100%;max-width: 11.25ch;"
+                          style:--delay={100 + i * 10 + 'ms'}
+                        >
+                          <NotebookCover
+                            {notebook}
+                            height="17.25ch"
+                            fontSize="0.85rem"
+                            onclick={(e) => handleNotebookClick(notebook.id, e)}
+                            onpin={() => handlePinNotebook(notebook.id)}
+                            onunpin={() => handleUnPinNotebook(notebook.id)}
+                            {@attach contextMenu({
+                              canOpen: true,
+                              items: [
+                                !notebook.data.pinned
+                                  ? {
+                                      type: 'action',
+                                      text: 'Add to Favorites',
+                                      icon: 'heart',
+                                      action: () => handlePinNotebook(notebook.id)
+                                    }
+                                  : {
+                                      type: 'action',
+                                      text: 'Remove from Favorites',
+                                      icon: 'heart.off',
+                                      action: () => handleUnPinNotebook(notebook.id)
+                                    },
+                                {
+                                  type: 'action',
+                                  text: 'Customize',
+                                  icon: 'edit',
+                                  action: () => (isCustomizingNotebook = notebook)
+                                },
+                                {
+                                  type: 'action',
+                                  kind: 'danger',
+                                  text: 'Delete',
+                                  icon: 'trash',
+                                  action: () => handleDeleteNotebook(notebook)
+                                }
+                              ]
+                            })}
+                          />
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                {:else if category.id === 'notes'}
+                  <ul>
+                    {#if !notebookId}
+                      <SurfLoader
+                        tags={[
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        ]}
+                        search={{
+                          query: searchQuery,
+                          tags: [
+                            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                          ],
+                          parameters: {
+                            semanticSearch: false
+                          }
                         }}
                       >
-                        <NotebookCover
-                          title="Drafts"
-                          height="17.25ch"
-                          fontSize="0.85rem"
-                          color={[
-                            ['#5d5d62', '5d5d62'],
-                            ['#2e2f34', '#2e2f34'],
-                            ['#efefef', '#efefef']
-                          ]}
-                          onclick={() => {}}
-                        />
-                      </div>
-                    {/if}
-
-                    {#each notebooksList as notebook, i (notebook.id + i)}
-                      <div
-                        class="notebook-wrapper"
-                        style="width: 100%;max-width: 11.25ch;"
-                        style:--delay={100 + i * 10 + 'ms'}
+                        {#snippet children([resources, searchResult, searching])}
+                          {@render notesList(searchResult ?? resources, resources)}
+                        {/snippet}
+                      </SurfLoader>
+                    {:else if notebookId === 'drafts'}
+                      <SurfLoader
+                        excludeWithinSpaces
+                        tags={[
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        ]}
+                        search={{
+                          query: searchQuery,
+                          tags: [
+                            SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                          ],
+                          parameters: {
+                            semanticSearch: false
+                          }
+                        }}
                       >
-                        <NotebookCover
-                          {notebook}
-                          height="17.25ch"
-                          fontSize="0.85rem"
-                          onclick={(e) => handleNotebookClick(notebook.id, e)}
-                          onpin={() => handlePinNotebook(notebook.id)}
-                          onunpin={() => handleUnPinNotebook(notebook.id)}
-                          {@attach contextMenu({
-                            canOpen: true,
-                            items: [
-                              !notebook.data.pinned
-                                ? {
-                                    type: 'action',
-                                    text: 'Add to Favorites',
-                                    icon: 'heart',
-                                    action: () => handlePinNotebook(notebook.id)
-                                  }
-                                : {
-                                    type: 'action',
-                                    text: 'Remove from Favorites',
-                                    icon: 'heart.off',
-                                    action: () => handleUnPinNotebook(notebook.id)
-                                  },
-                              {
-                                type: 'action',
-                                text: 'Customize',
-                                icon: 'edit',
-                                action: () => (isCustomizingNotebook = notebook)
-                              },
-                              {
-                                type: 'action',
-                                kind: 'danger',
-                                text: 'Delete',
-                                icon: 'trash',
-                                action: () => handleDeleteNotebook(notebook)
-                              }
-                            ]
-                          })}
-                        />
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-              {:else if category.id === 'notes'}
-                <ul>
+                        {#snippet children([resources, searchResult, searching])}
+                          {@render notesList(searchResult ?? resources, resources)}
+                        {/snippet}
+                      </SurfLoader>
+                    {:else}
+                      <NotebookLoader
+                        {notebookId}
+                        search={{
+                          query: searchQuery,
+                          parameters: {
+                            semanticSearch: false
+                          }
+                        }}
+                        fetchContents
+                      >
+                        {#snippet children([notebook, searchResult, searching])}
+                          {@render notesList(
+                            filterNoteResources(notebook?.contents ?? [], searchResult).map(
+                              (e) => e.entry_id
+                            ),
+                            filterNoteResources(notebook?.contents ?? [], searchResult).map(
+                              (e) => e.entry_id
+                            )
+                          )}
+                        {/snippet}
+                      </NotebookLoader>
+                    {/if}
+                  </ul>
+                {:else if category.id === 'sources'}
                   {#if !notebookId}
                     <SurfLoader
                       tags={[
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
                       ]}
                       search={{
                         query: searchQuery,
                         tags: [
-                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
                         ],
                         parameters: {
                           semanticSearch: false
@@ -469,23 +544,19 @@
                       }}
                     >
                       {#snippet children([resources, searchResult, searching])}
-                        {@render notesList(searchResult ?? resources, resources)}
-                      {/snippet}
-
-                      {#snippet loading()}
-                        {@render loadingSnippet()}
+                        {@render sourcesList(searchResult ?? resources, resources)}
                       {/snippet}
                     </SurfLoader>
                   {:else if notebookId === 'drafts'}
                     <SurfLoader
                       excludeWithinSpaces
                       tags={[
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
                       ]}
                       search={{
                         query: searchQuery,
                         tags: [
-                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
                         ],
                         parameters: {
                           semanticSearch: false
@@ -493,11 +564,7 @@
                       }}
                     >
                       {#snippet children([resources, searchResult, searching])}
-                        {@render notesList(searchResult ?? resources, resources)}
-                      {/snippet}
-
-                      {#snippet loading()}
-                        {@render loadingSnippet()}
+                        {@render sourcesList(searchResult ?? resources, resources)}
                       {/snippet}
                     </SurfLoader>
                   {:else}
@@ -512,104 +579,25 @@
                       fetchContents
                     >
                       {#snippet children([notebook, searchResult, searching])}
-                        {@render notesList(
-                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
-                            (e) => e.entry_id
-                          ),
-                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
+                        {@render sourcesList(
+                          filterOtherResources(notebook?.contents ?? [], searchResult)
+                            .slice(0, resourceRenderCnt)
+                            .map((e) => e.entry_id),
+                          filterOtherResources(notebook?.contents ?? [], searchResult).map(
                             (e) => e.entry_id
                           )
                         )}
                       {/snippet}
-
-                      {#snippet loading()}
-                        {@render loadingSnippet()}
-                      {/snippet}
                     </NotebookLoader>
                   {/if}
-                </ul>
-              {:else if category.id === 'sources'}
-                {#if !notebookId}
-                  <SurfLoader
-                    tags={[
-                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                    ]}
-                    search={{
-                      query: searchQuery,
-                      tags: [
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                      ],
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                  >
-                    {#snippet children([resources, searchResult, searching])}
-                      {@render sourcesList(searchResult ?? resources, resources)}
-                    {/snippet}
-
-                    {#snippet loading()}
-                      {@render loadingSnippet()}
-                    {/snippet}
-                  </SurfLoader>
-                {:else if notebookId === 'drafts'}
-                  <SurfLoader
-                    excludeWithinSpaces
-                    tags={[
-                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                    ]}
-                    search={{
-                      query: searchQuery,
-                      tags: [
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                      ],
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                  >
-                    {#snippet children([resources, searchResult, searching])}
-                      {@render sourcesList(searchResult ?? resources, resources)}
-                    {/snippet}
-
-                    {#snippet loading()}
-                      {@render loadingSnippet()}
-                    {/snippet}
-                  </SurfLoader>
-                {:else}
-                  <NotebookLoader
-                    {notebookId}
-                    search={{
-                      query: searchQuery,
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                    fetchContents
-                  >
-                    {#snippet children([notebook, searchResult, searching])}
-                      {@render sourcesList(
-                        filterOtherResources(notebook?.contents ?? [], searchResult)
-                          .slice(0, resourceRenderCnt)
-                          .map((e) => e.entry_id),
-                        filterOtherResources(notebook?.contents ?? [], searchResult).map(
-                          (e) => e.entry_id
-                        )
-                      )}
-                    {/snippet}
-
-                    {#snippet loading()}
-                      {@render loadingSnippet()}
-                    {/snippet}
-                  </NotebookLoader>
                 {/if}
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/each}
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
     </div>
-  </div>
+  {/if}
 </div>
 
 <style lang="scss">
@@ -626,6 +614,31 @@
     justify-content: space-between;
     padding-bottom: 1rem;
     margin-bottom: 1rem;
+    gap: 0.75rem;
+
+    :global(input) {
+      transition: all 0.2s ease;
+    }
+  }
+
+  .library-title-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
+    }
+
+    :global([data-icon]) {
+      transition: transform 0.2s ease;
+    }
   }
 
   .library-title {
@@ -639,6 +652,7 @@
     overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2)) transparent;
+    scroll-behavior: smooth;
 
     &::-webkit-scrollbar {
       height: 8px;
@@ -651,6 +665,11 @@
     &::-webkit-scrollbar-thumb {
       background-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2));
       border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3));
     }
   }
 
@@ -659,6 +678,18 @@
     flex-direction: column;
     gap: 1.5rem;
     padding-bottom: 1rem;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .category-section {
@@ -690,6 +721,10 @@
     &:hover {
       background: light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05));
     }
+
+    :global([data-icon]) {
+      transition: transform 0.2s ease;
+    }
   }
 
   :global(.category-add-btn[data-button-root]) {
@@ -705,6 +740,29 @@
   .category-content {
     max-height: min(360px, 40vh);
     overflow-y: auto;
+    animation: expandCategory 0.3s ease-out;
+    transform-origin: top;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)) transparent;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15));
+      border-radius: 3px;
+      transition: background-color 0.2s ease;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background-color: light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.25));
+    }
 
     @media screen and (min-width: 1440px) {
       max-height: 50vh;
@@ -715,10 +773,39 @@
     }
   }
 
+  @keyframes expandCategory {
+    from {
+      opacity: 0;
+      transform: scaleY(0.95);
+      max-height: 0;
+    }
+    to {
+      opacity: 1;
+      transform: scaleY(1);
+      max-height: min(360px, 40vh);
+    }
+  }
+
   .notebook-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(11.3ch, 1fr));
     gap: 0.5rem;
+  }
+
+  .notebook-wrapper {
+    animation: fadeInUp 0.4s ease-out backwards;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .sources-grid {
@@ -726,10 +813,19 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
     grid-auto-rows: 60px;
+    animation: fadeIn 0.3s ease-out;
   }
 
-  .empty,
-  .loading {
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .empty {
     width: 100%;
     border: 1px dashed light-dark(rgba(0, 0, 0, 0.2), rgba(71, 85, 105, 0.4));
     padding: 0.75rem 0.75rem;
@@ -751,20 +847,5 @@
       color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
       max-width: 60ch;
     }
-  }
-
-  .empty {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.5rem;
   }
 </style>
