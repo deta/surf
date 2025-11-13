@@ -35,7 +35,9 @@ import type {
   AIChatMessage,
   AIChatMessageSource,
   AIDocsSimilarity,
-  YoutubeTranscript
+  YoutubeTranscript,
+  SFFSPaginationParams,
+  SFFSPaginatedResult
 } from '@deta/types'
 
 import type {
@@ -439,7 +441,68 @@ export class SFFS {
     return items.map(this.convertCompositeResourceToResource)
   }
 
-  async listResourceIDsByTags(tags: SFFSResourceTag[], excludeWithinSpaces: boolean = false) {
+  private serializeTagsData(tags: SFFSResourceTag[]): string {
+    return JSON.stringify(
+      tags.map(
+        (tag) =>
+          ({
+            id: '',
+            resource_id: '',
+            tag_name: tag.name,
+            tag_value: tag.value,
+            op: tag.op ?? 'eq'
+          }) as SFFSRawResourceTag
+      )
+    )
+  }
+
+  async listAllResourceIDsByTags(
+    tags: SFFSResourceTag[],
+    excludeWithinSpaces: boolean = false
+  ): Promise<string[]> {
+    this.log.debug('listing all resources by tags', tags, excludeWithinSpaces)
+
+    const tagsData = this.serializeTagsData(tags)
+
+    const allResults: string[] = []
+    let hasMore = true
+    let cursor: string | null = null
+
+    while (hasMore) {
+      const paginationParams: SFFSPaginationParams = {
+        limit: 100,
+        ...(cursor && { cursor })
+      }
+      const paginationData = JSON.stringify(paginationParams)
+
+      let raw: string
+      if (excludeWithinSpaces) {
+        raw = await this.backend.js__store_list_resources_by_tags_no_space(tagsData, paginationData)
+      } else {
+        raw = await this.backend.js__store_list_resources_by_tags(tagsData, paginationData)
+      }
+
+      const parsed = this.parseData<SFFSPaginatedResult<string>>(raw)
+      if (!parsed) {
+        throw new Error(
+          'failed to parse result of list resources by tags, unexpected data from backend'
+        )
+      }
+
+      allResults.push(...parsed.items)
+      hasMore = parsed.has_more
+      cursor = parsed.next_cursor
+    }
+
+    this.log.debug(`fetched ${allResults.length} total resources by tags`)
+    return allResults
+  }
+
+  async listResourceIDsByTags(
+    tags: SFFSResourceTag[],
+    excludeWithinSpaces: boolean = false,
+    paginationParams: SFFSPaginationParams
+  ) {
     this.log.debug('listing resources by tags', tags, excludeWithinSpaces)
     const tagsData = JSON.stringify(
       tags.map(
@@ -453,16 +516,16 @@ export class SFFS {
           }) as SFFSRawResourceTag
       )
     )
+    const paginationData = JSON.stringify(paginationParams)
 
     let raw: string
     if (excludeWithinSpaces) {
-      raw = await this.backend.js__store_list_resources_by_tags_no_space(tagsData)
+      raw = await this.backend.js__store_list_resources_by_tags_no_space(tagsData, paginationData)
     } else {
-      raw = await this.backend.js__store_list_resources_by_tags(tagsData)
+      raw = await this.backend.js__store_list_resources_by_tags(tagsData, paginationData)
     }
-
-    const parsed = this.parseData<{ items: string[]; total: number }>(raw)
-    return parsed?.items ?? []
+    const parsed = this.parseData<SFFSPaginatedResult<string>>(raw)
+    return parsed
   }
 
   async listAllResourcesAndSpaces(tags: SFFSResourceTag[]) {
