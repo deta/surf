@@ -1,15 +1,17 @@
 #!/bin/sh
 
-FILES=$(git diff --cached --name-only --diff-filter=ACMR | sed 's| |\\ |g')
-echo $FILES
+FILES=$(git diff --cached --name-only --diff-filter=ACMR -z)
+echo "$FILES" | tr '\0' '\n'
 [ -z "$FILES" ] && exit 0
 
-echo "$FILES" | tr ' ' '\n' | grep -E '\.(js|ts|tsx|yml|json|md|svelte)$' | xargs ./node_modules/.bin/prettier --ignore-path .gitignore --ignore-path .prettierignore --write
+git diff --cached --name-only --diff-filter=ACMR -z \
+  | grep -z -E '\.(js|ts|tsx|yml|json|md|svelte)$' \
+  | xargs -0 ./node_modules/.bin/prettier --ignore-path .gitignore --ignore-path .prettierignore --write
 
 # Clean up any duplicate tokens files before commit
 echo "🧹 Cleaning duplicate tokens files..."
 yarn clean:tokens
 
-echo "$FILES" | xargs git add
+git diff --cached --name-only --diff-filter=ACMR -z | xargs -0 git add
 
 exit 0

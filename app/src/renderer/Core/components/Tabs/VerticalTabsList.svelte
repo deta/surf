@@ -168,27 +168,29 @@
       ></div>
     {/if}
 
-    {#each tabsService.tabs as tab, index (tab.id)}
-      {#if tab.pinned}
-        <VerticalPinnedTab
-          {tab}
-          active={tabsService.activeTab?.id === tab.id}
-          height={layoutCalculation?.tabDimensions[index]?.height}
-          {isResizing}
-        />
-        <!-- Add separator line after last pinned tab -->
-        {#if index + 1 < tabsService.tabs.length && !tabsService.tabs[index + 1].pinned}
-          <div class="pinned-separator"></div>
-        {/if}
-      {:else}
-        <VerticalUnpinnedTab
-          {tab}
-          active={tabsService.activeTab?.id === tab.id}
-          height={layoutCalculation?.tabDimensions[index]?.height}
-          showCloseButton={layoutCalculation?.tabDimensions[index]?.showCloseButton ?? true}
-          {isResizing}
-        />
-      {/if}
+    {#if tabsService.tabs.some((t) => t.pinned)}
+      <div class="pinned-grid">
+        {#each tabsService.tabs.filter((t) => t.pinned) as tab (tab.id)}
+          <VerticalPinnedTab
+            {tab}
+            active={tabsService.activeTab?.id === tab.id}
+            height={48}
+            {isResizing}
+          />
+        {/each}
+      </div>
+      <div class="pinned-separator"></div>
+    {/if}
+
+    {#each tabsService.tabs.filter((t) => !t.pinned) as tab (tab.id)}
+      <VerticalUnpinnedTab
+        {tab}
+        active={tabsService.activeTab?.id === tab.id}
+        height={layoutCalculation?.tabDimensions[tabsService.tabs.indexOf(tab)]?.height}
+        showCloseButton={layoutCalculation?.tabDimensions[tabsService.tabs.indexOf(tab)]
+          ?.showCloseButton ?? true}
+        {isResizing}
+      />
     {/each}
   </div>
 
@@ -355,6 +357,18 @@
     background: light-dark(var(--border-color), var(--border-color-dark));
     margin: 0.5rem 0.75rem;
     opacity: 0.3;
+  }
+
+  .pinned-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    align-items: center;
+  }
+
+  .pinned-grid :global(.vertical-tab-item.pinned) {
+    flex: 0 0 40px;
   }
 
   .resize-handle {

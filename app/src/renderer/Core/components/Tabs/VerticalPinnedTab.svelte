@@ -20,7 +20,7 @@
   {active}
   {height}
   {isResizing}
-  showTitle={true}
+  showTitle={false}
   showCloseButton={false}
   showPinIndicator={false}
 />
