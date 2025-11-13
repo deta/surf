@@ -1,5 +1,5 @@
-use crate::store::models::SearchResourcesParams;
-use crate::{api::message::*, store::models, worker::tunnel::WorkerTunnel};
+use super::{message::*, parse_json_argument};
+use crate::{store::models, worker::tunnel::WorkerTunnel};
 use neon::prelude::*;
 use neon::types::JsDate;
 
@@ -469,22 +469,24 @@ fn js_recover_resource(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
-    let resource_tags_json = cx
-        .argument_opt(1)
-        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
-        .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
-        .map(|json_str| serde_json::from_str(&json_str))
-        .transpose()
-    {
-        Ok(Some(tags)) => tags,
-        Ok(None) => return cx.throw_error("Resource tags must be provided"),
-        Err(err) => return cx.throw_error(err.to_string()),
-    };
+    let resource_tags: Vec<models::ResourceTagFilter> =
+        match parse_json_argument(&mut cx, 1, "Resource tags") {
+            Ok(tags) => tags,
+            Err(err) => return cx.throw_error(err),
+        };
+
+    let pagination_params: models::PaginationParams =
+        match parse_json_argument(&mut cx, 2, "Pagination parameters") {
+            Ok(params) => params,
+            Err(err) => return cx.throw_error(err),
+        };
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(resource_tags)),
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(
+            resource_tags,
+            pagination_params,
+        )),
         deferred,
     );
 
@@ -494,22 +496,24 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
 fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
 
-    let resource_tags_json = cx
-        .argument_opt(1)
-        .and_then(|arg| arg.downcast::<JsString, FunctionContext>(&mut cx).ok())
-        .map(|js_string| js_string.value(&mut cx));
-    let resource_tags: Vec<models::ResourceTagFilter> = match resource_tags_json
-        .map(|json_str| serde_json::from_str(&json_str))
-        .transpose()
-    {
-        Ok(Some(tags)) => tags,
-        Ok(None) => return cx.throw_error("Resource tags must be provided"),
-        Err(err) => return cx.throw_error(err.to_string()),
-    };
+    let resource_tags: Vec<models::ResourceTagFilter> =
+        match parse_json_argument(&mut cx, 1, "Resource tags") {
+            Ok(tags) => tags,
+            Err(err) => return cx.throw_error(err),
+        };
+
+    let pagination_params: models::PaginationParams =
+        match parse_json_argument(&mut cx, 2, "Pagination parameters") {
+            Ok(params) => params,
+            Err(err) => return cx.throw_error(err),
+        };
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(resource_tags)),
+        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(
+            resource_tags,
+            pagination_params,
+        )),
         deferred,
     );
 
@@ -591,16 +595,18 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::SearchResources(SearchResourcesParams {
-            query,
-            resource_tag_filters,
-            semantic_search_enabled,
-            embeddings_distance_threshold,
-            embeddings_limit,
-            include_annotations,
-            space_id,
-            keyword_limit,
-        })),
+        WorkerMessage::ResourceMessage(ResourceMessage::SearchResources(
+            models::SearchResourcesParams {
+                query,
+                resource_tag_filters,
+                semantic_search_enabled,
+                embeddings_distance_threshold,
+                embeddings_limit,
+                include_annotations,
+                space_id,
+                keyword_limit,
+            },
+        )),
         deferred,
     );
 

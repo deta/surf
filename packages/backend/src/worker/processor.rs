@@ -268,21 +268,22 @@ fn is_markdown_file(file_name: &str) -> bool {
 fn parse_markdown_with_frontmatter(content: &str) -> BackendResult<(String, serde_yaml::Value)> {
     // Simple frontmatter parser - finds content between --- markers
     let parts: Vec<&str> = content.split("---").collect();
-    
+
     match parts.len() {
         // No frontmatter or invalid format
         0 | 1 => Ok((content.to_string(), serde_yaml::Value::Null)),
-        
+
         // Has frontmatter
         _ => {
             // Parse the YAML frontmatter (second part, index 1)
             let frontmatter_yaml = parts[1].trim();
-            let frontmatter = serde_yaml::from_str(frontmatter_yaml)
-                .map_err(|e| BackendError::GenericError(format!("Failed to parse frontmatter: {}", e)))?;
-            
+            let frontmatter = serde_yaml::from_str(frontmatter_yaml).map_err(|e| {
+                BackendError::GenericError(format!("Failed to parse frontmatter: {}", e))
+            })?;
+
             // Get the content (everything after second ---)
             let content = parts[2..].join("---").trim().to_string();
-            
+
             Ok((content, frontmatter))
         }
     }
@@ -339,53 +340,68 @@ fn process_resource_data(
             }
         }
 
-        ResourceTextContentType::Post => {
-            process_file_data::<PostData>(resource_data, resource_text_content_type, resource, |post_data| {
+        ResourceTextContentType::Post => process_file_data::<PostData>(
+            resource_data,
+            resource_text_content_type,
+            resource,
+            |post_data| {
                 let title = post_data.title.as_deref().unwrap_or_default();
                 let excerpt = post_data.excerpt.as_deref().unwrap_or_default();
                 let content = post_data.content_plain.as_deref().unwrap_or_default();
                 let author = post_data.author.as_deref().unwrap_or_default();
                 let site = post_data.site_name.as_deref().unwrap_or_default();
                 format!("{title} {excerpt} {content} {author} {site}")
-            })
-        }
+            },
+        ),
 
-        ResourceTextContentType::ChatMessage => {
-            process_file_data::<ChatMessageData>(resource_data, resource_text_content_type, resource, |msg| {
+        ResourceTextContentType::ChatMessage => process_file_data::<ChatMessageData>(
+            resource_data,
+            resource_text_content_type,
+            resource,
+            |msg| {
                 let author = msg.author.as_deref().unwrap_or_default();
                 let content = msg.content_plain.as_deref().unwrap_or_default();
                 let platform = msg.platform_name.as_deref().unwrap_or_default();
                 format!("{author} {content} {platform}")
-            })
-        }
+            },
+        ),
 
-        ResourceTextContentType::Document => {
-            process_file_data::<DocumentData>(resource_data, resource_text_content_type, resource, |doc| {
+        ResourceTextContentType::Document => process_file_data::<DocumentData>(
+            resource_data,
+            resource_text_content_type,
+            resource,
+            |doc| {
                 let author = doc.author.as_deref().unwrap_or_default();
                 let content = doc.content_plain.as_deref().unwrap_or_default();
                 let editor = doc.editor_name.as_deref().unwrap_or_default();
                 format!("{author} {content} {editor}")
-            })
-        }
+            },
+        ),
 
-        ResourceTextContentType::Article => {
-            process_file_data::<ArticleData>(resource_data, resource_text_content_type, resource, |article| {
+        ResourceTextContentType::Article => process_file_data::<ArticleData>(
+            resource_data,
+            resource_text_content_type,
+            resource,
+            |article| {
                 let title = article.title.as_deref().unwrap_or_default();
                 let excerpt = article.excerpt.as_deref().unwrap_or_default();
                 let content = article.content_plain.as_deref().unwrap_or_default();
                 format!("{title} {excerpt} {content}")
-            })
-        }
+            },
+        ),
 
-        ResourceTextContentType::Link => {
-            process_file_data::<LinkData>(resource_data, resource_text_content_type, resource, |link| {
+        ResourceTextContentType::Link => process_file_data::<LinkData>(
+            resource_data,
+            resource_text_content_type,
+            resource,
+            |link| {
                 let title = link.title.as_deref().unwrap_or_default();
                 let desc = link.description.as_deref().unwrap_or_default();
                 let url = link.url.as_deref().unwrap_or_default();
                 let content = link.content_plain.as_deref().unwrap_or_default();
                 format!("{title} {desc} {url}\n{content}")
-            })
-        }
+            },
+        ),
 
         ResourceTextContentType::ChatThread => process_file_data::<ChatThreadData>(
             resource_data,
@@ -506,11 +522,12 @@ where
     T: serde::de::DeserializeOwned,
 {
     // Check if this is a markdown file for supported resource types
-    if is_markdown_resource_type(&resource.resource.resource_type) && 
-       is_markdown_file(&resource.resource.resource_path) {
+    if is_markdown_resource_type(&resource.resource.resource_type)
+        && is_markdown_file(&resource.resource.resource_path)
+    {
         // Parse markdown with frontmatter
         let (content, frontmatter) = parse_markdown_with_frontmatter(data)?;
-        
+
         // Try to deserialize the frontmatter into our expected type
         match serde_yaml::from_value::<T>(frontmatter) {
             Ok(parsed_data) => {

@@ -8,11 +8,11 @@ use crate::{
         db::Database,
         models::{
             current_time, random_uuid, CompositeResource, EmbeddingResource, EmbeddingType,
-            InternalResourceTagNames, PostProcessingJob, Resource, ResourceMetadata,
-            ResourceOrSpace, ResourceProcessingState, ResourceTag, ResourceTagFilter,
-            ResourceTextContentMetadata, ResourceTextContentType, SearchEngine,
-            SearchResourcesParams, SearchResult, SearchResultItem, SearchResultSimple,
-            SearchResultSpaceItem, SpaceEntryExtended, SpaceEntryType,
+            InternalResourceTagNames, PaginatedResult, PaginationParams, PostProcessingJob,
+            Resource, ResourceMetadata, ResourceOrSpace, ResourceProcessingState, ResourceTag,
+            ResourceTagFilter, ResourceTextContentMetadata, ResourceTextContentType, SearchEngine,
+            SearchResourcesParams, SearchResult, SearchResultItem, SearchResultSpaceItem,
+            SpaceEntryExtended, SpaceEntryType,
         },
     },
     worker::{send_worker_response, Worker},
@@ -32,17 +32,17 @@ impl Worker {
 
         let resource_id = random_uuid();
         let ct = current_time();
-        let extension = crate::utils::get_resource_file_extension(&resource_type);    
+        let extension = crate::utils::get_resource_file_extension(&resource_type);
         let name = metadata.as_ref().map(|m| m.name.as_ref());
         let resource_name = crate::utils::get_resource_filename(&resource_id, name);
 
         let resource = Resource {
             id: resource_id.clone(),
             resource_path: Path::new(&self.resources_path)
-            .join(format!("{}.{}", resource_name, extension))
-            .as_os_str()
-            .to_string_lossy()
-            .to_string(),
+                .join(format!("{}.{}", resource_name, extension))
+                .as_os_str()
+                .to_string_lossy()
+                .to_string(),
             resource_type: resource_type.clone(),
             created_at: ct,
             updated_at: ct,
@@ -232,8 +232,10 @@ impl Worker {
     pub fn list_resources_by_tags(
         &mut self,
         tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        self.db.list_resources_by_tags(tags)
+        pagination: PaginationParams,
+    ) -> BackendResult<PaginatedResult<String>> {
+        self.db
+            .list_resource_ids_by_tags_paginated(&tags, pagination)
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -248,8 +250,10 @@ impl Worker {
     pub fn list_resources_by_tags_no_space(
         &mut self,
         tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        self.db.list_resources_by_tags_no_space(tags)
+        pagination: PaginationParams,
+    ) -> BackendResult<PaginatedResult<String>> {
+        self.db
+            .list_resource_ids_by_tags_no_space_paginated(&tags, pagination)
     }
 
     fn get_filtered_ids_for_search(
@@ -753,16 +757,16 @@ pub fn handle_resource_message(
             let result = worker.remove_resources_by_tags(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::ListResourcesByTags(tags) => {
-            let result = worker.list_resources_by_tags(tags);
+        ResourceMessage::ListResourcesByTags(tags, pagination_params) => {
+            let result = worker.list_resources_by_tags(tags, pagination_params);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListAllResourcesAndSpaces(tags) => {
             let result = worker.list_all_resources_and_spaces(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::ListResourcesByTagsNoSpace(tags) => {
-            let result = worker.list_resources_by_tags_no_space(tags);
+        ResourceMessage::ListResourcesByTagsNoSpace(tags, pagination_params) => {
+            let result = worker.list_resources_by_tags_no_space(tags, pagination_params);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::SearchResources(search_params) => {

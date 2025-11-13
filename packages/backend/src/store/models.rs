@@ -1000,3 +1000,16 @@ pub struct App {
     pub icon: Option<String>,
     pub meta: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaginationParams {
+    pub limit: usize,
+    pub cursor: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaginatedResult<T> {
+    pub items: Vec<T>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}

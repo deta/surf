@@ -214,6 +214,73 @@ impl Database {
         Ok(result)
     }
 
+    pub fn list_resource_ids_by_tags_paginated(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+        pagination: PaginationParams,
+    ) -> BackendResult<PaginatedResult<String>> {
+        if tags.is_empty() {
+            return Ok(PaginatedResult {
+                items: Vec::new(),
+                next_cursor: None,
+                has_more: false,
+            });
+        }
+
+        let (mut query, mut params) = list_resource_ids_by_tags_query(tags, 0);
+
+        let param_offset = params.len();
+        query = format!(
+            "SELECT r.id, r.created_at 
+             FROM ({}) rt
+             JOIN resources r ON rt.resource_id = r.id
+             WHERE r.deleted = 0",
+            query
+        );
+
+        if let Some(cursor_id) = &pagination.cursor {
+            query = format!("{} AND r.id < ?{}", query, param_offset + 1);
+            params.push(cursor_id.clone());
+        }
+
+        // NOTE: created_at DESC is the primary ordering, but we need a secondary ordering on id DESC
+        query = format!(
+            "{} ORDER BY r.created_at DESC, r.id DESC LIMIT ?{}",
+            query,
+            params.len() + 1
+        );
+        // fetch one extra to check has_more
+        params.push((pagination.limit + 1).to_string());
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut rows = stmt.query(rusqlite::params_from_iter(params.iter()))?;
+
+        let mut items = Vec::new();
+
+        while let Some(row) = rows.next()? {
+            let id: String = row.get(0)?;
+            items.push(id);
+        }
+
+        // check if there are more results and remove the extra item
+        let has_more = items.len() > pagination.limit;
+        if has_more {
+            items.pop();
+        }
+
+        let next_cursor = if has_more {
+            items.last().cloned()
+        } else {
+            None
+        };
+
+        Ok(PaginatedResult {
+            items,
+            next_cursor,
+            has_more,
+        })
+    }
+
     pub fn list_resource_ids_by_tags_space_id(
         &self,
         tags: &Vec<ResourceTagFilter>,
@@ -265,6 +332,72 @@ impl Database {
             result.push(resource_id?);
         }
         Ok(result)
+    }
+
+    pub fn list_resource_ids_by_tags_no_space_paginated(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+        pagination: PaginationParams,
+    ) -> BackendResult<PaginatedResult<String>> {
+        if tags.is_empty() {
+            return Ok(PaginatedResult {
+                items: Vec::new(),
+                next_cursor: None,
+                has_more: false,
+            });
+        }
+
+        let (mut query, mut params) = list_resource_ids_by_tags_query(tags, 0);
+
+        query = format!(
+            "SELECT rt.resource_id, r.created_at 
+             FROM ({}) rt
+             JOIN resources r ON rt.resource_id = r.id
+             WHERE rt.resource_id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)",
+            query
+        );
+
+        if let Some(cursor_id) = &pagination.cursor {
+            query = format!("{} AND rt.resource_id < ?{}", query, params.len() + 1);
+            params.push(cursor_id.clone());
+        }
+
+        // NOTE: created_at DESC is the primary ordering, but we need a secondary ordering on id DESC
+        query = format!(
+            "{} ORDER BY r.created_at DESC, rt.resource_id DESC LIMIT ?{}",
+            query,
+            params.len() + 1
+        );
+        // fetch one extra to check has_more
+        params.push((pagination.limit + 1).to_string());
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut rows = stmt.query(rusqlite::params_from_iter(params.iter()))?;
+
+        let mut items = Vec::new();
+
+        while let Some(row) = rows.next()? {
+            let id: String = row.get(0)?;
+            items.push(id);
+        }
+
+        // check if there are more results and remove the extra item
+        let has_more = items.len() > pagination.limit;
+        if has_more {
+            items.pop();
+        }
+
+        let next_cursor = if has_more {
+            items.last().cloned()
+        } else {
+            None
+        };
+
+        Ok(PaginatedResult {
+            items,
+            next_cursor,
+            has_more,
+        })
     }
 }
 
