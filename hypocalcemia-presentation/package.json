@@ -1,0 +1,17 @@
+{
+  "name": "hypocalcemia-presentation",
+  "version": "1.0.0",
+  "description": "Professional PowerPoint presentation on hypocalcemia in pediatric patients",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate-presentation.js",
+    "start": "node generate-presentation.js"
+  },
+  "keywords": ["powerpoint", "medical", "pediatrics", "hypocalcemia"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}
