@@ -295,7 +295,6 @@ impl Worker {
             }
         }
         let keyword_limit = params.keyword_limit.unwrap_or(100);
-        let include_annotations = params.include_annotations.unwrap_or(false);
 
         let semantic_search_enabled = params.semantic_search_enabled.unwrap_or_default();
 
@@ -308,12 +307,9 @@ impl Worker {
         let filtered_resource_ids =
             self.get_filtered_ids_for_search(params.resource_tag_filters, params.space_id.clone())?;
 
-        let db_results = self.db.search_resources(
-            &params.query,
-            &filtered_resource_ids,
-            include_annotations,
-            Some(keyword_limit),
-        )?;
+        let db_results =
+            self.db
+                .search_resources(&params.query, &filtered_resource_ids, Some(keyword_limit))?;
 
         for result in db_results.items {
             if result.resource.resource.resource_type.ends_with(".ignore") {

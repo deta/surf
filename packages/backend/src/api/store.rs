@@ -576,18 +576,13 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
             .ok()
             .map(|js_number| js_number.value(&mut cx) as i64)
     });
-    let include_annotations = cx.argument_opt(6).and_then(|arg| {
-        arg.downcast::<JsBoolean, FunctionContext>(&mut cx)
-            .ok()
-            .map(|js_boolean| js_boolean.value(&mut cx))
-    });
-    let space_id = cx.argument_opt(7).and_then(|arg| {
+    let space_id = cx.argument_opt(6).and_then(|arg| {
         arg.downcast::<JsString, FunctionContext>(&mut cx)
             .ok()
             .map(|js_string| js_string.value(&mut cx))
     });
 
-    let keyword_limit = cx.argument_opt(8).and_then(|arg| {
+    let keyword_limit = cx.argument_opt(7).and_then(|arg| {
         arg.downcast::<JsNumber, FunctionContext>(&mut cx)
             .ok()
             .map(|js_number| js_number.value(&mut cx) as i64)
@@ -602,7 +597,6 @@ fn js_search_resources(mut cx: FunctionContext) -> JsResult<JsPromise> {
                 semantic_search_enabled,
                 embeddings_distance_threshold,
                 embeddings_limit,
-                include_annotations,
                 space_id,
                 keyword_limit,
             },

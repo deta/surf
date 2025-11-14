@@ -250,7 +250,6 @@ impl Database {
         &self,
         keyword: &str,
         filtered_resource_ids: &Option<Vec<String>>,
-        include_annotations: bool,
         keyword_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         // The Some value in filtered_resource_ids indicates that the search MUST have the filter ids
@@ -283,19 +282,6 @@ impl Database {
             keyword_limit,
         )?);
 
-        if include_annotations {
-            let mut annotations = self.list_resource_annotations(
-                results
-                    .iter()
-                    .map(|item| item.resource.resource.id.as_str())
-                    .collect::<Vec<_>>()
-                    .as_ref(),
-            )?;
-            for item in results.iter_mut() {
-                item.resource.resource_annotations =
-                    annotations.remove(item.resource.resource.id.as_str())
-            }
-        }
         Ok(SearchResult {
             total: results.len() as i64,
             items: results,

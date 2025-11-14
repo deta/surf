@@ -135,7 +135,6 @@ export interface SFFSResourceOrSpace {
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
 
 export interface SFFSSearchGeneralParameters {
-  includeAnnotations?: boolean
   spaceId?: string
   keywordLimit?: number // Limit for keyword-based search results
 }

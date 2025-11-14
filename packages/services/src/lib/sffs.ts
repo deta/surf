@@ -578,7 +578,6 @@ export class SFFS {
       parameters?.semanticEnabled,
       parameters?.semanticDistanceThreshold,
       parameters?.semanticLimit,
-      parameters?.includeAnnotations,
       parameters?.spaceId,
       parameters?.keywordLimit
     )

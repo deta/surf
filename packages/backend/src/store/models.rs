@@ -951,7 +951,6 @@ pub struct SearchResourcesParams {
     pub semantic_search_enabled: Option<bool>,
     pub embeddings_distance_threshold: Option<f32>,
     pub embeddings_limit: Option<i64>,
-    pub include_annotations: Option<bool>,
     pub space_id: Option<String>,
     pub keyword_limit: Option<i64>,
 }
