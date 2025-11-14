@@ -1,3 +1,31 @@
+<svelte:options runes={true} />
+
+<script module lang="ts">
+  export function attachLoadMore(node: HTMLElement, loadMoreFn: () => void) {
+    const observerOptions = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          loadMoreFn()
+        }
+      })
+    }, observerOptions)
+
+    observer.observe(node)
+
+    return {
+      destroy() {
+        observer.disconnect()
+      }
+    }
+  }
+</script>
+
 <script lang="ts">
   import { Icon } from '@deta/icons'
   import { Notebook, useNotebookManager } from '@deta/services/notebooks'
@@ -18,7 +46,7 @@
     openResource
   } from '../../handlers/notebookOpenHandlers'
   import NotebookEditor from './NotebookEditor/NotebookEditor.svelte'
-  import { conditionalArrayItem, SearchResourceTags, truncate, useThrottle } from '@deta/utils'
+  import { conditionalArrayItem, SearchResourceTags, truncate } from '@deta/utils'
   import { type OpenTarget, type Option, ResourceTypes, SpaceEntryOrigin } from '@deta/types'
   import NotebookSidebarNoteName from './NotebookSidebarNoteName.svelte'
   import {
@@ -29,6 +57,7 @@
   } from '@deta/services/resources'
   import { useMessagePortClient } from '@deta/services/messagePort'
   import { promptForFilesAndTurnIntoResources } from '@deta/services'
+  import { onMount } from 'svelte'
 
   let { notebookId }: { notebookId?: string } = $props()
 
@@ -37,15 +66,38 @@
 
   let searchQuery = $state('')
   let categoryScrollContainer = $state<HTMLElement>()
-  let collapsedCategories = $state<Set<string>>(new Set(['notes', 'sources']))
 
-  let resourceRenderCnt = $state(20)
-  const handleMediaWheel = useThrottle(() => {
-    resourceRenderCnt += 4
-  }, 5)
+  let notesLoadMoreTrigger = $state<HTMLElement | null>(null)
+  let sourcesLoadMoreTrigger = $state<HTMLElement | null>(null)
+
+  // on index page, collapse notes and sources by default only showing notebooks
+  // on within a notebook, collapse only sources by default
+  let collapsedCategories = $derived<Set<string>>(
+    notebookId ? new Set(['sources']) : new Set(['notes', 'sources'])
+  )
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
+
+  // intersection observer for scroll-to-load
+  onMount(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.target.dataset.loadMore) {
+          const loadMoreFn = (entry.target as any)._loadMoreFn
+          if (loadMoreFn) loadMoreFn()
+        }
+      })
+    }, observerOptions)
+
+    return () => observer.disconnect()
+  })
 
   // TODO: have a sane way to manage `Drafts` in the notebook manager itself
   const notebooksList = $derived(
@@ -257,8 +309,8 @@
   </section>
 {/snippet}
 
-{#snippet notesList(visibleItems, allItems)}
-  {#if allItems.length <= 0}
+{#snippet notesList({ resources, searchResults, searching, pagination, loadMore })}
+  {#if resources.length <= 0}
     {#if searchQuery.length > 0}
       {@render noResultsSnippet('notes')}
     {:else}
@@ -279,8 +331,8 @@
       </div>
     {/if}
   {:else}
-    <div class="sources-grid" onwheel={handleMediaWheel}>
-      {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
+    <div class="sources-grid">
+      {#each searchResults ?? resources as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
         <ResourceLoader {resource}>
           {#snippet children(resource: Resource)}
             <NotebookSidebarNoteName {resource} sourceNotebookId={notebookId} />
@@ -288,11 +340,27 @@
         </ResourceLoader>
       {/each}
     </div>
+
+    {#if pagination.hasMore && !searchQuery}
+      <div
+        class="load-more-trigger"
+        bind:this={notesLoadMoreTrigger}
+        data-load-more="notes"
+        use:attachLoadMore={loadMore}
+      >
+        {#if pagination.isLoadingMore}
+          <div class="loading-more">
+            <Icon name="spinner" />
+            <span class="typo-title-sm">Loading more...</span>
+          </div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 {/snippet}
 
-{#snippet sourcesList(visibleItems, allItems)}
-  {#if allItems.length <= 0}
+{#snippet sourcesList({ resources, searchResults, searching, pagination, loadMore })}
+  {#if resources.length <= 0}
     {#if searchQuery.length > 0}
       {@render noResultsSnippet('media')}
     {:else}
@@ -313,8 +381,8 @@
       </div>
     {/if}
   {:else}
-    <div class="sources-grid" onwheel={handleMediaWheel}>
-      {#each visibleItems as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
+    <div class="sources-grid">
+      {#each searchResults ?? resources as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
         <ResourceLoader {resource}>
           {#snippet children(resource: Resource)}
             <SourceCard
@@ -334,9 +402,20 @@
         </ResourceLoader>
       {/each}
     </div>
-    {#if resourceRenderCnt < allItems.length && !searchQuery}
-      <div style="text-align:center;width:100%;margin-top:1rem;">
-        <span class="typo-title-sm" style="opacity: 0.5;">Scroll to load more</span>
+
+    {#if pagination.hasMore && !searchQuery}
+      <div
+        class="load-more-trigger"
+        bind:this={sourcesLoadMoreTrigger}
+        data-load-more="sources"
+        use:attachLoadMore={loadMore}
+      >
+        {#if pagination.isLoadingMore}
+          <div class="loading-more">
+            <Icon name="spinner" />
+            <span class="typo-title-sm">Loading more...</span>
+          </div>
+        {/if}
       </div>
     {/if}
   {/if}
@@ -453,6 +532,7 @@
                 <ul>
                   {#if !notebookId}
                     <SurfLoader
+                      pageSize={20}
                       tags={[
                         SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
                       ]}
@@ -466,12 +546,13 @@
                         }
                       }}
                     >
-                      {#snippet children([resources, searchResult, searching])}
-                        {@render notesList(searchResult ?? resources, resources)}
+                      {#snippet children(loaderData)}
+                        {@render notesList(loaderData)}
                       {/snippet}
                     </SurfLoader>
                   {:else if notebookId === 'drafts'}
                     <SurfLoader
+                      pageSize={20}
                       excludeWithinSpaces
                       tags={[
                         SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
@@ -486,8 +567,8 @@
                         }
                       }}
                     >
-                      {#snippet children([resources, searchResult, searching])}
-                        {@render notesList(searchResult ?? resources, resources)}
+                      {#snippet children(loaderData)}
+                        {@render notesList(loaderData)}
                       {/snippet}
                     </SurfLoader>
                   {:else}
@@ -517,6 +598,7 @@
               {:else if category.id === 'sources'}
                 {#if !notebookId}
                   <SurfLoader
+                    pageSize={20}
                     tags={[
                       SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
                     ]}
@@ -530,12 +612,13 @@
                       }
                     }}
                   >
-                    {#snippet children([resources, searchResult, searching])}
-                      {@render sourcesList(searchResult ?? resources, resources)}
+                    {#snippet children(loaderData)}
+                      {@render sourcesList(loaderData)}
                     {/snippet}
                   </SurfLoader>
                 {:else if notebookId === 'drafts'}
                   <SurfLoader
+                    pageSize={20}
                     excludeWithinSpaces
                     tags={[
                       SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
@@ -550,8 +633,8 @@
                       }
                     }}
                   >
-                    {#snippet children([resources, searchResult, searching])}
-                      {@render sourcesList(searchResult ?? resources, resources)}
+                    {#snippet children(loaderData)}
+                      {@render sourcesList(loaderData)}
                     {/snippet}
                   </SurfLoader>
                 {:else}
@@ -567,9 +650,9 @@
                   >
                     {#snippet children([notebook, searchResult, searching])}
                       {@render sourcesList(
-                        filterOtherResources(notebook?.contents ?? [], searchResult)
-                          .slice(0, resourceRenderCnt)
-                          .map((e) => e.entry_id),
+                        filterOtherResources(notebook?.contents ?? [], searchResult).map(
+                          (e) => e.entry_id
+                        ),
                         filterOtherResources(notebook?.contents ?? [], searchResult).map(
                           (e) => e.entry_id
                         )
@@ -809,6 +892,21 @@
     to {
       opacity: 1;
     }
+  }
+
+  .load-more-trigger {
+    text-align: center;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.5rem;
+  }
+
+  .loading-more {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    color: light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
   }
 
   .empty {

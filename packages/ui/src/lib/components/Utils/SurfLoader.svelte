@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte'
   import { type Resource } from '@deta/services/resources'
-  import { useNotebookManager, type Notebook } from '@deta/services/notebooks'
+  import { useNotebookManager } from '@deta/services/notebooks'
   import {
     ResourceTagsBuiltInKeys,
     type Option,
@@ -9,7 +9,7 @@
     type SFFSSearchParameters,
     type SFFSPaginatedResult
   } from '@deta/types'
-  import { type ResourceSearchResult, useResourceManager } from '@deta/services/resources'
+  import { useResourceManager } from '@deta/services/resources'
   import { SearchResourceTags, useCancelableDebounce, useThrottle } from '@deta/utils'
   import { NotebookManagerEvents } from '@deta/services/notebooks'
 
@@ -150,7 +150,7 @@
       pagination.hasMore = false
 
       const result = await loadPage()
-      resources = result
+      resources = result.items
       pagination.cursor = result.next_cursor
       pagination.hasMore = result.has_more
     } catch (error) {
@@ -170,7 +170,7 @@
 
       const result = await loadPage(pagination.cursor)
       const newResources = result.items
-      resources = [...resources, ...newResources]
+      resources.push(...newResources)
 
       pagination.cursor = result.next_cursor
       pagination.hasMore = result.has_more
