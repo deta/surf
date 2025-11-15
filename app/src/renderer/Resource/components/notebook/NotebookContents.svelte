@@ -57,7 +57,6 @@
   } from '@deta/services/resources'
   import { useMessagePortClient } from '@deta/services/messagePort'
   import { promptForFilesAndTurnIntoResources } from '@deta/services'
-  import { onMount } from 'svelte'
 
   let { notebookId }: { notebookId?: string } = $props()
 
@@ -78,26 +77,6 @@
 
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
-
-  // intersection observer for scroll-to-load
-  onMount(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '100px',
-      threshold: 0.1
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && entry.target.dataset.loadMore) {
-          const loadMoreFn = (entry.target as any)._loadMoreFn
-          if (loadMoreFn) loadMoreFn()
-        }
-      })
-    }, observerOptions)
-
-    return () => observer.disconnect()
-  })
 
   // TODO: have a sane way to manage `Drafts` in the notebook manager itself
   const notebooksList = $derived(
