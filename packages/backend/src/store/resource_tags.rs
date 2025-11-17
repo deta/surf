@@ -258,8 +258,7 @@ impl Database {
         query = format!(
             "SELECT r.updated_at, r.id
              FROM ({}) rt
-             JOIN resources r ON rt.resource_id = r.id
-             WHERE r.deleted = 0",
+             JOIN resources r ON rt.resource_id = r.id",
             query
         );
 
@@ -285,11 +284,13 @@ impl Database {
         if let Some(cursor_id) = &pagination.cursor {
             let (updated_at, id) = PaginationCursor::decode_date_id(cursor_id)?;
             query = format!(
-                "{} AND r.updated_at < ?{} AND r.id < ?{}",
+                "{} WHERE (r.updated_at < ?{} OR (r.updated_at = ?{} AND r.id < ?{}))",
                 query,
                 cursor_param_offset + 1,
-                cursor_param_offset + 2
+                cursor_param_offset + 2,
+                cursor_param_offset + 3
             );
+            params.push(updated_at.clone());
             params.push(updated_at);
             params.push(id);
         }
