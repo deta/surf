@@ -26,9 +26,7 @@ Surf is built to be personal and open, in service of the user. This means local 
 
 ## Installation
 
-Checkout the [GitHub releases](https://github.com/deta/surf/releases) for the latest stable version of Surf for MacOS, Windows and Linux.
-
-You can also download Surf with some managed & additional features (e.g. AI) from the [Deta website](https://deta.surf). That version is subject to different terms.
+Checkout the [installation guide](./docs/INSTALL.md) for detailed instructions.
 
 For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
