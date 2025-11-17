@@ -55,6 +55,9 @@
     "brace-expansion": "^2.0.2",
     "tmp": "^0.2.4",
     "devalue": "^5.4.1",
-    "expr-eval-fork": "^3.0.0"
+    "expr-eval-fork": "^3.0.0",
+    "gray-matter/js-yaml": "3.14.2",
+    "front-matter/js-yaml": "3.14.2",
+    "electron-builder/**/js-yaml": "4.1.1"
   }
 }
