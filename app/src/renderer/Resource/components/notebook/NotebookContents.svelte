@@ -206,25 +206,6 @@
           : () => handleRemoveFromNotebook(sourceNotebookId, resource.id)
     })
 
-  const filterNoteResources = (
-    resources: NotebookEntry[],
-    searchResults: Option<ResourceSearchResult>
-  ) => {
-    if (searchResults) {
-      return searchResults.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
-    } else {
-      return resources.filter((e) => e.resource_type === ResourceTypes.DOCUMENT_SPACE_NOTE)
-    }
-  }
-  const filterOtherResources = (
-    resources: NotebookEntry[],
-    searchResults: Option<ResourceSearchResult>
-  ) => {
-    if (searchResults) {
-      return searchResults.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
-    } else return resources.filter((e) => e.resource_type !== ResourceTypes.DOCUMENT_SPACE_NOTE)
-  }
-
   const categories = $derived([
     ...conditionalArrayItem(notebookId === undefined, {
       id: 'notebooks',
@@ -636,18 +617,6 @@
     flex-direction: column;
     gap: 1.5rem;
     padding-bottom: 1rem;
-    animation: slideDown 0.3s ease-out;
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 
   .category-section {
@@ -698,7 +667,6 @@
   .category-content {
     max-height: min(360px, 40vh);
     overflow-y: auto;
-    animation: expandCategory 0.3s ease-out;
     transform-origin: top;
     scroll-behavior: smooth;
     scrollbar-width: thin;
@@ -731,39 +699,10 @@
     }
   }
 
-  @keyframes expandCategory {
-    from {
-      opacity: 0;
-      transform: scaleY(0.95);
-      max-height: 0;
-    }
-    to {
-      opacity: 1;
-      transform: scaleY(1);
-      max-height: min(360px, 40vh);
-    }
-  }
-
   .notebook-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(11.3ch, 1fr));
     gap: 0.5rem;
-  }
-
-  .notebook-wrapper {
-    animation: fadeInUp 0.4s ease-out backwards;
-    animation-delay: var(--delay, 0ms);
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
 
   .sources-grid {
@@ -771,16 +710,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
     grid-auto-rows: 60px;
-    animation: fadeIn 0.3s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
   }
 
   .load-more-trigger {
