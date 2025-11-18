@@ -156,26 +156,6 @@ impl Database {
         Ok(results)
     }
 
-    // search for resources that match the given tags and only return the resource ids
-    pub fn list_resources_by_tags(
-        &self,
-        tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        let filtered_resource_ids = self.list_resource_ids_by_tags(&tags)?;
-
-        if filtered_resource_ids.is_empty() {
-            return Ok(SearchResultSimple {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        Ok(SearchResultSimple {
-            total: filtered_resource_ids.len() as i64,
-            items: filtered_resource_ids,
-        })
-    }
-
     pub fn list_all_resources_and_spaces(
         &self,
         resource_tags: Vec<ResourceTagFilter>,

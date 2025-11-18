@@ -223,18 +223,31 @@ impl Database {
     pub fn list_resource_ids_by_tags(
         &self,
         tags: &Vec<ResourceTagFilter>,
+        space_id: Option<String>,
     ) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
-        if tags.is_empty() {
-            return Ok(result);
+        let mut cursor: Option<String> = None;
+        let page_size = 100;
+
+        loop {
+            let paginated_result = self.list_resource_ids_by_tags_paginated(
+                tags,
+                PaginationParams {
+                    limit: page_size,
+                    cursor: cursor.clone(),
+                },
+                space_id.clone(),
+            )?;
+
+            result.extend(paginated_result.items);
+
+            if !paginated_result.has_more {
+                break;
+            }
+
+            cursor = paginated_result.next_cursor;
         }
-        let (query, params) = list_resource_ids_by_tags_query(tags, 0);
-        let mut stmt = self.conn.prepare(&query)?;
-        let resource_ids =
-            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
-        for resource_id in resource_ids {
-            result.push(resource_id?);
-        }
+
         Ok(result)
     }
 
@@ -242,7 +255,7 @@ impl Database {
         &self,
         tags: &Vec<ResourceTagFilter>,
         pagination: PaginationParams,
-        // None = no space filter, Some("") = no space, Some(id) = specific space
+        // None = no space filter(all spaces), Some("") = does not belong to any space, Some(id) = specific space
         space_filter: Option<&str>,
     ) -> BackendResult<PaginatedResult<String>> {
         if tags.is_empty() {

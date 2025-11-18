@@ -214,7 +214,7 @@ impl Worker {
 
     #[instrument(level = "trace", skip(self))]
     pub fn remove_resources_by_tags(&mut self, tags: Vec<ResourceTagFilter>) -> BackendResult<()> {
-        let ids = self.db.list_resource_ids_by_tags(&tags)?;
+        let ids = self.db.list_resource_ids_by_tags(&tags, None)?;
         self.remove_resources(ids)
     }
 
@@ -254,14 +254,9 @@ impl Worker {
         space_id: Option<String>,
     ) -> BackendResult<Option<Vec<String>>> {
         if let Some(resource_tag_filters) = resource_tag_filters {
-            if let Some(space_id) = space_id {
-                return Ok(Some(self.db.list_resource_ids_by_tags_space_id(
-                    &resource_tag_filters,
-                    &space_id,
-                )?));
-            }
             return Ok(Some(
-                self.db.list_resource_ids_by_tags(&resource_tag_filters)?,
+                self.db
+                    .list_resource_ids_by_tags(&resource_tag_filters, space_id)?,
             ));
         }
         if let Some(space_id) = space_id {
