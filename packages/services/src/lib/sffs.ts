@@ -500,10 +500,13 @@ export class SFFS {
 
   async listResourceIDsByTags(
     tags: SFFSResourceTag[],
-    excludeWithinSpaces: boolean = false,
-    paginationParams: SFFSPaginationParams
+    paginationParams: SFFSPaginationParams,
+    // undefined = all spaces
+    // empty string = does not belong to any space
+    // non empty string = specific space
+    spaceId?: string
   ) {
-    this.log.debug('listing resources by tags', tags, excludeWithinSpaces)
+    this.log.debug('listing resources by tags', tags, paginationParams, spaceId)
     const tagsData = JSON.stringify(
       tags.map(
         (tag) =>
@@ -517,13 +520,11 @@ export class SFFS {
       )
     )
     const paginationData = JSON.stringify(paginationParams)
-
-    let raw: string
-    if (excludeWithinSpaces) {
-      raw = await this.backend.js__store_list_resources_by_tags_no_space(tagsData, paginationData)
-    } else {
-      raw = await this.backend.js__store_list_resources_by_tags(tagsData, paginationData)
-    }
+    const raw = await this.backend.js__store_list_resources_by_tags(
+      tagsData,
+      paginationData,
+      spaceId
+    )
     const parsed = this.parseData<SFFSPaginatedResult<string>>(raw)
     return parsed
   }

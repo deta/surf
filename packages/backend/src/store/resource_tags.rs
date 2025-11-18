@@ -242,7 +242,8 @@ impl Database {
         &self,
         tags: &Vec<ResourceTagFilter>,
         pagination: PaginationParams,
-        space_filter: Option<&str>, // None = no space filter, Some("") = no space, Some(id) = specific space
+        // None = no space filter, Some("") = no space, Some(id) = specific space
+        space_filter: Option<&str>,
     ) -> BackendResult<PaginatedResult<String>> {
         if tags.is_empty() {
             return Ok(PaginatedResult {
@@ -327,8 +328,9 @@ impl Database {
         &self,
         tags: &Vec<ResourceTagFilter>,
         pagination: PaginationParams,
+        space_filter: Option<String>,
     ) -> BackendResult<PaginatedResult<String>> {
-        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, None)
+        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, space_filter.as_deref())
     }
 
     pub fn list_resource_ids_by_tags_space_id(
@@ -357,39 +359,13 @@ impl Database {
         Ok(result)
     }
 
-    pub fn list_resource_ids_by_tags_no_space(
+    pub fn list_resource_ids_by_tags_space_id_paginated(
         &self,
         tags: &Vec<ResourceTagFilter>,
-    ) -> BackendResult<Vec<String>> {
-        if tags.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut result = Vec::new();
-        let (query, params) = list_resource_ids_by_tags_query(tags, 0);
-
-        let final_query = format!(
-        "SELECT rt.resource_id FROM ({}) rt 
-         JOIN resources r ON rt.resource_id = r.id 
-         WHERE rt.resource_id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)
-         ORDER BY r.created_at DESC",
-        query
-    );
-
-        let mut stmt = self.conn.prepare(&final_query)?;
-        let resource_ids =
-            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
-        for resource_id in resource_ids {
-            result.push(resource_id?);
-        }
-        Ok(result)
-    }
-
-    pub fn list_resource_ids_by_tags_no_space_paginated(
-        &self,
-        tags: &Vec<ResourceTagFilter>,
+        space_id: &str,
         pagination: PaginationParams,
     ) -> BackendResult<PaginatedResult<String>> {
-        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, Some(""))
+        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, Some(space_id))
     }
 }
 

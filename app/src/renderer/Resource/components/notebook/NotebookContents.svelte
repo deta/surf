@@ -33,7 +33,6 @@
     Button,
     contextMenu,
     NotebookCover,
-    NotebookLoader,
     openDialog,
     ResourceLoader,
     SearchInput,
@@ -509,136 +508,46 @@
                 </div>
               {:else if category.id === 'notes'}
                 <ul>
-                  {#if !notebookId}
-                    <SurfLoader
-                      pageSize={20}
-                      tags={[
+                  <SurfLoader
+                    pageSize={20}
+                    {notebookId}
+                    tags={[
+                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
+                    ]}
+                    search={{
+                      query: searchQuery,
+                      tags: [
                         SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
-                      ]}
-                      search={{
-                        query: searchQuery,
-                        tags: [
-                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
-                        ],
-                        parameters: {
-                          semanticSearch: false
-                        }
-                      }}
-                    >
-                      {#snippet children(loaderData)}
-                        {@render notesList(loaderData)}
-                      {/snippet}
-                    </SurfLoader>
-                  {:else if notebookId === 'drafts'}
-                    <SurfLoader
-                      pageSize={20}
-                      excludeWithinSpaces
-                      tags={[
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
-                      ]}
-                      search={{
-                        query: searchQuery,
-                        tags: [
-                          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')
-                        ],
-                        parameters: {
-                          semanticSearch: false
-                        }
-                      }}
-                    >
-                      {#snippet children(loaderData)}
-                        {@render notesList(loaderData)}
-                      {/snippet}
-                    </SurfLoader>
-                  {:else}
-                    <NotebookLoader
-                      {notebookId}
-                      search={{
-                        query: searchQuery,
-                        parameters: {
-                          semanticSearch: false
-                        }
-                      }}
-                      fetchContents
-                    >
-                      {#snippet children([notebook, searchResult, searching])}
-                        {@render notesList(
-                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
-                            (e) => e.entry_id
-                          ),
-                          filterNoteResources(notebook?.contents ?? [], searchResult).map(
-                            (e) => e.entry_id
-                          )
-                        )}
-                      {/snippet}
-                    </NotebookLoader>
-                  {/if}
+                      ],
+                      parameters: {
+                        semanticSearch: false
+                      }
+                    }}
+                  >
+                    {#snippet children(loaderData)}
+                      {@render notesList(loaderData)}
+                    {/snippet}
+                  </SurfLoader>
                 </ul>
               {:else if category.id === 'sources'}
-                {#if !notebookId}
-                  <SurfLoader
-                    pageSize={20}
-                    tags={[
+                <SurfLoader
+                  pageSize={20}
+                  {notebookId}
+                  tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
+                  search={{
+                    query: searchQuery,
+                    tags: [
                       SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                    ]}
-                    search={{
-                      query: searchQuery,
-                      tags: [
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                      ],
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                  >
-                    {#snippet children(loaderData)}
-                      {@render sourcesList(loaderData)}
-                    {/snippet}
-                  </SurfLoader>
-                {:else if notebookId === 'drafts'}
-                  <SurfLoader
-                    pageSize={20}
-                    excludeWithinSpaces
-                    tags={[
-                      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                    ]}
-                    search={{
-                      query: searchQuery,
-                      tags: [
-                        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')
-                      ],
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                  >
-                    {#snippet children(loaderData)}
-                      {@render sourcesList(loaderData)}
-                    {/snippet}
-                  </SurfLoader>
-                {:else}
-                  <NotebookLoader
-                    {notebookId}
-                    search={{
-                      query: searchQuery,
-                      parameters: {
-                        semanticSearch: false
-                      }
-                    }}
-                    fetchContents
-                  >
-                    {#snippet children([notebook, searchResult, searching])}
-                      {@render sourcesList(
-                        filterOtherResources(notebook?.contents ?? [], searchResult).map(
-                          (e) => e.entry_id
-                        ),
-                        filterOtherResources(notebook?.contents ?? [], searchResult).map(
-                          (e) => e.entry_id
-                        )
-                      )}
-                    {/snippet}
-                  </NotebookLoader>
-                {/if}
+                    ],
+                    parameters: {
+                      semanticSearch: false
+                    }
+                  }}
+                >
+                  {#snippet children(loaderData)}
+                    {@render sourcesList(loaderData)}
+                  {/snippet}
+                </SurfLoader>
               {/if}
             </div>
           {/if}

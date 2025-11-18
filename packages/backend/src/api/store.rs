@@ -19,10 +19,6 @@ pub fn register_exported_functions(cx: &mut ModuleContext) -> NeonResult<()> {
         js_list_resources_by_tags,
     )?;
     cx.export_function(
-        "js__store_list_resources_by_tags_no_space",
-        js_list_resources_by_tags_no_space,
-    )?;
-    cx.export_function(
         "js__store_list_all_resources_and_spaces",
         js_list_all_resources_and_spaces,
     )?;
@@ -481,38 +477,19 @@ fn js_list_resources_by_tags(mut cx: FunctionContext) -> JsResult<JsPromise> {
             Err(err) => return cx.throw_error(err),
         };
 
+    // None = no space filter, Some("") = no space, Some(id) = specific space
+    let space_id = cx.argument_opt(3).and_then(|arg| {
+        arg.downcast::<JsString, FunctionContext>(&mut cx)
+            .ok()
+            .map(|js_string| js_string.value(&mut cx))
+    });
+
     let (deferred, promise) = cx.promise();
     tunnel.worker_send_js(
         WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTags(
             resource_tags,
             pagination_params,
-        )),
-        deferred,
-    );
-
-    Ok(promise)
-}
-
-fn js_list_resources_by_tags_no_space(mut cx: FunctionContext) -> JsResult<JsPromise> {
-    let tunnel = cx.argument::<JsBox<WorkerTunnel>>(0)?;
-
-    let resource_tags: Vec<models::ResourceTagFilter> =
-        match parse_json_argument(&mut cx, 1, "Resource tags") {
-            Ok(tags) => tags,
-            Err(err) => return cx.throw_error(err),
-        };
-
-    let pagination_params: models::PaginationParams =
-        match parse_json_argument(&mut cx, 2, "Pagination parameters") {
-            Ok(params) => params,
-            Err(err) => return cx.throw_error(err),
-        };
-
-    let (deferred, promise) = cx.promise();
-    tunnel.worker_send_js(
-        WorkerMessage::ResourceMessage(ResourceMessage::ListResourcesByTagsNoSpace(
-            resource_tags,
-            pagination_params,
+            space_id,
         )),
         deferred,
     );

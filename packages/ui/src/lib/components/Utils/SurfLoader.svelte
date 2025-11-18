@@ -27,7 +27,7 @@
 
   let {
     tags,
-    excludeWithinSpaces = false,
+    notebookId,
     search,
     pageSize = 50,
     children,
@@ -35,7 +35,7 @@
     error
   }: {
     tags: SFFSResourceTag[]
-    excludeWithinSpaces?: boolean
+    notebookId?: string
     search?: Search
     pageSize?: number
     children: Snippet<
@@ -67,6 +67,15 @@
     isLoadingMore: false
   })
 
+  // TODO: fix using 'Drafts' like this
+  const spaceId = $derived.by(() => {
+    if (notebookId?.toLowerCase() === 'drafts') {
+      // in the API an empty spaceId refers to the Drafts space i.e. does not belong to any space)
+      return ''
+    }
+    return notebookId
+  })
+
   const { execute: runQuery, cancel: cancelQuery } = useCancelableDebounce((search: Search) => {
     try {
       searching = true
@@ -83,7 +92,7 @@
           ],
           {
             ...search.parameters,
-            spaceId: undefined
+            spaceId
           }
         )
         .then((results) => {
@@ -94,7 +103,7 @@
             )
             .map((e) => e.resource)
             .filter((e) => {
-              if (excludeWithinSpaces && resources !== undefined) {
+              if (resources !== undefined) {
                 return resources.find((item) => item.id === e.id)
               }
               return e
@@ -134,7 +143,7 @@
       },
       {
         includeAnnotations: false,
-        excludeWithinSpaces
+        spaceId
       }
     )
 
@@ -204,8 +213,7 @@
         if (searchResults) searchResults = searchResults.filter((e) => !resourceIds.includes(e.id))
       })
     ]
-
-    if (excludeWithinSpaces) {
+    if (!notebookId) {
       unsubs.push(notebookManager.on(NotebookManagerEvents.AddedResources, () => load()))
     }
 

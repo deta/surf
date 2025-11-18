@@ -971,14 +971,13 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
   async listResourceIDsByTags(
     tags: SFFSResourceTag[],
-    excludeWithinSpaces: boolean = false,
-    paginationParams: SFFSPaginationParams
+    paginationParams: SFFSPaginationParams,
+    // undefined = all spaces
+    // empty string = does not belong to any space
+    // non empty string = specific space
+    spaceId?: string
   ) {
-    const results = await this.sffs.listResourceIDsByTags(
-      tags,
-      excludeWithinSpaces,
-      paginationParams
-    )
+    const results = await this.sffs.listResourceIDsByTags(tags, paginationParams, spaceId)
     return results
   }
 
@@ -986,13 +985,15 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
   async listResourcesByTags(
     tags: SFFSResourceTag[],
     paginationParams: SFFSPaginationParams,
-    opts: { includeAnnotations?: boolean; excludeWithinSpaces?: boolean } = {}
+    opts: {
+      includeAnnotations?: boolean
+      // undefined = all spaces
+      // empty string = does not belong to any space
+      // non empty string = specific space
+      spaceId?: string
+    } = {}
   ) {
-    const result = await this.sffs.listResourceIDsByTags(
-      tags,
-      opts?.excludeWithinSpaces ?? false,
-      paginationParams
-    )
+    const result = await this.sffs.listResourceIDsByTags(tags, paginationParams, opts?.spaceId)
     // TODO: is this the right behavior?
     if (!result) {
       return []

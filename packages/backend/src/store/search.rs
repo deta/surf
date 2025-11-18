@@ -226,26 +226,6 @@ impl Database {
         Ok(items)
     }
 
-    // list all resources that are not in a space by list of tags
-    pub fn list_resources_by_tags_no_space(
-        &self,
-        tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        let filtered_resource_ids = self.list_resource_ids_by_tags_no_space(&tags)?;
-
-        if filtered_resource_ids.is_empty() {
-            return Ok(SearchResultSimple {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        Ok(SearchResultSimple {
-            total: filtered_resource_ids.len() as i64,
-            items: filtered_resource_ids,
-        })
-    }
-
     pub fn search_resources(
         &self,
         keyword: &str,

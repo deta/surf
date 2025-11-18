@@ -233,9 +233,11 @@ impl Worker {
         &mut self,
         tags: Vec<ResourceTagFilter>,
         pagination: PaginationParams,
+        // None = no space filter, Some("") = no space, Some(id) = specific space
+        space_filter: Option<String>,
     ) -> BackendResult<PaginatedResult<String>> {
         self.db
-            .list_resource_ids_by_tags_paginated(&tags, pagination)
+            .list_resource_ids_by_tags_paginated(&tags, pagination, space_filter)
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -244,16 +246,6 @@ impl Worker {
         tags: Vec<ResourceTagFilter>,
     ) -> BackendResult<Vec<ResourceOrSpace>> {
         self.db.list_all_resources_and_spaces(tags)
-    }
-
-    // Only return resource ids
-    pub fn list_resources_by_tags_no_space(
-        &mut self,
-        tags: Vec<ResourceTagFilter>,
-        pagination: PaginationParams,
-    ) -> BackendResult<PaginatedResult<String>> {
-        self.db
-            .list_resource_ids_by_tags_no_space_paginated(&tags, pagination)
     }
 
     fn get_filtered_ids_for_search(
@@ -753,16 +745,12 @@ pub fn handle_resource_message(
             let result = worker.remove_resources_by_tags(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::ListResourcesByTags(tags, pagination_params) => {
-            let result = worker.list_resources_by_tags(tags, pagination_params);
+        ResourceMessage::ListResourcesByTags(tags, pagination_params, space_filter) => {
+            let result = worker.list_resources_by_tags(tags, pagination_params, space_filter);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListAllResourcesAndSpaces(tags) => {
             let result = worker.list_all_resources_and_spaces(tags);
-            send_worker_response(&mut worker.channel, oneshot, result);
-        }
-        ResourceMessage::ListResourcesByTagsNoSpace(tags, pagination_params) => {
-            let result = worker.list_resources_by_tags_no_space(tags, pagination_params);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::SearchResources(search_params) => {

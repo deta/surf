@@ -114,8 +114,9 @@ pub enum ResourceMessage {
     RemoveResources(Vec<String>),
     RemoveResourcesByTags(Vec<ResourceTagFilter>),
     RecoverResource(String),
-    ListResourcesByTags(Vec<ResourceTagFilter>, PaginationParams),
-    ListResourcesByTagsNoSpace(Vec<ResourceTagFilter>, PaginationParams),
+    // Last Param is space filter where
+    // None = no space filter, Some("") = no space, Some(id) = specific space
+    ListResourcesByTags(Vec<ResourceTagFilter>, PaginationParams, Option<String>),
     ListAllResourcesAndSpaces(Vec<ResourceTagFilter>),
     SearchResources(SearchResourcesParams),
     UpdateResource(Resource),
