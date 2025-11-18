@@ -96,18 +96,7 @@
           }
         )
         .then((results) => {
-          searchResults = results.resources
-            .sort(
-              (a, b) =>
-                new Date(b.resource.updatedAt).getTime() - new Date(a.resource.updatedAt).getTime()
-            )
-            .map((e) => e.resource)
-            .filter((e) => {
-              if (resources !== undefined) {
-                return resources.find((item) => item.id === e.id)
-              }
-              return e
-            })
+          searchResults = results.resources.map((e) => e.resource)
           searching = false
         })
     } catch (e) {
@@ -221,7 +210,7 @@
   })
 </script>
 
-{#if isLoading}
+{#if isLoading || searching}
   {@render loading?.()}
 {:else}
   {@render children?.({

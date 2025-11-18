@@ -262,14 +262,22 @@
   })
 </script>
 
+{#snippet loadingSnippet()}
+  <div class="loading-more">
+    <Icon name="spinner" />
+  </div>
+{/snippet}
+
 {#snippet noResultsSnippet(categoryLabel: string)}
   <section class="empty">
     <p>No {categoryLabel} found for "{searchQuery}"</p>
   </section>
 {/snippet}
 
-{#snippet notesList({ resources, searchResults, searching, pagination, loadMore })}
-  {#if resources.length <= 0}
+{#snippet notesList({ resources, searchResults, pagination, loadMore })}
+  {#if searchQuery && searchResults?.length === 0}
+    {@render noResultsSnippet('notes')}
+  {:else if resources.length <= 0}
     {#if searchQuery.length > 0}
       {@render noResultsSnippet('notes')}
     {:else}
@@ -308,37 +316,32 @@
         use:attachLoadMore={loadMore}
       >
         {#if pagination.isLoadingMore}
-          <div class="loading-more">
-            <Icon name="spinner" />
-            <span class="typo-title-sm">Loading more...</span>
-          </div>
+          {@render loadingSnippet()}
         {/if}
       </div>
     {/if}
   {/if}
 {/snippet}
 
-{#snippet sourcesList({ resources, searchResults, searching, pagination, loadMore })}
-  {#if resources.length <= 0}
-    {#if searchQuery.length > 0}
-      {@render noResultsSnippet('media')}
-    {:else}
-      <div class="px py">
-        <div class="empty">
-          <h1>Surf Media</h1>
+{#snippet sourcesList({ resources, searchResults, pagination, loadMore })}
+  {#if searchQuery && searchResults?.length === 0}
+    {@render noResultsSnippet('media')}
+  {:else if resources.length === 0}
+    <div class="px py">
+      <div class="empty">
+        <h1>Surf Media</h1>
 
-          <p style="max-width: 55ch;">
-            Add media from across the web or your system to your notebook and to use it together
-            with Surf Notes to turn them into something great.
-          </p>
+        <p style="max-width: 55ch;">
+          Add media from across the web or your system to your notebook and to use it together with
+          Surf Notes to turn them into something great.
+        </p>
 
-          <p style="max-width: 57ch;">
-            Save web pages using the "Save" button while browsing, import local files or add
-            existing media from other notebooks by right-clicking them.
-          </p>
-        </div>
+        <p style="max-width: 57ch;">
+          Save web pages using the "Save" button while browsing, import local files or add existing
+          media from other notebooks by right-clicking them.
+        </p>
       </div>
-    {/if}
+    </div>
   {:else}
     <div class="sources-grid">
       {#each searchResults ?? resources as resource, i (typeof resource === 'string' ? resource : resource.id + i)}
@@ -370,10 +373,7 @@
         use:attachLoadMore={loadMore}
       >
         {#if pagination.isLoadingMore}
-          <div class="loading-more">
-            <Icon name="spinner" />
-            <span class="typo-title-sm">Loading more...</span>
-          </div>
+          {@render loadingSnippet()}
         {/if}
       </div>
     {/if}
@@ -509,6 +509,9 @@
                     {#snippet children(loaderData)}
                       {@render notesList(loaderData)}
                     {/snippet}
+                    {#snippet loading()}
+                      {@render loadingSnippet()}
+                    {/snippet}
                   </SurfLoader>
                 </ul>
               {:else if category.id === 'sources'}
@@ -528,6 +531,9 @@
                 >
                   {#snippet children(loaderData)}
                     {@render sourcesList(loaderData)}
+                  {/snippet}
+                  {#snippet loading()}
+                    {@render loadingSnippet()}
                   {/snippet}
                 </SurfLoader>
               {/if}
