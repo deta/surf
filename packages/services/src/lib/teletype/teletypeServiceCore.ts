@@ -1,10 +1,8 @@
 import { useLogScope } from '@deta/utils'
 import type { ActionProvider, TeletypeAction, TeletypeServiceOptions } from './types'
 import { SearchProvider } from './providers/SearchProvider'
-import { AskProvider } from './providers/AskProvider'
 import { type TeletypeActionSerialized, useMessagePortPrimary } from '../messagePort'
-import { MentionItemType, type MentionItem } from '@deta/editor'
-import { ResourcesProvider } from './providers/ResourcesProvider'
+import { type MentionItem } from '@deta/editor'
 import { useBrowser } from '../browser'
 import { HostnameProvider } from './providers/HostnameProvider'
 import type { Fn } from '@deta/types'
@@ -72,7 +70,6 @@ export class TeletypeServiceCore {
     // Register external/async providers
     this.registerProvider(new HostnameProvider()) // Async Hostname suggestions
     this.registerProvider(new SearchProvider()) // Async Google suggestions
-    this.registerProvider(new ResourcesProvider()) // SFFS Resources search
     this.registerProvider(new NotebooksProvider()) // Notebooks search
   }
 
