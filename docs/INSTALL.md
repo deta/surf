@@ -5,6 +5,8 @@ Surf is available as an open source release for macOS, Windows, and Linux. Follo
 - [Download](#download)
 - [macOS Security Warning](#macos-security-warning)
 - [Windows Security Warning](#windows-security-warning)
+- [AI](#ai)
+- [Migrating from managed Surf](#migrating-from-managed-surf)
 
 ## Download
 
