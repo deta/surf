@@ -535,7 +535,9 @@ pub struct PostProcessingJob {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type")]
+#[derive(Default)]
 pub enum ResourceProcessingState {
+    #[default]
     Pending,
     Started,
     Failed { message: String },
@@ -558,11 +560,6 @@ impl FromSql for ResourceProcessingState {
     }
 }
 
-impl Default for ResourceProcessingState {
-    fn default() -> Self {
-        Self::Pending
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LegacyResourceTextContent {

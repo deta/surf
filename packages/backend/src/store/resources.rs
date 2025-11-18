@@ -153,7 +153,7 @@ impl Database {
             .conn
             .prepare("SELECT resource_id FROM space_entries WHERE space_id = ?1")?;
         // TODO: document this behavior better
-        if space_id == "" {
+        if space_id.is_empty() {
             stmt = self.
                 conn.
                 prepare("SELECT id from resources WHERE id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)")?;
