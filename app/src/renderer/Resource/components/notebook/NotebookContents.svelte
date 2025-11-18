@@ -469,12 +469,13 @@
                         height="17.25ch"
                         fontSize="0.85rem"
                         onclick={(e) => handleNotebookClick(notebook.id, e)}
+                        canPin={notebook.id !== 'drafts'}
                         onpin={() => handlePinNotebook(notebook.id)}
                         onunpin={() => handleUnPinNotebook(notebook.id)}
                         {@attach contextMenu({
                           canOpen: notebook.id !== 'drafts',
                           items: [
-                            !notebook.data.pinned
+                            !notebook.data?.pinned
                               ? {
                                   type: 'action',
                                   text: 'Add to Favorites',
