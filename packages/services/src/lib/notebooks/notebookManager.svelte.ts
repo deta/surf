@@ -118,7 +118,7 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
 
         // Listen to resource updates (e.g., name changes) to keep notebook contents fresh
         this.resourceManager.on(ResourceManagerEvents.Updated, (resource: Resource) => {
-          this.log.debug('Resource updated, refreshing affected notebooks:', resource.id)
+          console.log('Resource updated, refreshing affected notebooks:', resource.id)
 
           // Find notebooks that contain this resource and refresh their contents
           for (const notebook of this.notebooks.values()) {
@@ -134,11 +134,12 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
 
           // Send cross-renderer message for resource updates
           if (isMainRenderer()) {
-            useViewManager()?.viewsValue.forEach((view) =>
+            useViewManager()?.viewsValue.forEach((view) => {
+              console.log('xxxx-sending resource update to view', view.id, resource.id)
               this.messagePort.extern_state_resourceUpdated.send(view.id, {
                 resourceId: resource.id
               })
-            )
+            })
           } else {
             this.messagePort.extern_state_resourceUpdated.send({
               resourceId: resource.id

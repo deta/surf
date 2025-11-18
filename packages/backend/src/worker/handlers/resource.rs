@@ -169,6 +169,29 @@ impl Worker {
     }
 
     #[instrument(level = "trace", skip(self))]
+    fn read_resource_by_path(&mut self, path: &str) -> BackendResult<Option<CompositeResource>> {
+        let resource = match self.db.get_resource_by_path(path)? {
+            Some(data) => data,
+            None => return Ok(None),
+        };
+        let metadata = self.db.get_resource_metadata_by_resource_id(&resource.id)?;
+        let processing_state = self.db.get_resource_processing_state(&resource.id)?;
+        let space_ids = self.db.list_space_ids_by_resource_id(&resource.id)?;
+        let resource_tags = self.db.list_resource_tags(&resource.id)?;
+        let resource_tags = (!resource_tags.is_empty()).then_some(resource_tags);
+
+        Ok(Some(CompositeResource {
+            resource,
+            metadata,
+            text_content: None,
+            resource_tags,
+            resource_annotations: None,
+            post_processing_job: processing_state,
+            space_ids: Some(space_ids),
+        }))
+    }
+
+    #[instrument(level = "trace", skip(self))]
     pub fn remove_resources(&mut self, ids: Vec<String>) -> BackendResult<()> {
         if ids.is_empty() {
             return Ok(());
@@ -739,6 +762,10 @@ pub fn handle_resource_message(
         }
         ResourceMessage::GetResource(id, include_annotations) => {
             let result = worker.read_resource(&id, include_annotations);
+            send_worker_response(&mut worker.channel, oneshot, result);
+        }
+        ResourceMessage::GetResourceByPath(path) => {
+            let result = worker.read_resource_by_path(&path);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::RemoveResources(ids) => {

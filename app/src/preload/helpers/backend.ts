@@ -535,6 +535,10 @@ export class ResourceHandle {
     await this.fd.close()
     await this.onWriteHappened()
   }
+
+  async delete(): Promise<void> {
+    await fsp.unlink(this.filePath)
+  }
 }
 
 export const initResources = (sffs: ReturnType<typeof initSFFS>, opts?: SFFSOptions) => {
@@ -590,6 +594,13 @@ export const initResources = (sffs: ReturnType<typeof initSFFS>, opts?: SFFSOpti
     resourceHandles.delete(resourceId)
   }
 
+  async function deleteResource(resourceId: string) {
+    const resourceHandle = resourceHandles.get(resourceId)
+    if (!resourceHandle) throw new Error('resource handle is not open')
+
+    await resourceHandle.delete()
+  }
+
   async function triggerPostProcessing(resourceId: string) {
     await (sffs as any).js__store_resource_post_process(resourceId)
   }
@@ -620,6 +631,7 @@ export const initResources = (sffs: ReturnType<typeof initSFFS>, opts?: SFFSOpti
     writeResource,
     flushResource,
     closeResource,
+    deleteResource,
     updateResourceHash,
     triggerPostProcessing
   }

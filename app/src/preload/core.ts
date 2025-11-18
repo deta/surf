@@ -27,7 +27,8 @@ import {
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs,
   RendererType,
-  type ControlWindow
+  type ControlWindow,
+  ResourceFileChange
 } from '@deta/types'
 
 import {
@@ -474,6 +475,33 @@ const eventHandlers = {
     return IPC_EVENTS_RENDERER.updateViewBounds.on((_, { viewId, bounds }) => {
       try {
         callback(viewId, bounds)
+      } catch (error) {
+        // noop
+      }
+    })
+  },
+
+  onResourceFileChange: (
+    callback: (
+      type: ResourceFileChange['type'],
+      data: ResourceFileChange['data'],
+      file?: ResourceFileChange['file']
+    ) => void
+  ) => {
+    return IPC_EVENTS_RENDERER.resourceFileChange.on(async (_, { type, data }) => {
+      try {
+        let file: File | undefined = undefined
+
+        if (type === 'create' && data.newPath) {
+          const fileBuffer = await fsp.readFile(data.newPath)
+          const fileName = path.basename(data.newPath)
+          const fileType = mime.lookup(fileName.toLowerCase()) || 'application/octet-stream'
+          file = new File([fileBuffer as any], fileName, {
+            type: fileType
+          })
+        }
+
+        callback(type, data, file)
       } catch (error) {
         // noop
       }

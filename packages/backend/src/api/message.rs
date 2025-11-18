@@ -111,6 +111,7 @@ pub enum ResourceMessage {
         resource_metadata: Option<ResourceMetadata>,
     },
     GetResource(String, bool),
+    GetResourceByPath(String),
     RemoveResources(Vec<String>),
     RemoveResourcesByTags(Vec<ResourceTagFilter>),
     RecoverResource(String),

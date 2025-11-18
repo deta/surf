@@ -175,3 +175,14 @@ export type SpaceEntrySearchOptions = {
   order?: 'asc' | 'desc'
   limit?: number
 }
+
+export type ResourceFileChange = {
+  type: 'create' | 'delete' | 'rename'
+  data: {
+    oldName?: string
+    newName?: string
+    oldPath?: string
+    newPath?: string
+  }
+  file?: File
+}

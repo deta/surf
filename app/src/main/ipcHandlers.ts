@@ -8,6 +8,7 @@ import { handleDragStart } from './drag'
 import {
   BrowserType,
   ElectronAppInfo,
+  ResourceFileChange,
   RightSidebarTab,
   SFFSResource,
   UserSettings
@@ -716,5 +717,15 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.updateViewBounds.sendToWebContents(window.webContents, { viewId, bounds })
+  },
+
+  resourceFileChange(data: ResourceFileChange) {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.resourceFileChange.sendToWebContents(window.webContents, data)
   }
 }

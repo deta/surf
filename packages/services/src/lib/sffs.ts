@@ -343,6 +343,18 @@ export class SFFS {
     return this.convertCompositeResourceToResource(composite)
   }
 
+  async getResourceByPath(path: string): Promise<SFFSResource | null> {
+    this.log.debug('getting resource by path', path)
+    const dataString = await this.backend.js__store_get_resource_by_path(path)
+
+    const composite = this.parseData<SFFSRawCompositeResource>(dataString)
+    if (!composite) {
+      return null
+    }
+
+    return this.convertCompositeResourceToResource(composite)
+  }
+
   async updateResource(resource: SFFSRawResource) {
     this.log.debug('updating resource with id', resource.id, 'data:', resource)
 
@@ -750,6 +762,19 @@ export class SFFS {
     const buffer = await data.arrayBuffer()
 
     await this.fs.writeResource(resourceId, buffer)
+    await this.fs.closeResource(resourceId)
+  }
+
+  async deleteDataFile(
+    resourceId: string,
+    resourceType: string,
+    resourcePath: string
+  ): Promise<void> {
+    this.log.debug('deleting data file', resourceId, resourceType, resourcePath)
+
+    await this.fs.openResource(resourceId, resourceType, resourcePath, 'w')
+
+    await this.fs.deleteResource(resourceId)
     await this.fs.closeResource(resourceId)
   }
 
