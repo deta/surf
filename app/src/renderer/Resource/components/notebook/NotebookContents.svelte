@@ -210,17 +210,26 @@
     ...conditionalArrayItem(notebookId === undefined, {
       id: 'notebooks',
       label: 'Notebooks',
-      icon: 'notebook'
+      icon: {
+        main: 'notebook',
+        add: 'add'
+      }
     }),
     {
       id: 'notes',
       label: 'Notes',
-      icon: 'note'
+      icon: {
+        main: 'note',
+        add: 'add'
+      }
     },
     {
       id: 'sources',
       label: 'Media',
-      icon: 'link'
+      icon: {
+        main: 'link',
+        add: 'folder.open'
+      }
     }
   ])
 
@@ -403,7 +412,9 @@
 
 <div class="library-container">
   <header class="library-header">
-    <h3 class="library-title">Your Library</h3>
+    <h3 class="library-title">
+      {notebookId ? 'Your Notebook' : 'Your Library'}
+    </h3>
     <SearchInput bind:value={searchQuery} />
   </header>
 
@@ -413,7 +424,7 @@
         <div class="category-section">
           <div class="category-header">
             <button class="category-tab" onclick={() => toggleCategoryCollapse(category.id)}>
-              <Icon name={category.icon} />
+              <Icon name={category.icon.main} />
               <span>{category.label}</span>
               <Icon
                 name={isCategoryCollapsed(category.id) ? 'chevron.down' : 'chevron.up'}
@@ -427,7 +438,7 @@
                 onclick={getAddButtonAction(category.id)}
                 class="category-add-btn"
               >
-                <Icon name="add" />
+                <Icon name={category.icon.add} />
               </Button>
             {/if}
           </div>
