@@ -15,7 +15,7 @@
     type OpenTarget,
     SpaceEntryOrigin
   } from '@deta/types'
-  import { NotebookLoader, SurfLoader, SourceCard } from '@deta/ui'
+  import { SurfLoader, SourceCard } from '@deta/ui'
   import { type Notebook } from '@deta/services/notebooks'
   import { type Resource, getResourceCtxItems } from '@deta/services/resources'
   import {
@@ -252,7 +252,7 @@
 
     <MaskedScroll --padding={'0.5rem 0.5rem 0rem 0.5rem'}>
       <SurfLoader
-        excludeWithinSpaces
+        {notebookId}
         tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
         search={{
           query,
@@ -280,7 +280,7 @@
       </SurfLoader>
 
       <SurfLoader
-        excludeWithinSpaces
+        {notebookId}
         tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
         search={{
           query,
@@ -457,6 +457,7 @@
       {/if}
 
       <SurfLoader
+        {notebookId}
         tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'eq')]}
         search={{
           query,
@@ -487,6 +488,7 @@
       </SurfLoader>
 
       <SurfLoader
+        {notebookId}
         tags={[SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE, 'ne')]}
         search={{
           query,
@@ -540,7 +542,7 @@
       </SurfLoader>
     </MaskedScroll>
   {:else}
-    <NotebookLoader
+    <SurfLoader
       {notebookId}
       search={{
         query,
@@ -548,7 +550,6 @@
           semanticSearch: false
         }
       }}
-      fetchContents
     >
       {#snippet children([notebook, searchResult, searching])}
         <header class="px pt">
@@ -661,7 +662,7 @@
           {/if}
         </MaskedScroll>
       {/snippet}
-    </NotebookLoader>
+    </SurfLoader>
   {/if}
 </aside>
 
