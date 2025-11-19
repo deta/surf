@@ -996,7 +996,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     const result = await this.sffs.listResourceIDsByTags(tags, paginationParams, opts?.spaceId)
     // TODO: is this the right behavior?
     if (!result) {
-      return []
+      throw new Error('failed to list resources by tags')
     }
     this.log.debug('found resource ids', result.items)
     const resources = (await Promise.all(

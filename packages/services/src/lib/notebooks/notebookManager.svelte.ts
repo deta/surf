@@ -1,8 +1,7 @@
 import { onMount, tick } from 'svelte'
-import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
+import { get, writable, type Writable } from 'svelte/store'
 
 import {
-  conditionalArrayItem,
   isDev,
   useLogScope,
   EventEmitterBase,
@@ -769,19 +768,16 @@ export class NotebookManager extends EventEmitterBase<NotebookManagerEventHandle
       await tick()
 
       const excludeAnnotations = !get(this.config.settings).show_annotations_in_oasis
-      // const selectedFilterType = get(this.selectedFilterType)
 
       this.log.debug('loading everything', { excludeAnnotations })
-      const resources = await this.resourceManager.listResourcesByTags(
+      const resources = await this.resourceManager.listAllResourcesByTags(
         [
           ...SearchResourceTags.NonHiddenDefaultTags({
             excludeAnnotations: excludeAnnotations
           })
-          // ...conditionalArrayItem(selectedFilterType !== null, selectedFilterType?.tags ?? []),
         ],
         {
           includeAnnotations: true
-          //excludeWithinSpaces: get(this.selectedNotebook) === 'inbox'
         }
       )
 
