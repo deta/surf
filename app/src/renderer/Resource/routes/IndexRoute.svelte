@@ -282,7 +282,6 @@
       flex-shrink: 1;
       padding-inline: 0.5rem;
 
-      transform: translateY(0px);
       transition:
         opacity 223ms ease-out,
         transform 223ms ease-out;

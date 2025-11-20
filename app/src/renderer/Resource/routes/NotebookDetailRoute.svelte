@@ -305,7 +305,6 @@
   section {
     padding-inline: 12px;
 
-    transform: translateY(0px);
     transition:
       opacity 223ms ease-out,
       transform 223ms ease-out;
