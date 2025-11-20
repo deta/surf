@@ -7,10 +7,8 @@
 
 <style lang="scss">
   .sidecar {
-    position: absolute;
-    top: 0;
-    left: calc(100% + 3.5rem);
-    max-width: 400px;
+    position: relative;
+    margin-bottom: 2rem !important;
     width: 100%;
     border: 1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(71, 85, 105, 0.3));
     border-radius: 12px;
@@ -25,21 +23,10 @@
     &:hover {
       opacity: 1;
     }
-  }
 
-  @media screen and (max-width: 1590px) {
-    .sidecar {
-      top: unset;
-      left: unset;
-      position: relative;
-      margin-top: 2rem;
-      margin-left: 1rem;
-      max-width: unset;
-
-      :global(li) {
-        max-width: 430px;
-        max-height: 4rem;
-      }
+    :global(li) {
+      max-width: 430px;
+      max-height: 4rem;
     }
   }
 </style>

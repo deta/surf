@@ -231,7 +231,11 @@
 
     unsubs.push(handlePreloadEvents())
 
-    await checkAndCreateDemoItems()
+    try {
+      await checkAndCreateDemoItems()
+    } catch (err) {
+      log.error('Error creating demo items:', err)
+    }
     // cleanup temporary resources created for chat
     await resourceManager.deleteResourcesByTags([ResourceTag.createdForChat(true)])
 

@@ -417,7 +417,6 @@
     </h3>
     <SearchInput bind:value={searchQuery} />
   </header>
-
   <div class="categories-scroll-container" bind:this={categoryScrollContainer}>
     <div class="categories-scroll-content">
       {#each categories as category}

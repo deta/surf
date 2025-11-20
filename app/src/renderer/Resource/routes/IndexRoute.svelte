@@ -254,12 +254,12 @@
 
     {#if $ttyQuery.length <= 0}
       <section class="contents-wrapper">
+        {#if viewLocation === ViewLocation.Tab && $ttyQuery.length <= 0}
+          <NotebookSidecarExample onselect={handleRunExample} />
+        {/if}
+
         <NotebookContents />
       </section>
-    {/if}
-
-    {#if viewLocation === ViewLocation.Tab && $ttyQuery.length <= 0}
-      <NotebookSidecarExample onselect={handleRunExample} />
     {/if}
   </main>
 
