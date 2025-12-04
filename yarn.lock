@@ -4372,10 +4372,10 @@ electron-vite@^4.0.0:
     magic-string "^0.30.17"
     picocolors "^1.1.1"
 
-electron@39.2.4:
-  version "39.2.4"
-  resolved "https://registry.yarnpkg.com/electron/-/electron-39.2.4.tgz#5ba17fd8fbfc5e6e50e6855f31b433a558030bea"
-  integrity sha512-KxPtwpFceQKSxRtUY39piHLYhJMMyHfOhc70e6zRnKGrbRdK6hzEqssth8IGjlKOdkeT4KCvIEngnNraYk39+g==
+electron@39.2.5:
+  version "39.2.5"
+  resolved "https://registry.yarnpkg.com/electron/-/electron-39.2.5.tgz#de4260573f5df13e8c4dc9e2879f9f15de3ac9a6"
+  integrity sha512-LXlOcH3CNopcVTQWjp680fMygdNrWKdIe3hyMtlyceO+Jd0b2hdMw1iWz36I+UUXHXPH87i937gXYi0jze2fCw==
   dependencies:
     "@electron/get" "^2.0.0"
     "@types/node" "^22.7.7"
