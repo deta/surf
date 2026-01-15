@@ -1724,36 +1724,17 @@
   dependencies:
     import-meta-resolve "^4.1.0"
 
-"@sveltejs/kit@^2.31.1":
-  version "2.31.1"
-  resolved "https://registry.npmjs.org/@sveltejs/kit/-/kit-2.31.1.tgz"
-  integrity sha512-Iv98PKh81amOjIWZ6Flqr6E7xYcrrYZ4mY9XwYUvaCDiQ4hYt5+jXR9CivcgLOTK+RcJ3K4guEYF4lFYQfTxaA==
+"@sveltejs/kit@^2.31.1", "@sveltejs/kit@^2.49.5":
+  version "2.49.5"
+  resolved "https://registry.yarnpkg.com/@sveltejs/kit/-/kit-2.49.5.tgz#da173805592e3ebd483bb77d45ef424078f0aaff"
+  integrity sha512-dCYqelr2RVnWUuxc+Dk/dB/SjV/8JBndp1UovCyCZdIQezd8TRwFLNZctYkzgHxRJtaNvseCSRsuuHPeUgIN/A==
   dependencies:
     "@standard-schema/spec" "^1.0.0"
     "@sveltejs/acorn-typescript" "^1.0.5"
     "@types/cookie" "^0.6.0"
     acorn "^8.14.1"
     cookie "^0.6.0"
-    devalue "^5.1.0"
-    esm-env "^1.2.2"
-    kleur "^4.1.5"
-    magic-string "^0.30.5"
-    mrmime "^2.0.0"
-    sade "^1.8.1"
-    set-cookie-parser "^2.6.0"
-    sirv "^3.0.0"
-
-"@sveltejs/kit@^2.47.2":
-  version "2.47.2"
-  resolved "https://registry.yarnpkg.com/@sveltejs/kit/-/kit-2.47.2.tgz#535e543732efa0e937910e12e42d0b23212051b0"
-  integrity sha512-mbUomaJTiADTrq6GT4ZvQ7v1rs0S+wXGMzrjFwjARAKMEF8FpOUmz2uEJ4M9WMJMQOXCMHpKFzJfdjo9O7M22A==
-  dependencies:
-    "@standard-schema/spec" "^1.0.0"
-    "@sveltejs/acorn-typescript" "^1.0.5"
-    "@types/cookie" "^0.6.0"
-    acorn "^8.14.1"
-    cookie "^0.6.0"
-    devalue "^5.3.2"
+    devalue "^5.6.2"
     esm-env "^1.2.2"
     kleur "^4.1.5"
     magic-string "^0.30.5"
@@ -4099,10 +4080,10 @@ detect-node@^2.0.4:
   resolved "https://registry.npmjs.org/detect-node/-/detect-node-2.1.0.tgz"
   integrity sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==
 
-devalue@^5.1.0, devalue@^5.3.2, devalue@^5.4.1:
-  version "5.6.0"
-  resolved "https://registry.yarnpkg.com/devalue/-/devalue-5.6.0.tgz#895e61331efdd8a7ef7b735a246fe9a3973e5339"
-  integrity sha512-BaD1s81TFFqbD6Uknni42TrolvEWA1Ih5L+OiHWmi4OYMJVwAYPGtha61I9KxTf52OvVHozHyjPu8zljqdF3uA==
+devalue@^5.4.1, devalue@^5.6.2:
+  version "5.6.2"
+  resolved "https://registry.yarnpkg.com/devalue/-/devalue-5.6.2.tgz#931e2bb1cc2b299e0f0fb9e4e5be8ebf521a25b8"
+  integrity sha512-nPRkjWzzDQlsejL1WVifk5rvcFi/y1onBRxjaFMjZeR9mFpqu2gmAZ9xUB9/IEanEP/vBtGeGganC/GO1fmufg==
 
 devlop@^1.0.0, devlop@^1.1.0:
   version "1.1.0"
@@ -6922,24 +6903,10 @@ lru-cache@^6.0.0:
   dependencies:
     yallist "^4.0.0"
 
-magic-string@^0.30.11, magic-string@^0.30.12, magic-string@^0.30.17, magic-string@^0.30.3, magic-string@^0.30.5, magic-string@~0.30.0:
-  version "0.30.17"
-  resolved "https://registry.npmjs.org/magic-string/-/magic-string-0.30.17.tgz"
-  integrity sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==
-  dependencies:
-    "@jridgewell/sourcemap-codec" "^1.5.0"
-
-magic-string@^0.30.19:
+magic-string@^0.30.11, magic-string@^0.30.12, magic-string@^0.30.17, magic-string@^0.30.19, magic-string@^0.30.3, magic-string@^0.30.4, magic-string@^0.30.5, magic-string@~0.30.0:
   version "0.30.21"
   resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.30.21.tgz#56763ec09a0fa8091df27879fd94d19078c00d91"
   integrity sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==
-  dependencies:
-    "@jridgewell/sourcemap-codec" "^1.5.5"
-
-magic-string@^0.30.4:
-  version "0.30.19"
-  resolved "https://registry.yarnpkg.com/magic-string/-/magic-string-0.30.19.tgz#cebe9f104e565602e5d2098c5f2e79a77cc86da9"
-  integrity sha512-2N21sPY9Ws53PZvsEpVtNuSW+ScYbQdp4b9qUaL+9QkHUrGFKo56Lg9Emg5s9V/qrtNBmiR01sYhUOwu3H+VOw==
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.5.5"
 
