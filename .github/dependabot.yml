@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: 'npm'
-    directory: '/app'
+    directories:
+      - '/app'
+      - '/'
     schedule:
       interval: 'daily'
     open-pull-requests-limit: 5
