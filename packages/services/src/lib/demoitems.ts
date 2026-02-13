@@ -112,14 +112,23 @@ export async function createDemoNote(note: DemoNote, notebook: Notebook) {
   const notebookManager = useNotebookManager()
   const resourceManager = useResourceManager()
 
-  const existingOnboardingNotes = await resourceManager.listResourcesByTags([
-    SearchResourceTags.Deleted(false),
-    SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
-    SearchResourceTags.Onboarding(note.id)
-  ])
+  const existingOnboardingNotes = await resourceManager.listResourcesByTags(
+    [
+      SearchResourceTags.Deleted(false),
+      SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
+      SearchResourceTags.Onboarding(note.id)
+    ],
+    {
+      limit: 1
+    }
+  )
 
-  if (existingOnboardingNotes.length > 0) {
-    const resource = existingOnboardingNotes[0] as ResourceNote
+  if (!existingOnboardingNotes) {
+    throw new Error('Failed to list existing onboarding notes')
+  }
+
+  if (existingOnboardingNotes.items.length > 0) {
+    const resource = existingOnboardingNotes.items[0] as ResourceNote
     log.debug('Onboarding note already exists, skipping creation', note, resource.id)
 
     await resource.updateContent(note.content)

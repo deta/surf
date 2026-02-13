@@ -95,7 +95,7 @@
   }
 </script>
 
-<div class="dialog-backdrop" onclick={handleClose}></div>
+<div class="dialog-backdrop"></div>
 <dialog open>
   <header>
     {#if mode === 'edit'}
@@ -182,14 +182,16 @@
     z-index: 10000;
     background: light-dark(rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.3));
     backdrop-filter: blur(1px);
+    max-width: none !important;
   }
+
   dialog {
     position: fixed;
     z-index: 10001;
     inset: 0;
 
     margin: 0 auto;
-    margin-top: 10%;
+    margin-top: 15% !important;
     width: 100%;
     max-width: 70ch;
 

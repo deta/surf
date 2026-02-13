@@ -8,11 +8,11 @@ use crate::{
         db::Database,
         models::{
             current_time, random_uuid, CompositeResource, EmbeddingResource, EmbeddingType,
-            InternalResourceTagNames, PostProcessingJob, Resource, ResourceMetadata,
-            ResourceOrSpace, ResourceProcessingState, ResourceTag, ResourceTagFilter,
-            ResourceTextContentMetadata, ResourceTextContentType, SearchEngine,
-            SearchResourcesParams, SearchResult, SearchResultItem, SearchResultSimple,
-            SearchResultSpaceItem, SpaceEntryExtended, SpaceEntryType,
+            InternalResourceTagNames, PaginatedResult, PaginationParams, PostProcessingJob,
+            Resource, ResourceMetadata, ResourceOrSpace, ResourceProcessingState, ResourceTag,
+            ResourceTagFilter, ResourceTextContentMetadata, ResourceTextContentType, SearchEngine,
+            SearchResourcesParams, SearchResult, SearchResultItem, SearchResultSpaceItem,
+            SpaceEntryExtended, SpaceEntryType,
         },
     },
     worker::{send_worker_response, Worker},
@@ -32,17 +32,17 @@ impl Worker {
 
         let resource_id = random_uuid();
         let ct = current_time();
-        let extension = crate::utils::get_resource_file_extension(&resource_type);    
+        let extension = crate::utils::get_resource_file_extension(&resource_type);
         let name = metadata.as_ref().map(|m| m.name.as_ref());
         let resource_name = crate::utils::get_resource_filename(&resource_id, name);
 
         let resource = Resource {
             id: resource_id.clone(),
             resource_path: Path::new(&self.resources_path)
-            .join(format!("{}.{}", resource_name, extension))
-            .as_os_str()
-            .to_string_lossy()
-            .to_string(),
+                .join(format!("{}.{}", resource_name, extension))
+                .as_os_str()
+                .to_string_lossy()
+                .to_string(),
             resource_type: resource_type.clone(),
             created_at: ct,
             updated_at: ct,
@@ -214,7 +214,7 @@ impl Worker {
 
     #[instrument(level = "trace", skip(self))]
     pub fn remove_resources_by_tags(&mut self, tags: Vec<ResourceTagFilter>) -> BackendResult<()> {
-        let ids = self.db.list_resource_ids_by_tags(&tags)?;
+        let ids = self.db.list_resource_ids_by_tags(&tags, None)?;
         self.remove_resources(ids)
     }
 
@@ -232,8 +232,12 @@ impl Worker {
     pub fn list_resources_by_tags(
         &mut self,
         tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        self.db.list_resources_by_tags(tags)
+        pagination: PaginationParams,
+        // None = no space filter, Some("") = no space, Some(id) = specific space
+        space_filter: Option<String>,
+    ) -> BackendResult<PaginatedResult<String>> {
+        self.db
+            .list_resource_ids_by_tags_paginated(&tags, pagination, space_filter)
     }
 
     #[instrument(level = "trace", skip(self))]
@@ -244,28 +248,15 @@ impl Worker {
         self.db.list_all_resources_and_spaces(tags)
     }
 
-    // Only return resource ids
-    pub fn list_resources_by_tags_no_space(
-        &mut self,
-        tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        self.db.list_resources_by_tags_no_space(tags)
-    }
-
     fn get_filtered_ids_for_search(
         &mut self,
         resource_tag_filters: Option<Vec<ResourceTagFilter>>,
         space_id: Option<String>,
     ) -> BackendResult<Option<Vec<String>>> {
         if let Some(resource_tag_filters) = resource_tag_filters {
-            if let Some(space_id) = space_id {
-                return Ok(Some(self.db.list_resource_ids_by_tags_space_id(
-                    &resource_tag_filters,
-                    &space_id,
-                )?));
-            }
             return Ok(Some(
-                self.db.list_resource_ids_by_tags(&resource_tag_filters)?,
+                self.db
+                    .list_resource_ids_by_tags(&resource_tag_filters, space_id)?,
             ));
         }
         if let Some(space_id) = space_id {
@@ -291,7 +282,6 @@ impl Worker {
             }
         }
         let keyword_limit = params.keyword_limit.unwrap_or(100);
-        let include_annotations = params.include_annotations.unwrap_or(false);
 
         let semantic_search_enabled = params.semantic_search_enabled.unwrap_or_default();
 
@@ -304,12 +294,9 @@ impl Worker {
         let filtered_resource_ids =
             self.get_filtered_ids_for_search(params.resource_tag_filters, params.space_id.clone())?;
 
-        let db_results = self.db.search_resources(
-            &params.query,
-            &filtered_resource_ids,
-            include_annotations,
-            Some(keyword_limit),
-        )?;
+        let db_results =
+            self.db
+                .search_resources(&params.query, &filtered_resource_ids, Some(keyword_limit))?;
 
         for result in db_results.items {
             if result.resource.resource.resource_type.ends_with(".ignore") {
@@ -753,16 +740,12 @@ pub fn handle_resource_message(
             let result = worker.remove_resources_by_tags(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
-        ResourceMessage::ListResourcesByTags(tags) => {
-            let result = worker.list_resources_by_tags(tags);
+        ResourceMessage::ListResourcesByTags(tags, pagination_params, space_filter) => {
+            let result = worker.list_resources_by_tags(tags, pagination_params, space_filter);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::ListAllResourcesAndSpaces(tags) => {
             let result = worker.list_all_resources_and_spaces(tags);
-            send_worker_response(&mut worker.channel, oneshot, result);
-        }
-        ResourceMessage::ListResourcesByTagsNoSpace(tags) => {
-            let result = worker.list_resources_by_tags_no_space(tags);
             send_worker_response(&mut worker.channel, oneshot, result);
         }
         ResourceMessage::SearchResources(search_params) => {

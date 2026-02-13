@@ -45,6 +45,7 @@
       : null
   )
   let imageError = $state(false)
+  let faviconError = $state(false)
 
   const handleClick = (e: MouseEvent) => {
     onclick?.(e)
@@ -57,6 +58,10 @@
 
   const handleImageError = () => {
     imageError = true
+  }
+
+  const handleFaviconError = () => {
+    faviconError = true
   }
 
   onMount(async () => {
@@ -138,17 +143,24 @@
             <div class="cover fallback">
               <DynamicIcon name={data.source.icon} width="1em" height="1em" />
             </div>
-          {:else}
-            <div class="cover fallback">
-              <DynamicIcon name={`file;;${getFileKind(resource.type)}`} width="1em" height="1em" />
-            </div>
+          {:else if faviconUrl && !faviconError}
+            <img
+              class="cover"
+              src={faviconUrl}
+              alt={data?.title || data?.metadata?.text}
+              decoding="async"
+              loading="eager"
+              ondragstart={(e) => e.preventDefault()}
+              onerror={handleFaviconError}
+            />
           {/if}
 
+          <!--
           {#if faviconUrl && faviconUrl.length > 0}
             <div class="favicon">
-              <img src={faviconUrl} alt="" />
             </div>
           {/if}
+          -->
         </div>
       </div>
 
@@ -216,11 +228,12 @@
     align-items: center;
     perspective: 200px;
     max-width: var(--max-width, inherit);
+    padding: 0.5em 0.5em;
 
     .card {
       flex-shrink: 0;
       --padding: 4px;
-      --corner-radius: 16px;
+      --corner-radius: 6px;
 
       padding: var(--padding);
       background: light-dark(#fff, #1a2438);
@@ -228,8 +241,8 @@
       border-radius: var(--corner-radius);
 
       width: var(--width, 100%);
+      height: var(--height, auto);
       aspect-ratio: 3.1 / 4;
-      //height: var(--height, auto);
       content-visibility: auto;
 
       box-shadow: light-dark(rgba(99, 99, 99, 0.15), rgba(0, 0, 0, 0.3)) 0px 2px 8px 0px;

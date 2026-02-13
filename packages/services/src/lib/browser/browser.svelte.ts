@@ -416,18 +416,21 @@ export class BrowserService {
     try {
       this.log.debug('Preparing new note view')
 
-      const existingResources = await this.resourceManager.listResourcesByTags([
-        SearchResourceTags.Deleted(false),
-        SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
-        SearchResourceTags.PreloadedResource(true)
-      ])
+      const existingResources = await this.resourceManager.listResourcesByTags(
+        [
+          SearchResourceTags.Deleted(false),
+          SearchResourceTags.ResourceType(ResourceTypes.DOCUMENT_SPACE_NOTE),
+          SearchResourceTags.PreloadedResource(true)
+        ],
+        { limit: 1 }
+      )
 
       this.log.debug('Found existing preloaded resources:', existingResources)
 
       let resource: ResourceNote | null = null
 
-      if (existingResources.length > 0) {
-        resource = existingResources[0] as ResourceNote
+      if (existingResources?.items.length > 0) {
+        resource = existingResources.items[0] as ResourceNote
       } else {
         resource = await this.resourceManager.createResourceNote(
           '',

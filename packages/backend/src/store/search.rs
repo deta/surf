@@ -156,26 +156,6 @@ impl Database {
         Ok(results)
     }
 
-    // search for resources that match the given tags and only return the resource ids
-    pub fn list_resources_by_tags(
-        &self,
-        tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        let filtered_resource_ids = self.list_resource_ids_by_tags(&tags)?;
-
-        if filtered_resource_ids.is_empty() {
-            return Ok(SearchResultSimple {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        Ok(SearchResultSimple {
-            total: filtered_resource_ids.len() as i64,
-            items: filtered_resource_ids,
-        })
-    }
-
     pub fn list_all_resources_and_spaces(
         &self,
         resource_tags: Vec<ResourceTagFilter>,
@@ -226,31 +206,10 @@ impl Database {
         Ok(items)
     }
 
-    // list all resources that are not in a space by list of tags
-    pub fn list_resources_by_tags_no_space(
-        &self,
-        tags: Vec<ResourceTagFilter>,
-    ) -> BackendResult<SearchResultSimple> {
-        let filtered_resource_ids = self.list_resource_ids_by_tags_no_space(&tags)?;
-
-        if filtered_resource_ids.is_empty() {
-            return Ok(SearchResultSimple {
-                items: vec![],
-                total: 0,
-            });
-        }
-
-        Ok(SearchResultSimple {
-            total: filtered_resource_ids.len() as i64,
-            items: filtered_resource_ids,
-        })
-    }
-
     pub fn search_resources(
         &self,
         keyword: &str,
         filtered_resource_ids: &Option<Vec<String>>,
-        include_annotations: bool,
         keyword_limit: Option<i64>,
     ) -> BackendResult<SearchResult> {
         // The Some value in filtered_resource_ids indicates that the search MUST have the filter ids
@@ -283,19 +242,6 @@ impl Database {
             keyword_limit,
         )?);
 
-        if include_annotations {
-            let mut annotations = self.list_resource_annotations(
-                results
-                    .iter()
-                    .map(|item| item.resource.resource.id.as_str())
-                    .collect::<Vec<_>>()
-                    .as_ref(),
-            )?;
-            for item in results.iter_mut() {
-                item.resource.resource_annotations =
-                    annotations.remove(item.resource.resource.id.as_str())
-            }
-        }
         Ok(SearchResult {
             total: results.len() as i64,
             items: results,

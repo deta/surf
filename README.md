@@ -26,9 +26,7 @@ Surf is built to be personal and open, in service of the user. This means local 
 
 ## Installation
 
-Checkout the [GitHub releases](https://github.com/deta/surf/releases) for the latest stable version of Surf for MacOS, Windows and Linux.
-
-You can also download Surf with some managed & additional features (e.g. AI) from the [Deta website](https://deta.surf). That version is subject to different terms.
+Checkout the [installation guide](./docs/INSTALL.md) for detailed instructions.
 
 For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -128,9 +126,7 @@ Unless otherwise specified in the file or directory, all code defaults to the Ap
 
 See [LICENSE](LICENSE) for more details about the Apache 2.0 license.
 
-**Note:** The Deta name and logos are trademarks of Deta GmbH and are **not** covered by the Apache 2.0 license.
-
-Deta GmbH is a commercial open source company. Surf is designed to operate as open source software without needing Deta's servers. Deta GmbH also offers a modified version of Surf (which integrates with Deta's servers) and is subject to separate terms and conditions. This version of Surf can be downloaded from the [Deta website](https://deta.surf/).
+**Note:** The Deta name and logos are **not** covered by the Apache 2.0 license.
 
 ## Acknowledgements
 

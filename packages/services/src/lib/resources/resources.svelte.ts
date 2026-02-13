@@ -27,6 +27,8 @@ import {
   type AiSFFSQueryResponse,
   type SFFSResourceMetadata,
   type SFFSResourceTag,
+  type SFFSPaginationParams,
+  type SFFSPaginatedResult,
   ResourceTypes,
   type SFFSResource,
   type ResourceDataLink,
@@ -967,23 +969,63 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     this.resources = new SvelteMap<string, ResourceObject>(resources)
   }
 
-  async listResourceIDsByTags(tags: SFFSResourceTag[], excludeWithinSpaces: boolean = false) {
-    const results = await this.sffs.listResourceIDsByTags(tags, excludeWithinSpaces)
+  async listResourceIDsByTags(
+    tags: SFFSResourceTag[],
+    paginationParams: SFFSPaginationParams,
+    // undefined = all spaces
+    // empty string = does not belong to any space
+    // non empty string = specific space
+    spaceId?: string
+  ) {
+    const results = await this.sffs.listResourceIDsByTags(tags, paginationParams, spaceId)
     return results
   }
 
+  // TODO: why leak SFFS types and still have this abstractions?
   async listResourcesByTags(
+    tags: SFFSResourceTag[],
+    paginationParams: SFFSPaginationParams,
+    opts: {
+      includeAnnotations?: boolean
+      // undefined = all spaces
+      // empty string = does not belong to any space
+      // non empty string = specific space
+      spaceId?: string
+    } = {}
+  ) {
+    const result = await this.sffs.listResourceIDsByTags(tags, paginationParams, opts?.spaceId)
+    // TODO: is this the right behavior?
+    if (!result) {
+      throw new Error('failed to list resources by tags')
+    }
+    this.log.debug('found resource ids', result.items)
+    const resources = (await Promise.all(
+      result.items.map((id) => this.findOrGetResourceObject(id, opts))
+    )) as Resource[]
+    return {
+      items: resources.filter((r) => r !== null),
+      next_cursor: result.next_cursor,
+      has_more: result.has_more
+    } as SFFSPaginatedResult<Resource>
+  }
+
+  async listAllResourcesByTags(
     tags: SFFSResourceTag[],
     opts: { includeAnnotations?: boolean; excludeWithinSpaces?: boolean } = {}
   ) {
-    const resourceIds = await this.sffs.listResourceIDsByTags(
+    const result = await this.sffs.listAllResourceIDsByTags(
       tags,
       opts?.excludeWithinSpaces ?? false
     )
-    this.log.debug('found resource ids', resourceIds)
-    return (await Promise.all(
-      resourceIds.map((id) => this.findOrGetResourceObject(id, opts))
+    // TODO: is this the right behavior?
+    if (!result) {
+      return []
+    }
+    this.log.debug('found resource ids', result)
+    const resources = (await Promise.all(
+      result.map((id) => this.findOrGetResourceObject(id, opts))
     )) as Resource[]
+    return resources.filter((r) => r !== null)
   }
 
   async listAllResourcesAndSpaces(tags: SFFSResourceTag[]) {
@@ -1047,30 +1089,6 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     }
   }
 
-  // async searchForNearbyResources(resourceId: string, parameters?: SFFSSearchProximityParameters) {
-  //   const rawResults = await this.sffs.searchForNearbyResources(resourceId, parameters)
-  //   const results = rawResults.map(
-  //     (item) =>
-  //       ({
-  //         id: item.resource.id,
-  //         engine: item.engine,
-  //         cardIds: item.card_ids,
-  //         resource: this.findOrCreateResourceObject(item.resource)
-  //       }) as ResourceSearchResultItem
-  //   )
-
-  //   return results
-  // }
-
-  async getResourceAnnotations() {
-    const resources = await this.listResourcesByTags([
-      SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION),
-      SearchResourceTags.Deleted(false)
-    ])
-
-    return resources as ResourceAnnotation[]
-  }
-
   async getResourcesFromSourceURL(url: string, tags?: SFFSResourceTag[]) {
     const surfUrlMatch = url.match(/surf:\/\/resource\/([^\/]+)/)
     if (surfUrlMatch) {
@@ -1083,7 +1101,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
       return []
     }
 
-    const resources = await this.listResourcesByTags([
+    const resources = await this.listAllResourcesByTags([
       SearchResourceTags.CanonicalURL(canonicalURL),
       SearchResourceTags.Deleted(false),
       ...(tags ?? [])
@@ -1091,7 +1109,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
 
     // if the canonical URL is different, we should also search for the original URL
     if (canonicalURL !== url) {
-      const additionalResources = await this.listResourcesByTags([
+      const additionalResources = await this.listAllResourcesByTags([
         SearchResourceTags.CanonicalURL(url),
         SearchResourceTags.Deleted(false),
         ...(tags ?? [])
@@ -1109,7 +1127,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     const protocol = url.startsWith('http://') ? 'http' : 'https'
     const prefixedHostname = `${protocol}://${hostname}`
 
-    const resources = await this.listResourcesByTags([
+    const resources = await this.listAllResourcesByTags([
       SearchResourceTags.CanonicalURL(prefixedHostname, 'prefix'),
       SearchResourceTags.Deleted(false),
       ...(tags ?? [])
@@ -1119,7 +1137,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
   }
 
   async getAnnotationsForResource(id: string) {
-    const resources = await this.listResourcesByTags([
+    const resources = await this.listAllResourcesByTags([
       SearchResourceTags.ResourceType(ResourceTypes.ANNOTATION),
       SearchResourceTags.Annotates(id),
       SearchResourceTags.Deleted(false)
@@ -1259,7 +1277,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
   }
 
   async deleteResourcesByTags(tags: SFFSResourceTag[]) {
-    const resourceIds = await this.sffs.listResourceIDsByTags(tags)
+    const resourceIds = await this.sffs.listAllResourceIDsByTags(tags)
     this.log.debug('deleting resources by tags', tags, resourceIds)
     if (!resourceIds.length) return
     await this.deleteResources(resourceIds)
@@ -1679,7 +1697,7 @@ export class ResourceManager extends EventEmitterBase<ResourceManagerEventHandle
     const type = codeLanguageToMimeType(language)
 
     this.log.debug('Looking for existing code resource', type, codeHash)
-    const resources = await this.listResourcesByTags([
+    const resources = await this.listAllResourcesByTags([
       SearchResourceTags.Deleted(false),
       SearchResourceTags.ResourceType(type),
       SearchResourceTags.ContentHash(codeHash),

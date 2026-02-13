@@ -28,6 +28,17 @@ export interface SFFSResourceTag {
   op?: 'eq' | 'ne' | 'prefix' | 'suffix' | 'notexists' | 'neprefix' | 'nesuffix'
 }
 
+export interface SFFSPaginationParams {
+  limit: number
+  cursor?: string
+}
+
+export interface SFFSPaginatedResult<T> {
+  items: T[]
+  next_cursor: string | null
+  has_more: boolean
+}
+
 export enum ResourceTagsBuiltInKeys {
   SAVED_WITH_ACTION = 'savedWithAction',
   TYPE = 'type',
@@ -124,7 +135,6 @@ export interface SFFSResourceOrSpace {
 export type SFFSSearchResultEngine = 'keyword' | 'proximity' | 'semantic' | 'local'
 
 export interface SFFSSearchGeneralParameters {
-  includeAnnotations?: boolean
   spaceId?: string
   keywordLimit?: number // Limit for keyword-based search results
 }

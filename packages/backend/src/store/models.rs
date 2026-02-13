@@ -8,6 +8,8 @@ use std::str::FromStr;
 use std::string::ToString;
 use strum_macros::EnumString;
 
+use crate::{BackendError, BackendResult};
+
 pub fn default_horizon_tint() -> String {
     "hsl(275, 40%, 80%)".to_owned()
 }
@@ -533,7 +535,9 @@ pub struct PostProcessingJob {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type")]
+#[derive(Default)]
 pub enum ResourceProcessingState {
+    #[default]
     Pending,
     Started,
     Failed { message: String },
@@ -556,11 +560,6 @@ impl FromSql for ResourceProcessingState {
     }
 }
 
-impl Default for ResourceProcessingState {
-    fn default() -> Self {
-        Self::Pending
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LegacyResourceTextContent {
@@ -951,7 +950,6 @@ pub struct SearchResourcesParams {
     pub semantic_search_enabled: Option<bool>,
     pub embeddings_distance_threshold: Option<f32>,
     pub embeddings_limit: Option<i64>,
-    pub include_annotations: Option<bool>,
     pub space_id: Option<String>,
     pub keyword_limit: Option<i64>,
 }
@@ -999,4 +997,36 @@ pub struct App {
     pub name: Option<String>,
     pub icon: Option<String>,
     pub meta: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaginationParams {
+    pub limit: usize,
+    pub cursor: Option<String>,
+}
+
+pub struct PaginationCursor {}
+
+// TODO: allowing different cursor formats?
+impl PaginationCursor {
+    pub fn encode_date_id(datetime: &str, id: &str) -> String {
+        format!("{}|{}", datetime, id)
+    }
+
+    pub fn decode_date_id(cursor: &str) -> BackendResult<(String, String)> {
+        let parts: Vec<&str> = cursor.split('|').collect();
+        if parts.len() != 2 {
+            return Err(BackendError::GenericError(
+                "Invalid cursor format".to_string(),
+            ));
+        }
+        Ok((parts[0].to_string(), parts[1].to_string()))
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaginatedResult<T> {
+    pub items: Vec<T>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }

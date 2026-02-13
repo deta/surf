@@ -152,6 +152,13 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare("SELECT resource_id FROM space_entries WHERE space_id = ?1")?;
+        // TODO: document this behavior better
+        if space_id.is_empty() {
+            stmt = self.
+                conn.
+                prepare("SELECT id from resources WHERE id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)")?;
+        }
+
         let resource_ids = stmt.query_map(rusqlite::params![space_id], |row| row.get(0))?;
         for resource_id in resource_ids {
             result.push(resource_id?);

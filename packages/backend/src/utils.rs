@@ -8,14 +8,14 @@ pub fn uuid_to_base62(uuid: &str) -> String {
     // Remove hyphens and convert to u128
     let uuid = uuid.replace("-", "");
     let mut num = u128::from_str_radix(&uuid, 16).unwrap_or(0);
-    
+
     let mut result = Vec::new();
     while num > 0 {
         let rem = (num % 62) as usize;
         result.push(BASE62_CHARS[rem]);
         num /= 62;
     }
-    
+
     // Reverse and convert to string
     String::from_utf8(result.into_iter().rev().collect()).unwrap_or_default()
 }
@@ -34,15 +34,11 @@ pub fn sanitize_filename(name: &str) -> String {
 /// Otherwise falls back to using just the resource ID
 pub fn get_resource_filename(resource_id: &str, metadata_name: Option<&str>) -> String {
     if let Some(name) = metadata_name {
-        let short_name = if name.len() > 150 {
-            &name[..150]
-        } else {
-            name
-        };
-        
+        let short_name = if name.len() > 150 { &name[..150] } else { name };
+
         let sanitized_name = sanitize_filename(short_name);
         let short_id = uuid_to_base62(resource_id);
-        
+
         format!("{}-{}", sanitized_name, short_id)
     } else {
         resource_id.to_string()
@@ -50,7 +46,7 @@ pub fn get_resource_filename(resource_id: &str, metadata_name: Option<&str>) -> 
 }
 
 /// Converts a resource type (MIME type) to a file extension.
-/// 
+///
 /// This function attempts to determine an appropriate file extension for a given resource type
 /// using the following logic:
 /// 1. For special space types (application/vnd.space.*), returns "jsong"
@@ -79,10 +75,13 @@ pub fn get_resource_file_extension(resource_type: &str) -> String {
         "application/vnd.space.link",
         "application/vnd.space.article",
         "application/vnd.space.post",
-        "application/vnd.space.document.space-note"
+        "application/vnd.space.document.space-note",
     ];
-    
-    if markdown_resource_types.iter().any(|&t| resource_type.starts_with(t)) {
+
+    if markdown_resource_types
+        .iter()
+        .any(|&t| resource_type.starts_with(t))
+    {
         return "md".to_string();
     }
 
@@ -114,23 +113,23 @@ mod tests {
     #[test]
     fn test_get_resource_filename() {
         let id = "550e8400-e29b-41d4-a716-446655440000";
-        
+
         // Test with metadata name
         let result = get_resource_filename(id, Some("My Test File"));
         assert!(result.starts_with("My Test File-"));
         assert!(result.contains('-'));
-        
+
         // Test with problematic characters
         let result = get_resource_filename(id, Some("My<Test>File*.txt"));
         assert!(result.starts_with("My-Test-File-"));
         assert!(!result.contains('*'));
         assert!(!result.contains('<'));
         assert!(!result.contains('>'));
-        
+
         // Test fallback to id
         let result = get_resource_filename(id, None);
         assert_eq!(result, id);
-        
+
         // Test with leading periods
         let result = get_resource_filename(id, Some("...test"));
         assert!(result.starts_with("test-"));
@@ -145,11 +144,20 @@ mod tests {
     #[test]
     fn test_get_resource_file_extension() {
         // Test space types
-        assert_eq!(get_resource_file_extension("application/vnd.space.article"), "md");
-        assert_eq!(get_resource_file_extension("application/vnd.space.something"), "json");
+        assert_eq!(
+            get_resource_file_extension("application/vnd.space.article"),
+            "md"
+        );
+        assert_eq!(
+            get_resource_file_extension("application/vnd.space.something"),
+            "json"
+        );
 
         // Test document space note
-        assert_eq!(get_resource_file_extension("application/vnd.space.document.space-note"), "md");
+        assert_eq!(
+            get_resource_file_extension("application/vnd.space.document.space-note"),
+            "md"
+        );
 
         // Test common MIME types
         assert_eq!(get_resource_file_extension("image/png"), "png");

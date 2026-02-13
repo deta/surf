@@ -4,6 +4,30 @@ use crate::{BackendError, BackendResult};
 use rusqlite::OptionalExtension;
 use std::collections::HashMap;
 
+fn process_paginated_results(
+    items: Vec<(String, String)>, // (updated_at, id) pairs
+    pagination: &PaginationParams,
+) -> (Vec<String>, Option<String>, bool) {
+    let has_more = items.len() > pagination.limit;
+    let mut items = items;
+
+    if has_more {
+        items.pop();
+    }
+
+    let next_cursor = if has_more {
+        items
+            .last()
+            .map(|(updated_at, id)| PaginationCursor::encode_date_id(updated_at, id))
+    } else {
+        None
+    };
+
+    let resource_ids = items.into_iter().map(|(_, id)| id).collect();
+
+    (resource_ids, next_cursor, has_more)
+}
+
 pub fn list_resource_ids_by_tags_query(
     tag_filters: &Vec<ResourceTagFilter>,
     param_start_index: usize,
@@ -199,19 +223,127 @@ impl Database {
     pub fn list_resource_ids_by_tags(
         &self,
         tags: &Vec<ResourceTagFilter>,
+        space_id: Option<String>,
     ) -> BackendResult<Vec<String>> {
         let mut result = Vec::new();
-        if tags.is_empty() {
-            return Ok(result);
+        let mut cursor: Option<String> = None;
+        let page_size = 100;
+
+        loop {
+            let paginated_result = self.list_resource_ids_by_tags_paginated(
+                tags,
+                PaginationParams {
+                    limit: page_size,
+                    cursor: cursor.clone(),
+                },
+                space_id.clone(),
+            )?;
+
+            result.extend(paginated_result.items);
+
+            if !paginated_result.has_more {
+                break;
+            }
+
+            cursor = paginated_result.next_cursor;
         }
-        let (query, params) = list_resource_ids_by_tags_query(tags, 0);
-        let mut stmt = self.conn.prepare(&query)?;
-        let resource_ids =
-            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
-        for resource_id in resource_ids {
-            result.push(resource_id?);
-        }
+
         Ok(result)
+    }
+
+    fn list_resource_ids_by_tags_paginated_internal(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+        pagination: PaginationParams,
+        // None = no space filter(all spaces), Some("") = does not belong to any space, Some(id) = specific space
+        space_filter: Option<&str>,
+    ) -> BackendResult<PaginatedResult<String>> {
+        if tags.is_empty() {
+            return Ok(PaginatedResult {
+                items: Vec::new(),
+                next_cursor: None,
+                has_more: false,
+            });
+        }
+
+        let (mut query, mut params) = list_resource_ids_by_tags_query(tags, 0);
+
+        let param_offset = params.len();
+        query = format!(
+            "SELECT r.updated_at, r.id
+             FROM ({}) rt
+             JOIN resources r ON rt.resource_id = r.id",
+            query
+        );
+
+        match space_filter {
+            Some("") => {
+                query = format!(
+                    "{} AND rt.resource_id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)",
+                    query
+                );
+            }
+            Some(space_id) => {
+                query = format!(
+                    "{} AND rt.resource_id IN (SELECT resource_id FROM space_entries WHERE space_id = ?{})",
+                    query,
+                    param_offset + 1
+                );
+                params.push(space_id.to_string());
+            }
+            None => {}
+        }
+
+        let cursor_param_offset = params.len();
+        if let Some(cursor_id) = &pagination.cursor {
+            let (updated_at, id) = PaginationCursor::decode_date_id(cursor_id)?;
+            query = format!(
+                "{} WHERE (r.updated_at < ?{} OR (r.updated_at = ?{} AND r.id < ?{}))",
+                query,
+                cursor_param_offset + 1,
+                cursor_param_offset + 2,
+                cursor_param_offset + 3
+            );
+            params.push(updated_at.clone());
+            params.push(updated_at);
+            params.push(id);
+        }
+
+        // NOTE: updated_at DESC is the primary ordering, but we need a secondary ordering on id DESC
+        query = format!(
+            "{} ORDER BY r.updated_at DESC, r.id DESC LIMIT ?{}",
+            query,
+            params.len() + 1
+        );
+        // fetch one extra to check has_more
+        params.push((pagination.limit + 1).to_string());
+
+        let mut stmt = self.conn.prepare(&query)?;
+        let mut rows = stmt.query(rusqlite::params_from_iter(params.iter()))?;
+
+        let mut items = Vec::new();
+        while let Some(row) = rows.next()? {
+            let updated_at: String = row.get(0)?;
+            let id: String = row.get(1)?;
+            items.push((updated_at, id));
+        }
+
+        let (resource_ids, next_cursor, has_more) = process_paginated_results(items, &pagination);
+
+        Ok(PaginatedResult {
+            items: resource_ids,
+            next_cursor,
+            has_more,
+        })
+    }
+
+    pub fn list_resource_ids_by_tags_paginated(
+        &self,
+        tags: &Vec<ResourceTagFilter>,
+        pagination: PaginationParams,
+        space_filter: Option<String>,
+    ) -> BackendResult<PaginatedResult<String>> {
+        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, space_filter.as_deref())
     }
 
     pub fn list_resource_ids_by_tags_space_id(
@@ -240,31 +372,13 @@ impl Database {
         Ok(result)
     }
 
-    pub fn list_resource_ids_by_tags_no_space(
+    pub fn list_resource_ids_by_tags_space_id_paginated(
         &self,
         tags: &Vec<ResourceTagFilter>,
-    ) -> BackendResult<Vec<String>> {
-        if tags.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut result = Vec::new();
-        let (query, params) = list_resource_ids_by_tags_query(tags, 0);
-
-        let final_query = format!(
-        "SELECT rt.resource_id FROM ({}) rt 
-         JOIN resources r ON rt.resource_id = r.id 
-         WHERE rt.resource_id NOT IN (SELECT resource_id FROM space_entries WHERE manually_added = 1)
-         ORDER BY r.created_at DESC",
-        query
-    );
-
-        let mut stmt = self.conn.prepare(&final_query)?;
-        let resource_ids =
-            stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?;
-        for resource_id in resource_ids {
-            result.push(resource_id?);
-        }
-        Ok(result)
+        space_id: &str,
+        pagination: PaginationParams,
+    ) -> BackendResult<PaginatedResult<String>> {
+        self.list_resource_ids_by_tags_paginated_internal(tags, pagination, Some(space_id))
     }
 }
 

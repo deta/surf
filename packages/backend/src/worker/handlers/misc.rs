@@ -632,7 +632,6 @@ impl Worker {
                 let db_results = self.db.search_resources(
                     &query,
                     &Some(ids.clone()),
-                    false,
                     Some(number_documents as i64),
                 )?;
 
