@@ -20,7 +20,7 @@ thiserror = "1.0.57"
 tokio = { version = "1.43.1", features = ["full"] }
 uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
 strum = { version = "0.25.0", features = ["derive"] }
-rand = "0.8.5"
+rand = "0.9.3"
 lazy_static = "1.4.0"
 text-splitter = { version = "0.6.3" }
 url = "2.5.0"
