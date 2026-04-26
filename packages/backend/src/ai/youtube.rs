@@ -165,8 +165,8 @@ pub fn fetch_transcript(
 
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(ref e)) => {
-                if e.name().as_ref() == b"text" {
+            Ok(Event::Start(ref e))
+                if e.name().as_ref() == b"text" => {
                     in_text = true;
                     // Parse start and duration attributes
                     for attr in e.attributes().flatten() {
@@ -185,7 +185,6 @@ pub fn fetch_transcript(
                         }
                     }
                 }
-            }
             Ok(Event::Text(e)) if in_text => {
                 let text = e.unescape().unwrap().into_owned();
                 current_text = text.clone();
