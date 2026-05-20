@@ -8,8 +8,35 @@ import { esbuildConsolidatePreloads } from './plugins/merge-chunks'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { createConcatLicensesPlugin, createLicensePlugin } from './plugins/license'
 import { createRustLicensePlugin } from './plugins/rust-license'
+import { copyFileSync, mkdirSync, existsSync } from 'fs'
+import { join } from 'path'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
+
+// Plugin to copy i18n files to output directory
+function copyI18nPlugin() {
+  return {
+    name: 'copy-i18n',
+    closeBundle() {
+      const srcDir = resolve(__dirname, 'src/main/i18n')
+      const destDir = resolve(__dirname, 'out/main/i18n')
+      
+      if (existsSync(srcDir)) {
+        if (!existsSync(destDir)) {
+          mkdirSync(destDir, { recursive: true })
+        }
+        
+        const files = ['en-US.json', 'zh-CN.json']
+        for (const file of files) {
+          const srcFile = join(srcDir, file)
+          const destFile = join(destDir, file)
+          copyFileSync(srcFile, destFile)
+        }
+        console.log('Copied i18n files to out/main/i18n/')
+      }
+    }
+  }
+}
 
 // TODO: actually fix the warnings in the code
 const silenceWarnings = IS_DEV || process.env.SILENCE_WARNINGS === 'true'
@@ -40,7 +67,7 @@ const cssConfig = silenceWarnings
 export default defineConfig({
   main: {
     envPrefix: 'M_VITE_',
-    plugins: [externalizeDepsPlugin(), createLicensePlugin('main')],
+    plugins: [externalizeDepsPlugin(), createLicensePlugin('main'), copyI18nPlugin()],
     build: {
       rollupOptions: {
         input: {

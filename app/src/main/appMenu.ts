@@ -9,6 +9,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { importFiles } from './importer'
 import { useLogScope } from '@deta/utils'
+import { t, getLocale } from './i18n'
 
 const log = useLogScope('Main App Menu')
 const execFileAsync = promisify(execFile)
@@ -107,7 +108,7 @@ class AppMenu {
   private createDataLocationMenuItem(): MenuConfig {
     const userDataPath = app.getPath('userData')
     const surfDataPath = join(userDataPath, 'sffs_backend')
-    const label = isMac() ? 'Show Surf Data in Finder' : 'Show Surf Data in File Manager'
+    const label = isMac() ? t('menu.showSurfDataInFinder') : t('menu.showSurfDataInFileManager')
 
     return {
       label,
@@ -118,10 +119,10 @@ class AppMenu {
   private getSurfMenu(isMacApp = isMac()): MenuConfig {
     const surfItems = [
       ...(isMacApp
-        ? ([{ label: 'About Surf', role: 'about' }, { type: 'separator' }] as MenuConfig[])
+        ? ([{ label: t('menu.aboutSurf'), role: 'about' }, { type: 'separator' }] as MenuConfig[])
         : []),
       {
-        label: 'Preferences',
+        label: t('menu.preferences'),
         accelerator: 'CmdOrCtrl+,',
         click: () => createSettingsWindow()
       },
@@ -134,43 +135,43 @@ class AppMenu {
       ...(isMacApp
         ? [
             { type: 'separator' },
-            { role: 'services', label: 'Services' },
+            { role: 'services', label: t('menu.services') },
             { type: 'separator' },
             {
-              label: 'Hide Surf',
+              label: t('menu.hideSurf'),
               accelerator: 'CmdOrCtrl+H',
               role: 'hide'
             },
             {
-              label: 'Hide Others',
+              label: t('menu.hideOthers'),
               accelerator: 'CmdOrCtrl+Shift+H',
               role: 'hideOthers'
             },
-            { label: 'Show All', role: 'unhide' }
+            { label: t('menu.showAll'), role: 'unhide' }
           ]
         : []),
       { type: 'separator' },
-      { label: 'Quit Surf', role: 'quit' }
+      { label: t('menu.quitSurf'), role: 'quit' }
     ]
 
     return {
-      label: isMacApp ? app.name : 'Surf',
+      label: isMacApp ? app.name : t('menu.surf'),
       submenu: surfItems as MenuConfig[]
     }
   }
 
   private getFileMenu(): MenuConfig {
     return {
-      label: 'File',
+      label: t('menu.file'),
       submenu: [
         ...(isMac() ? ([{ role: 'close', accelerator: 'CmdOrCtrl+Shift+W' }] as MenuConfig[]) : []),
         {
-          label: 'New Tab',
+          label: t('menu.newTab'),
           accelerator: 'CmdOrCtrl+T',
           click: () => ipcSenders.createNewTab()
         },
         {
-          label: 'Close Tab',
+          label: t('menu.closeTab'),
           accelerator: 'CmdOrCtrl+W',
           click: () => ipcSenders.closeActiveTab()
         },
@@ -182,7 +183,7 @@ class AppMenu {
         // },
         {
           id: 'importFiles',
-          label: 'Import Files',
+          label: t('menu.importFiles'),
           click: () => importFiles()
         },
         // {
@@ -199,7 +200,7 @@ class AppMenu {
 
   private getEditMenu(): MenuConfig {
     return {
-      label: 'Edit',
+      label: t('menu.edit'),
       submenu: [
         { role: 'cut' },
         { role: 'copy' },
@@ -208,7 +209,7 @@ class AppMenu {
         { role: 'selectAll' },
         { type: 'separator' },
         {
-          label: 'Copy URL',
+          label: t('menu.copyURL'),
           accelerator: 'CmdOrCtrl+Shift+C',
           click: () => ipcSenders.copyActiveTabURL()
         }
@@ -218,11 +219,11 @@ class AppMenu {
 
   private getViewMenu(): MenuConfig {
     return {
-      label: 'View',
+      label: t('menu.view'),
       submenu: [
         {
           id: 'showTabsInSidebar',
-          label: 'Show Tabs in Sidebar',
+          label: t('menu.showTabsInSidebar'),
           type: 'checkbox',
           accelerator: 'CmdOrCtrl+O',
           click: () => ipcSenders.toggleTabsPosition()
@@ -230,7 +231,7 @@ class AppMenu {
         { type: 'separator' },
         { role: 'togglefullscreen' },
         {
-          label: 'Toggle Developer Tools',
+          label: t('menu.toggleDevTools'),
           accelerator: isMac() ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
           click: () => ipcSenders.openDevTools()
         }
@@ -240,7 +241,7 @@ class AppMenu {
 
   private getNavigateMenu(): MenuConfig {
     return {
-      label: 'Navigate',
+      label: t('menu.navigate'),
       submenu: [
         // {
         //   label: 'My Stuff',
@@ -254,12 +255,12 @@ class AppMenu {
         // },
         // { type: 'separator' },
         {
-          label: 'Reload Tab',
+          label: t('menu.reloadTab'),
           accelerator: 'CmdOrCtrl+R',
           click: () => ipcSenders.reloadActiveTab()
         },
         {
-          label: 'Force Reload Tab',
+          label: t('menu.forceReloadTab'),
           accelerator: 'CmdOrCtrl+Shift+R',
           click: () => ipcSenders.reloadActiveTab(true)
         }
@@ -269,28 +270,28 @@ class AppMenu {
 
   private getToolsMenu(): MenuConfig {
     return {
-      label: 'Tools',
+      label: t('menu.tools'),
       submenu: [
         {
           id: 'adblocker',
           // this will automatically change to the correct label on startup
           // based on the previous stored state when the adblocker is initialized
-          label: 'Enable Adblocker',
+          label: t('menu.enableAdblocker'),
           click: () => toggleAdblocker('persist:horizon')
         },
         { type: 'separator' },
         {
-          label: 'Reload App',
+          label: t('menu.reloadApp'),
           role: 'reload',
           accelerator: 'CmdOrCtrl+Alt+R'
         },
         {
-          label: 'Force Reload App',
+          label: t('menu.forceReloadApp'),
           role: 'forceReload',
           accelerator: 'CmdOrCtrl+Alt+Shift+R'
         },
         {
-          label: 'Toggle Developer Tools for Surf',
+          label: t('menu.toggleDevToolsForSurf'),
           accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
           role: 'toggleDevTools'
         }
@@ -300,7 +301,7 @@ class AppMenu {
 
   private getWindowMenu(): MenuConfig {
     return {
-      label: 'Window',
+      label: t('menu.window'),
       submenu: [
         { role: 'minimize' },
         { role: 'zoom' },
@@ -366,6 +367,10 @@ export const changeMenuItemLabel = (id: string, newLabel: string): void => {
 
 export const updateTabOrientationMenuItem = (): void => {
   appMenu?.updateTabOrientationMenuItem()
+}
+
+export const rebuildAppMenu = (): void => {
+  appMenu?.buildMenu()
 }
 
 const checkForChangeWithTimeout = async (

@@ -18,6 +18,7 @@ import { CrashHandler } from './crashHandler'
 import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 import { useLogScope } from '@deta/utils'
 import { initializeSFFSMain } from './sffs'
+import { initI18n, getLocale } from './i18n'
 
 const log = useLogScope('Main')
 
@@ -206,6 +207,11 @@ const initializeApp = async () => {
 
   markAppAsSetup()
   await setupAdblocker()
+  
+  // Initialize i18n before setting app menu
+  const userConfig = getUserConfig()
+  initI18n(userConfig.settings.language as any)
+  
   setAppMenu()
 
   createWindow()

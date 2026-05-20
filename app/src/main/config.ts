@@ -4,6 +4,7 @@ import path from 'path'
 import { type UserConfig } from '@deta/types'
 import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@deta/types/src/ai.types'
 import { useLogScope } from '@deta/utils'
+import { type SupportedLocale, DEFAULT_LOCALE, initI18n } from './i18n'
 
 const log = useLogScope('Config')
 
@@ -81,6 +82,7 @@ export const getUserConfig = (path?: string) => {
       embedding_model: 'multilingual_small',
       tabs_orientation: 'vertical',
       app_style: 'light',
+      language: DEFAULT_LOCALE,
       use_semantic_search: false,
       save_to_user_downloads: true,
       automatic_chat_prompt_generation: true,
@@ -126,6 +128,7 @@ export const getUserConfig = (path?: string) => {
       enable_custom_prompts: true
     }
     setUserConfig(storedConfig as UserConfig)
+    initI18n(DEFAULT_LOCALE)
   }
 
   let changedConfig = false
@@ -258,6 +261,14 @@ export const getUserConfig = (path?: string) => {
     storedConfig.settings.acknowledged_editing_resource_files = false
     changedConfig = true
   }
+
+  if (storedConfig.settings.language === undefined) {
+    storedConfig.settings.language = DEFAULT_LOCALE
+    changedConfig = true
+  }
+
+  // Initialize i18n with stored locale
+  initI18n(storedConfig.settings.language as SupportedLocale)
 
   // "Migration" for late april settings cleanup
   if (storedConfig.settings.show_annotations_in_oasis === undefined) {
