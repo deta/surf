@@ -151,6 +151,7 @@ import LinkExternal from './Icons/LinkExternal.svelte'
 import Ollama from './Icons/Ollama.svelte'
 import OpenRouter from './Icons/OpenRouter.svelte'
 import HuggingFace from './Icons/HuggingFace.svelte'
+import LiteLLM from './Icons/LiteLLM.svelte'
 
 import DynamicIcon from './DynamicIcon.svelte'
 
@@ -309,7 +310,8 @@ export const icons = {
   book: Book,
   ollama: Ollama,
   openrouter: OpenRouter,
-  huggingface: HuggingFace
+  huggingface: HuggingFace,
+  litellm: LiteLLM
 }
 
 export type Icons = keyof typeof icons
@@ -470,5 +472,6 @@ export {
   LinkExternal,
   Ollama,
   OpenRouter,
-  HuggingFace
+  HuggingFace,
+  LiteLLM
 }

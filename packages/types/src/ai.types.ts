@@ -362,7 +362,8 @@ export enum CUSTOM_MODELS {
   Ollama = 'Ollama',
   OpenRouter = 'OpenRouter',
   HuggingFaceTogether = 'Hugging Face Together AI',
-  HuggingFace = 'Hugging Face Inference Endpoint'
+  HuggingFace = 'Hugging Face Inference Endpoint',
+  LiteLLM = 'LiteLLM'
 }
 
 export type CustomModelType = keyof typeof CUSTOM_MODELS
@@ -408,6 +409,14 @@ export const CUSTOM_MODEL_DEFINITIONS: Record<CUSTOM_MODELS, CustomModelDefiniti
     provider_url: 'https://api-inference.huggingface.co/models/',
     model_page: 'https://huggingface.co/models?inference_provider=together&sort=trending',
     api_key_page: 'https://huggingface.co/settings/tokens'
+  },
+  [CUSTOM_MODELS.LiteLLM]: {
+    id: CUSTOM_MODELS.LiteLLM,
+    label: 'LiteLLM',
+    icon: 'litellm',
+    provider_url: 'http://localhost:4000/v1/chat/completions',
+    model_page: 'https://docs.litellm.ai/docs/providers',
+    api_key_page: 'https://docs.litellm.ai/docs/simple_proxy#quick-start'
   }
 }
 
