@@ -1,0 +1,97 @@
+name: Build Windows x64
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'packages/**'
+      - '.github/workflows/build-windows-x64.yml'
+  workflow_dispatch:
+    inputs:
+      app_version:
+        type: string
+        description: 'App Version (optional)'
+        required: false
+        default: '0.0.1'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/backend
+            packages/backend-server
+          key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo-about binary
+        id: cache-cargo-about
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-about
+          key: ${{ runner.os }}-cargo-about-0.8.2
+
+      - name: Install cargo-about
+        if: steps.cache-cargo-about.outputs.cache-hit != 'true'
+        run: cargo install cargo-about --version 0.8.2
+
+      - name: Install dependencies
+        run: |
+          yarn config set network-timeout 300000
+          yarn install --frozen-lockfile --network-timeout 300000
+
+      - name: Build Windows x64
+        run: yarn build:desktop:win:x64
+        env:
+          APP_VERSION: ${{ inputs.app_version || '0.0.1' }}
+          M_VITE_APP_VERSION: ${{ inputs.app_version || '0.0.1' }}
+          P_VITE_APP_VERSION: ${{ inputs.app_version || '0.0.1' }}
+          R_VITE_APP_VERSION: ${{ inputs.app_version || '0.0.1' }}
+
+          HUSKY: 0
+          NODE_OPTIONS: --max_old_space_size=8192
+
+          PRODUCT_NAME: 'Surf'
+          M_VITE_PRODUCT_NAME: 'Surf'
+          BUILD_RESOURCES_DIR: build/resources/prod
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: surf-windows-x64-installer
+          path: |
+            app/dist/*.exe
+            app/dist/*.yml
+          retention-days: 30
+
+      - name: Output download info
+        run: |
+          echo "::notice::构建完成！请到 Actions 页面下载构建产物"
+          echo "::notice::Artifact 名称: surf-windows-x64-installer"
+          echo "::notice::保留时间: 30 天"

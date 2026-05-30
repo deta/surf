@@ -11,6 +11,7 @@ export type UserSettings = {
   embedding_model: 'english_small' | 'english_large' | 'multilingual_small' | 'multilingual_large'
   tabs_orientation: 'vertical' | 'horizontal'
   app_style: 'light' | 'dark' // Note intentionally used app_style as "app_theme" would be themes in the future?
+  language: 'en-US' | 'zh-CN'
   use_semantic_search: boolean
   save_to_user_downloads: boolean
   automatic_chat_prompt_generation: boolean

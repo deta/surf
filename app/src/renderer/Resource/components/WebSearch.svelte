@@ -3,7 +3,7 @@
   import { writable, type Writable } from 'svelte/store'
   import { useLogScope } from '@deta/utils/io'
   import { getHostname } from '@deta/utils'
-  import { DuckDuckGoAPI } from '@deta/web-parser'
+  import { DuckDuckGoAPI, BochaSearchAPI, type BochaSearchConfig } from '@deta/web-parser'
   import HeadlessCitationItem from './HeadlessCitationItem.svelte'
   import { Icon } from '@deta/icons'
   import type { LinkClickHandler } from '@deta/editor/src/lib/extensions/Link/helpers/clickHandler'
@@ -26,7 +26,33 @@
   export let limit: number = 5
 
   const log = useLogScope('WebSearch Component')
-  const searchAPI = new DuckDuckGoAPI()
+  
+  // 搜索引擎配置 - 默认使用 DuckDuckGo，可配置为博查 API
+  interface SearchEngineConfig {
+    engine: 'duckduckgo' | 'bocha'
+    apiKey?: string
+  }
+  
+  // 从环境变量或配置中读取搜索引擎设置
+  const searchEngineConfig: SearchEngineConfig = {
+    engine: 'duckduckgo', // 默认使用 DuckDuckGo
+    apiKey: undefined
+  }
+  
+  // 根据配置初始化搜索引擎
+  let searchAPI: DuckDuckGoAPI | BochaSearchAPI
+  
+  if (searchEngineConfig.engine === 'bocha') {
+    const bochaConfig: BochaSearchConfig = {
+      apiKey: searchEngineConfig.apiKey || '',
+      baseUrl: 'https://api.bochaai.com/api/v1/web-search',
+      country: 'CN',
+      language: 'zh-CN'
+    }
+    searchAPI = new BochaSearchAPI(bochaConfig)
+  } else {
+    searchAPI = new DuckDuckGoAPI()
+  }
 
   type ErrorType = 'search_error' | 'initialization' | 'network'
 

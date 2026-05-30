@@ -13,8 +13,9 @@ import {
   UserSettings
 } from '@deta/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
-import { updateTabOrientationMenuItem } from './appMenu'
+import { updateTabOrientationMenuItem, rebuildAppMenu } from './appMenu'
 import { createSettingsWindow, getSettingsWindow } from './settingsWindow'
+import { setLocale, type SupportedLocale } from './i18n'
 
 import { IPC_EVENTS_MAIN, NewWindowRequest } from '@deta/services/ipc'
 import { exportResource, openResourceAsFile } from './downloadManager'
@@ -214,6 +215,12 @@ function setupIpcHandlers(backendRootPath: string) {
     // Update menu items if tab orientation changed
     if (settings.tabs_orientation) {
       updateTabOrientationMenuItem()
+    }
+
+    // Rebuild menu if language changed
+    if (settings.language) {
+      setLocale(settings.language as SupportedLocale)
+      rebuildAppMenu()
     }
 
     // notify other windows of the change
