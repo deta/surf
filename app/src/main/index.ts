@@ -146,7 +146,10 @@ const setupBackendServer = async (appPath: string, backendRootPath: string, user
   surfBackendManager = new SurfBackendServerManager(backendServerPath, [
     backendRootPath,
     'false',
-    isDev ? CONFIG.embeddingModelMode : userConfig.settings?.embedding_model
+    isDev ? CONFIG.embeddingModelMode : userConfig.settings?.embedding_model,
+    String(userConfig.settings?.embedding_batch_size || 64),
+    String(userConfig.settings?.embedding_max_threads || 4),
+    String(userConfig.settings?.embedding_max_connections || 8)
   ])
 
   surfBackendManager

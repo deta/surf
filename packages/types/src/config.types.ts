@@ -9,6 +9,9 @@ export type UserConfig = {
 
 export type UserSettings = {
   embedding_model: 'english_small' | 'english_large' | 'multilingual_small' | 'multilingual_large'
+  embedding_batch_size: number
+  embedding_max_threads: number
+  embedding_max_connections: number
   tabs_orientation: 'vertical' | 'horizontal'
   app_style: 'light' | 'dark' // Note intentionally used app_style as "app_theme" would be themes in the future?
   use_semantic_search: boolean
