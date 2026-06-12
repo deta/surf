@@ -612,7 +612,7 @@ export const promptForFilesAndTurnIntoResources = async (
 ) => {
   const files = await promptUserToSelectFiles({
     title: 'Select File to Use as Context',
-    buttonLabel: 'Import to Surf',
+    buttonLabel: 'Import to Browse',
     filters: [
       {
         name: 'Files',

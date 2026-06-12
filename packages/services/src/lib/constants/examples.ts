@@ -1,7 +1,7 @@
 import type { NotebookCustomization } from '@deta/types'
 
 export const onboardingNotebook = {
-  name: 'Intro to Surf',
+  name: 'Intro to Acosta Browse',
   customization: {
     coverColor: [
       ['#FFDFBA', '#FFDFBA'],

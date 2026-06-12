@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
-import { type UserConfig } from '@deta/types'
+import { DEFAULT_ACOSTA_SETTINGS, type UserConfig } from '@deta/types'
 import { BUILT_IN_MODELS, BuiltInModelIDs, DEFAULT_AI_MODEL } from '@deta/types/src/ai.types'
 import { useLogScope } from '@deta/utils'
 
@@ -109,6 +109,7 @@ export const getUserConfig = (path?: string) => {
       completed_onboarding_examples: [],
       dismissed_onboarding_examples: false,
       acknowledged_editing_resource_files: false,
+      acosta: structuredClone(DEFAULT_ACOSTA_SETTINGS),
 
       /// Deprecated
       homescreen_link_cmdt: false,
@@ -340,6 +341,26 @@ export const getUserConfig = (path?: string) => {
   if (storedConfig.settings.experimental_notes_chat_input === undefined) {
     storedConfig.settings.experimental_notes_chat_input = false
     changedConfig = true
+  }
+
+  // Migration: Acosta settings for configs created before the Acosta fork
+  if (storedConfig.settings.acosta === undefined) {
+    storedConfig.settings.acosta = structuredClone(DEFAULT_ACOSTA_SETTINGS)
+    changedConfig = true
+  } else {
+    // Fill in any newly added Acosta settings keys
+    storedConfig.settings.acosta = {
+      ...structuredClone(DEFAULT_ACOSTA_SETTINGS),
+      ...storedConfig.settings.acosta,
+      content_filter: {
+        ...structuredClone(DEFAULT_ACOSTA_SETTINGS.content_filter),
+        ...storedConfig.settings.acosta.content_filter
+      },
+      focus_defaults: {
+        ...structuredClone(DEFAULT_ACOSTA_SETTINGS.focus_defaults),
+        ...storedConfig.settings.acosta.focus_defaults
+      }
+    }
   }
 
   if (changedConfig) {

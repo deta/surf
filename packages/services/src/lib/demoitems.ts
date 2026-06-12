@@ -170,7 +170,10 @@ export async function createDemoNotes(notebook: Notebook) {
     {
       id: OnboardingNoteWelcome.attributes.id as string,
       title: OnboardingNoteWelcome.attributes.title as string,
-      content: parseNoteContent(OnboardingNoteWelcome, `surf://surf/resource/${manualResource.id}`)
+      content: parseNoteContent(
+        OnboardingNoteWelcome,
+        `acosta://acosta/resource/${manualResource.id}`
+      )
     },
     notebook
   )

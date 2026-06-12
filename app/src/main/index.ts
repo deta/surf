@@ -15,14 +15,17 @@ import { getUserConfig, updateUserConfig } from './config'
 import { isAppSetup, isDefaultBrowser, markAppAsSetup } from './utils'
 import { SurfBackendServerManager } from './surfBackend'
 import { CrashHandler } from './crashHandler'
-import { surfProtocolExternalURLHandler } from './surfProtocolHandlers'
 import { useLogScope } from '@deta/utils'
 import { initializeSFFSMain } from './sffs'
+import { useAcostaAuth } from './acosta/authService'
+import { setupAcostaIpc } from './acosta/ipc'
+import { setupAcostaEnforcement } from './acosta/enforcement'
+import { setupAutoUpdater } from './acosta/updater'
 
 const log = useLogScope('Main')
 
 const CONFIG = {
-  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Surf',
+  appName: import.meta.env.M_VITE_PRODUCT_NAME || 'Acosta Browse',
   appVersion: import.meta.env.M_VITE_APP_VERSION,
   useTmpDataDir: import.meta.env.M_VITE_USE_TMP_DATA_DIR === 'true',
   disableAutoUpdate: import.meta.env.M_VITE_DISABLE_AUTO_UPDATE === 'true',
@@ -67,10 +70,10 @@ const initializePaths = () => {
 }
 
 const registerProtocols = () => {
-  app.setAsDefaultProtocolClient('surf')
+  app.setAsDefaultProtocolClient('acosta')
   protocol.registerSchemesAsPrivileged([
     {
-      scheme: 'surf',
+      scheme: 'acosta',
       privileges: {
         standard: true,
         supportFetchAPI: true,
@@ -80,7 +83,7 @@ const registerProtocols = () => {
       }
     },
     {
-      scheme: 'surf-internal',
+      scheme: 'acosta-internal',
       privileges: {
         standard: true,
         supportFetchAPI: true,
@@ -190,7 +193,7 @@ const initializeApp = async () => {
 
   isAppLaunched = true
   setInterval(cleanupTempFiles, 60 * 60 * 1000)
-  electronApp.setAppUserModelId('ea.browser.deta.surf')
+  electronApp.setAppUserModelId('com.acostai.browse')
 
   const appPath = app.getAppPath() + (isDev ? '' : '.unpacked')
   const userDataPath = app.getPath('userData')
@@ -198,6 +201,19 @@ const initializeApp = async () => {
   const userConfig = getUserConfig()
 
   setupIpc(backendRootPath)
+  setupAcostaIpc()
+
+  // Content filtering and safe search hooks must exist before any web
+  // contents are created so no request escapes them.
+  setupAcostaEnforcement()
+
+  // Restore the persisted Firebase session before any window opens so the
+  // login screen only appears when the student is genuinely signed out.
+  await useAcostaAuth().initialize()
+
+  if (!CONFIG.disableAutoUpdate) {
+    setupAutoUpdater().catch((err) => log.error('Auto updater setup failed:', err))
+  }
 
   if (isDev) {
     log.log('Running in development mode, setting app icon to dev icon')

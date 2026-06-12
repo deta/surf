@@ -77,7 +77,7 @@
         onCitationClick={handleCitationClick}
       />
     {:else if isImageResource}
-      <img src={`surf://surf/resource/${resource.id}?raw`} />
+      <img src={`acosta://acosta/resource/${resource.id}?raw`} />
     {:else}
       <div>
         <p><strong>Name:</strong> {resource.metadata.name}</p>

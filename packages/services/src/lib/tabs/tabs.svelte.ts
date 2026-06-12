@@ -263,7 +263,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   private async prepareNewTabPage() {
     try {
       this.log.debug('Preparing new tab page')
-      this.newTabView = await this.viewManager.create({ url: 'surf://surf/notebook' }, true)
+      this.newTabView = await this.viewManager.create({ url: 'acosta://acosta/newtab' }, true)
       await this.newTabView.preloadWebContents({ activate: false })
     } catch (error) {
       this.log.error('Error preparing new tab page:', error)
@@ -330,7 +330,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
       ...opts
     } as CreateTabOptions
 
-    if (url === 'surf-internal://core/Core/core.html') {
+    if (url === 'acosta-internal://core/Core/core.html') {
       this.log.warn('Attempted to open core URL directly, which is not allowed.')
       throw new Error('Cannot open core URL directly')
     }
@@ -739,7 +739,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
   async openNewTabPage() {
     try {
       if (!this.newTabView) {
-        return this.create('surf://surf/notebook')
+        return this.create('acosta://acosta/newtab')
       }
 
       const tab = await this.createWithView(this.newTabView, { activate: true })
@@ -756,7 +756,7 @@ export class TabsService extends EventEmitterBase<TabsServiceEmitterEvents> {
 
   async createResourceTab(resourceId: string, opts?: Partial<CreateTabOptions>) {
     this.log.debug('Creating new resource tab')
-    const tab = await this.create(`surf://surf/resource/${resourceId}`, opts)
+    const tab = await this.create(`acosta://acosta/resource/${resourceId}`, opts)
     return tab
   }
 

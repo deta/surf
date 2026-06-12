@@ -295,12 +295,12 @@
           <h1>What are Surf Notes?</h1>
 
           <p style="max-width: 50ch;">
-            Surf notes are rich text documents that you can create manually or generate using Surf's
-            AI from your personal media.<br />
+            Notes are rich text documents that you can create manually or generate using Acosta's AI
+            from your personal media.<br />
           </p>
 
           <p style="max-width: 48ch;">
-            Jump start a new note by asking Surf's AI something in the input box above or create a
+            Jump start a new note by asking Acosta something in the input box above or create a
             blank note using the button.
           </p>
         </section>
@@ -338,7 +338,7 @@
   {:else if resources.length === 0}
     <div class="px py">
       <div class="empty">
-        <h1>Surf Media</h1>
+        <h1>Media</h1>
 
         <p style="max-width: 55ch;">
           Add media from across the web or your system to your notebook and to use it together with

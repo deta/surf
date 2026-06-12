@@ -32,7 +32,7 @@
   <p>If the problem persists, contact us: <a href="mailto:hello@deta.surf">hello@deta.surf</a></p>
 {:else if currentStepIdx === 3}
   <p>
-    Your imported data is now saved in Stuff, Surf's central place for anything you save from the
+    Your imported data is now saved in Stuff, Acosta Browse's central place for anything you save from the
     web.
   </p>
 

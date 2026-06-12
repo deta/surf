@@ -63,7 +63,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   private unsubs: Fn[] = []
   private newHomepageView: WebContentsView | null = null
   private viewPoolWebPages: WebContentsView[] = [] // Pool of pre-created views for http(s)://
-  private viewPoolSurfProtocol: WebContentsView[] = [] // Pool of pre-created views for surf://
+  private viewPoolSurfProtocol: WebContentsView[] = [] // Pool of pre-created views for acosta://
   private readonly poolSize = 1 // Number of views to pre-create
 
   static self: ViewManager
@@ -189,7 +189,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
       const fullData = {
         id: generateID(),
         partition: 'persist:horizon',
-        url: type === 'surf' ? 'surf://surf/resource/blank' : 'about:blank',
+        url: type === 'surf' ? 'acosta://acosta/resource/blank' : 'about:blank',
         title: 'New Tab',
         faviconUrl: '',
         navigationHistoryIndex: -1,
@@ -218,7 +218,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
     let view: WebContentsView | undefined
     if (url.protocol === 'http:' || url.protocol === 'https:') {
       view = this.viewPoolWebPages.pop()
-    } else if (url.protocol === 'surf:') {
+    } else if (url.protocol === 'acosta:') {
       view = this.viewPoolSurfProtocol.pop()
     }
 
@@ -507,7 +507,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   }
 
   openResourceInSidebar(resourceId: string) {
-    return this.openURLInSidebar(`surf://surf/resource/${resourceId}`)
+    return this.openURLInSidebar(`acosta://acosta/resource/${resourceId}`)
   }
 
   openURLInSidebar(url: string) {
@@ -530,7 +530,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   private async prepareNewHomepage() {
     try {
       this.log.debug('Preparing new homepage')
-      this.newHomepageView = await this.create({ url: 'surf://surf/notebook' }, true)
+      this.newHomepageView = await this.create({ url: 'acosta://acosta/newtab' }, true)
       await this.newHomepageView.preloadWebContents({ activate: false })
     } catch (error) {
       this.log.error('Error preparing new homepage:', error)
@@ -540,7 +540,7 @@ export class ViewManager extends EventEmitterBase<ViewManagerEmitterEvents> {
   async openNewHomepage() {
     try {
       if (!this.newHomepageView) {
-        return this.openURLInSidebar('surf://surf/notebook')
+        return this.openURLInSidebar('acosta://acosta/notebook')
       }
 
       const view = await this.openViewInSidebar(this.newHomepageView)

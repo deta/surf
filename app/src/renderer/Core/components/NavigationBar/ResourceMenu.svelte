@@ -69,7 +69,7 @@
       if (targetBreadcrumb) {
         view.webContents.loadURL(targetBreadcrumb.url)
       } else {
-        view.webContents.loadURL('surf://surf/notebook')
+        view.webContents.loadURL('acosta://acosta/notebook')
       }
     } catch (err) {
       log.error('Failed to delete resource', err)
@@ -170,7 +170,7 @@
       {
         type: 'action',
         kind: 'danger',
-        text: 'Delete from Surf',
+        text: 'Delete from Browse',
         icon: 'trash',
         action: onDeleteResource
       }

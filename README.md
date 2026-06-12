@@ -1,138 +1,52 @@
-<div align="center">
-  
-![splash](./docs/assets/repo-header.png)
+# Acosta Browse
 
-[**Website**](https://deta.surf) - [**Discord**](https://deta.surf/discord)
+The Acosta AI desktop browser — a study-focused browser for Australian high school students (NSW curriculum), built by [Acosta AI](https://heyacosta.com).
 
-</div>
+Acosta Browse is a fork of [Deta Surf](https://github.com/deta/surf) (Apache 2.0), keeping its excellent tab system, split view, notebook infrastructure and ad blocker, with Acosta's education layer built on top.
 
-<br>
+## What's different from Surf
 
-# Deta Surf: Your AI Notebook
+- **Acosta AI everywhere** — every AI call goes through the Acosta proxy (`api.acosta.ai`) with the student's Firebase ID token as the bearer key. The model picker offers Claude (default), Gemini and ChatGPT — no bring-your-own-key. Every chat carries the Acosta tutor system prompt (NSW curriculum aware, age-appropriate, academic-integrity protected).
+- **Firebase auth** — full-screen branded login (email/password + Google Sign-In) before the browser loads. Sessions persist across launches; auth state lives in the main process and is shared with every window over IPC.
+- **Content filtering** — always-on filtering of adult content, gambling, drugs and violence (StevenBlack host lists, cached weekly, plus embedded seed lists and AI URL screening via `api.acosta.ai/content-check`), optional social media and gaming blocks, forced safe search on Google/Bing/DuckDuckGo and YouTube restricted mode. Blocked sites show a branded page with a "Request Access" flow to the student's teacher/parent. Filtering degrades gracefully to blocklists-only when the AI endpoint is unreachable.
+- **Focus mode** — Pomodoro study sessions (`Cmd/Ctrl+Shift+F` or the toolbar bolt) with a per-session site allowlist enforced at the network layer, a countdown chip, a gentle task reminder when drifting, break prompts, and a session summary saved to `api.acosta.ai/study-sessions`.
+- **Study tools** — right-click any selection on a page for _Explain this_, _Quiz me on this_, _Add to Study Notes_, _Summarise_ and _Find in NSW Syllabus_; results land in the AI sidebar (`Cmd/Ctrl+Shift+A`). Study notes organise into per-subject notebooks (NSW Stage 4/5 subjects plus custom ones).
+- **Acosta new tab page** — greeting with the student's name, quick links to the Acosta platform (Study Plan, Exam Simulator), today's focus subject, and a daily AI-generated motivational quote (cached locally, with offline fallbacks).
+- **Rebrand** — `acosta://` / `acosta-internal://` protocols, Acosta navy/teal design system, Bricolage Grotesque + Geist fonts, `com.acostai.browse` bundle id, auto-updates from `updates.acosta-ai.com`.
 
-Deta Surf is an AI notebook that brings all your files and the web directly into your stream of thought.
+## Development
 
-It’s meant for simultaneous research and thinking that minimizes the grunt work: manually searching, opening windows & tabs, scrolling, copying and pasting into a document editor.
+Requires Node ≥ 22.18, Yarn 1.x and a Rust toolchain (for the Surf backend).
 
-Surf is primarily built in Svelte, TypeScript and Rust, runs on MacOS, Windows & Linux, stores data locally in open formats, and is open source.
+```bash
+yarn install
+cp app/.env.example app/.env   # fill in Firebase keys, or set M_VITE_ACOSTA_DEV_BYPASS_AUTH=true
+yarn dev
+```
 
-![split](./docs/assets/split-note.webp)
+## Building
 
-## Motivation
+```bash
+yarn build:packages            # workspace libs + Rust backend
+yarn build:desktop:mac         # DMG (run x64 + arm builds for universal coverage)
+yarn build:desktop:win:x64     # NSIS installer
+```
 
-Most applications are focused on a single task, or a single media type: notes, websites, or PDFs. Real thinking requires juggling media across sources to make connections and synthesize ideas. We want to help people think better, across all their media.
+Release artifacts publish to the generic update feed configured in `app/build/electron-builder-config.js` (`UPDATES_URL`, default `https://updates.acosta-ai.com`). Code signing identities are placeholders until certificates are provisioned.
 
-Surf is built to be personal and open, in service of the user. This means local first data, open data formats, open source, and openness with respect to AI models. [Read more](https://deta.surf/motivation).
+## Project layout
 
-## Installation
+- `app/src/main` — Electron main process. Acosta modules live in `app/src/main/acosta/` (auth service, Acosta API client, content filter, blocklists, safe search, focus mode, enforcement wiring, auto-updater, IPC).
+- `app/src/renderer` — Svelte 5 renderer surfaces: `Core` (browser chrome), `Login`, `Blocked`, `NewTab`, `Settings`, `Resource` (notebooks + AI chat), `PDF`, `Overlay`.
+- `packages/` — shared workspace packages (`@deta/services`, `@deta/types`, `@deta/ui`, …) plus the Rust backend (`packages/backend`, `packages/backend-server`).
 
-Checkout the [installation guide](./docs/INSTALL.md) for detailed instructions.
+Upstream Surf documentation for the inherited systems lives in [docs/](./docs/).
 
-For building from source and local development, see [CONTRIBUTING.md](CONTRIBUTING.md).
+## Licence
 
-## TL;DR - Things to try
+The source code is licensed under Apache 2.0, same as upstream Deta Surf, with the exceptions noted by upstream:
 
-- _YouTube Notes_: visit a YouTube video and ask a question
-- _PDF Notes_: open a PDF and ask a question
-- _Create an applet_: use the "app generation" tool and ask for an app
-- _Notes that search the web_: use the "web search" tool and ask a question with "search" in it
+1. The patch for the @ghostery/adblocker-electron package is licensed under MPL-2.0.
+2. Select files may contain their own specific licence headers that override the default.
 
-## Features
-
-### Multi-Media Library & Notebooks
-
-![notebooks](./docs/assets/readme/notebook-grid.png)
-
-Store almost any media in a private library on your computer, in an open and transparent format.
-
-- Support for local files, sites & links from the web (YouTube, Tweets & more), or create media directly in Surf.
-- Organize this library into Notebooks.
-- Open and use much of your library offline.
-- Use your library to power Surf’s AI features.
-
-Surf's library is built on a local storage engine called SFFS (Surf Flat File System), which stores data in open and transparent formats.
-
-[Details on the library](/docs/LIBRARY.md).
-
-### Smart Notes
-
-![smart-notes](./docs/assets/readme/smart-notes.png)
-
-Explore and think across your digital stuff without opening up a bunch of windows, clicking, scrolling and copying & pasting into your document (or chatbot).
-
-- `@-mention` and auto-generate from any tab, website or any resource in your [library](./docs/LIBRARY.md).
-- Trigger [web searches](./docs/SMART_NOTES.md#web-search) to do research, and bring the results back in your notes.
-- Integrated [citations](./docs/SMART_NOTES.md#citations) deeplinked to original sources, whether a section on a webpage, a timestamp in a video, or a page in a PDF.
-- Generate interactive applications without writing code using [Surflets](./docs/Surflets.md).
-- Paste in images, tables or data from other applications and have Surf understand and incorporate them.
-- Use rich formating, code blocks, to-do lists and more in your notes.
-
-[Read more](/docs/SMART_NOTES.md).
-
-### Tabs, Split View & Sidebar
-
-![split](./docs/assets/another-split.webp)
-
-Surf is built around tabs, split view and a sidebar for easy navigation.
-
-- Open local notes, files or web pages in tabs.
-- Split view allows you to view and interact with multiple resources side by side.
-- The sidebar provides quick access to your Notebooks & notes.
-
-### Surflets (App Generation)
-
-![surflets](./docs/assets/readme/surflets.png)
-
-Surf can code interactive applets to help you visualize, understand or explore concepts or data that are aided with code.
-
-[Read more](./docs/SURFLETS.md).
-
-### AI
-
-![models.png](./docs/assets/readme/models.png)
-
-[Surf’s notes](./docs/SMART_NOTES.md) and [Surflets](./docs/SURFLETS.md) are powered by large language models of your choice.
-
-- Bring your own key for popular models
-- Add a cloud model
-- Use Local Language Models
-
-[Read more](./docs/AI_MODELS.md).
-
-### Shortcuts
-
-Find the most common shortcuts [here](./docs/SHORTCUTS.md).
-
-## Security
-
-_To report a security concern, please see_ https://github.com/deta/surf/security/policy
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details on contributing to the project and an overview of the codebase.
-
-## Code of Conduct
-
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for details on our code of conduct.
-
-## License
-
-The source code for this project is licensed under the Apache 2.0 license, with the following exceptions:
-
-1. Our patch for the @ghostery/adblocker-electron package is licensed under the Mozilla Public License 2.0 (MPL-2.0), consistent with the upstream project's licensing.
-2. Select files may contain their own specific license headers that override the default license.
-
-Unless otherwise specified in the file or directory, all code defaults to the Apache 2.0 license.
-
-See [LICENSE](LICENSE) for more details about the Apache 2.0 license.
-
-**Note:** The Deta name and logos are **not** covered by the Apache 2.0 license.
-
-## Acknowledgements
-
-This project makes use of the following open source packages (not a comprehensive list):
-
-- [Electron](https://www.electronjs.org/)
-- [Tiptap](https://tiptap.dev/)
-- [Svelte](https://svelte.dev/)
-- [Rust](https://www.rust-lang.org/)
+See [LICENSE](LICENSE) for details. The Deta name and logos are **not** covered by the Apache 2.0 licence and remain the property of their owners; this fork replaces them with Acosta branding.

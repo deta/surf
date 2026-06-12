@@ -226,7 +226,7 @@
 </script>
 
 <svelte:head>
-  <title>Surf</title>
+  <title>Acosta Browse</title>
 </svelte:head>
 
 {#if isCustomizingNotebook}

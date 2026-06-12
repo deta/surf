@@ -171,7 +171,7 @@ export const CoreEntryPoint = (() => {
 })()
 
 export function checkIfSurfProtocolUrl(url: string): boolean {
-  return url.startsWith('surf://') || url.startsWith(ResourceViewerEntryPoint)
+  return url.startsWith('acosta://') || url.startsWith(ResourceViewerEntryPoint)
 }
 
 export async function checkFileExists(path: string) {

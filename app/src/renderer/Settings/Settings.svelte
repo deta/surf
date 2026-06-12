@@ -20,6 +20,7 @@
   import { BUILT_IN_MODELS, DEFAULT_AI_MODEL, Provider, type Model } from '@deta/types/src/ai.types'
   import { openDialog, prepareContextMenu } from '@deta/ui'
   import SmartNotesOptions from './components/SmartNotesOptions.svelte'
+  import AcostaSettings from './components/AcostaSettings.svelte'
   import LayoutPicker from '../components/LayoutPicker.svelte'
 
   // let error = ''
@@ -255,6 +256,17 @@
       <h1>AI</h1>
     </div>
 
+    <div
+      on:click={() => activeTab.set('acosta')}
+      role="tab"
+      tabindex="0"
+      class="tab no-drag"
+      class:active={$activeTab === 'acosta'}
+    >
+      <Icon name="bolt" size="24" />
+      <h1>Acosta</h1>
+    </div>
+
     <!-- <div
       on:click={() => activeTab.set('appearance')}
       role="tab"
@@ -285,7 +297,7 @@
       <article class="general">
         <img src={appIcon} alt="App Icon" />
         <div class="app-id">
-          <h1>Surf</h1>
+          <h1>Acosta Browse</h1>
 
           <span class="version-pill">{version}</span>
         </div>
@@ -366,6 +378,15 @@
             on:update-model={handleUpdateModel}
             on:created-model={handleCreatedModel}
             on:delete-model={handleDeleteModel}
+          />
+        {/if}
+      </article>
+    {:else if $activeTab === 'acosta'}
+      <article class="general">
+        {#if userConfigSettings?.acosta}
+          <AcostaSettings
+            bind:acosta={userConfigSettings.acosta}
+            on:update={() => handleSettingsUpdate()}
           />
         {/if}
       </article>

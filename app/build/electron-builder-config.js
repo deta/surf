@@ -1,4 +1,4 @@
-const productName = process.env.PRODUCT_NAME || 'Surf'
+const productName = process.env.PRODUCT_NAME || 'Acosta Browse'
 
 const params = {
   buildName: process.env.BUILD_TAG ? `${productName}-${process.env.BUILD_TAG}` : productName,
@@ -8,7 +8,7 @@ const params = {
 
 function electronBuilderConfig() {
   return {
-    appId: 'surf.deta',
+    appId: 'com.acostai.browse',
     productName: params.buildName,
     directories: {
       buildResources: params.buildResourcesDir || 'build/resources/prod'
@@ -74,11 +74,16 @@ function electronBuilderConfig() {
     },
     linux: {
       target: ['AppImage'],
-      maintainer: 'deta.surf',
+      maintainer: 'acosta.ai',
       artifactName: `${params.buildName}-${params.appVersion}.\${arch}.\${ext}`,
       category: 'WebBrowser'
     },
     npmRebuild: false,
+    publish: {
+      provider: 'generic',
+      url: process.env.UPDATES_URL || 'https://updates.acosta-ai.com',
+      channel: process.env.UPDATES_CHANNEL || 'latest'
+    },
     fileAssociations: [
       {
         name: 'Hypertext Markup Language',

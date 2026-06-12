@@ -424,7 +424,7 @@ export const appendURLPath = (url: string, path: string) => {
 
 /**
  * Try to parse a surf protocol URL and return the resourceId
- * Surf protocol URL format: surf://surf/resource/<id>
+ * Surf protocol URL format: acosta://acosta/resource/<id>
  * @deprecated This is no longer valid with having other surf paths not only resource
  * @param rawUrl The URL to parse
  * @returns resourceId or null if the URL is not a surf protocol URL
@@ -435,7 +435,7 @@ export const parseSurfProtocolURL = (rawUrl: URL | string) => {
     return null
   }
 
-  if (url.protocol === 'surf:') {
+  if (url.protocol === 'acosta:') {
     const resourceId = url.pathname.split('/')[2]
     if (!resourceId) {
       return null
@@ -456,7 +456,7 @@ export const parseSurfProtocolURL = (rawUrl: URL | string) => {
 export function isInternalRendererURL(url: string | URL): URL | null {
   try {
     const _url = url instanceof URL ? url : new URL(url)
-    if (_url.protocol === 'surf:') return _url
+    if (_url.protocol === 'acosta:') return _url
 
     const devPartialPaths = [
       '/Resource/resource.html',
@@ -510,6 +510,10 @@ export const getViewTypeData = (url: string) => {
     return { type: ViewType.NotebookHome, id: null }
   }
 
+  if (internalUrl.pathname === '/newtab') {
+    return { type: ViewType.NewTab, id: null }
+  }
+
   if (internalUrl.pathname.startsWith('/notebook/')) {
     const notebookId = internalUrl.pathname.split('/')[2]
     return { type: ViewType.Notebook, id: notebookId }
@@ -537,7 +541,9 @@ export const getCleanHostname = (url: string) => {
     } else if (viewType === ViewType.Notebook) {
       return 'Notebook'
     } else if (viewType === ViewType.NotebookHome) {
-      return 'Surf'
+      return 'Acosta'
+    } else if (viewType === ViewType.NewTab) {
+      return 'New Tab'
     } else {
       return getHostname(url) || url
     }
@@ -548,7 +554,7 @@ export const getCleanHostname = (url: string) => {
 
 export const cleanupPageTitle = (title: string) => {
   try {
-    if (!title.startsWith('surf://')) {
+    if (!title.startsWith('acosta://')) {
       return title
     }
 
@@ -558,7 +564,9 @@ export const cleanupPageTitle = (title: string) => {
     } else if (viewType === ViewType.Notebook) {
       return 'Notebook'
     } else if (viewType === ViewType.NotebookHome) {
-      return 'Surf'
+      return 'Acosta'
+    } else if (viewType === ViewType.NewTab) {
+      return 'New Tab'
     } else {
       return title
     }

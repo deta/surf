@@ -6,7 +6,13 @@ import type {
 } from 'electron'
 import type { ChatPrompt } from './ai.types'
 
-export type SettingsWindowTab = 'general' | 'ai' | 'appearance' | 'advanced' | 'extensions'
+export type SettingsWindowTab =
+  | 'general'
+  | 'ai'
+  | 'appearance'
+  | 'advanced'
+  | 'extensions'
+  | 'acosta'
 
 export type WebContentsViewCreateOptions = {
   id?: string

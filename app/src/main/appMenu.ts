@@ -107,7 +107,7 @@ class AppMenu {
   private createDataLocationMenuItem(): MenuConfig {
     const userDataPath = app.getPath('userData')
     const surfDataPath = join(userDataPath, 'sffs_backend')
-    const label = isMac() ? 'Show Surf Data in Finder' : 'Show Surf Data in File Manager'
+    const label = isMac() ? 'Show Browse Data in Finder' : 'Show Browse Data in File Manager'
 
     return {
       label,
@@ -118,7 +118,7 @@ class AppMenu {
   private getSurfMenu(isMacApp = isMac()): MenuConfig {
     const surfItems = [
       ...(isMacApp
-        ? ([{ label: 'About Surf', role: 'about' }, { type: 'separator' }] as MenuConfig[])
+        ? ([{ label: 'About Acosta Browse', role: 'about' }, { type: 'separator' }] as MenuConfig[])
         : []),
       {
         label: 'Preferences',
@@ -137,7 +137,7 @@ class AppMenu {
             { role: 'services', label: 'Services' },
             { type: 'separator' },
             {
-              label: 'Hide Surf',
+              label: 'Hide Acosta Browse',
               accelerator: 'CmdOrCtrl+H',
               role: 'hide'
             },
@@ -150,11 +150,11 @@ class AppMenu {
           ]
         : []),
       { type: 'separator' },
-      { label: 'Quit Surf', role: 'quit' }
+      { label: 'Quit Acosta Browse', role: 'quit' }
     ]
 
     return {
-      label: isMacApp ? app.name : 'Surf',
+      label: isMacApp ? app.name : 'Acosta Browse',
       submenu: surfItems as MenuConfig[]
     }
   }
@@ -290,7 +290,7 @@ class AppMenu {
           accelerator: 'CmdOrCtrl+Alt+Shift+R'
         },
         {
-          label: 'Toggle Developer Tools for Surf',
+          label: 'Toggle Developer Tools for Browse',
           accelerator: isMac() ? 'Cmd+Shift+I' : 'Option+Shift+I',
           role: 'toggleDevTools'
         }

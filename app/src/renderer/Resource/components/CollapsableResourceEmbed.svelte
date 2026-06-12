@@ -324,7 +324,7 @@
   {#if showImagePreview}
     <div class="image-preview-container">
       <Image
-        src={`surf://surf/resource/${resource.id}?raw=true`}
+        src={`acosta://acosta/resource/${resource.id}?raw=true`}
         alt={resource.metadata?.name || 'Image'}
         style="height: 100%; width: 100%; max-width: 100%; object-fit: contain; border-radius: 8px;"
       />

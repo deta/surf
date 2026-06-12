@@ -114,7 +114,10 @@ export default defineConfig({
           settings: resolve(__dirname, 'src/renderer/Settings/settings.html'),
           pdf: resolve(__dirname, 'src/renderer/PDF/pdf.html'),
           overlay: resolve(__dirname, 'src/renderer/Overlay/overlay.html'),
-          resource: resolve(__dirname, 'src/renderer/Resource/resource.html')
+          resource: resolve(__dirname, 'src/renderer/Resource/resource.html'),
+          login: resolve(__dirname, 'src/renderer/Login/login.html'),
+          blocked: resolve(__dirname, 'src/renderer/Blocked/blocked.html'),
+          newtab: resolve(__dirname, 'src/renderer/NewTab/newtab.html')
         },
         external: [
           'html-minifier-terser/dist/htmlminifier.esm.bundle.js',

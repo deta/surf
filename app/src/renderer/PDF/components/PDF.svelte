@@ -70,7 +70,7 @@
       if (pdfDownloadURL) {
         pdfSlick.loadDocument(pdfDownloadURL).then(async () => {
           if (pdfSlickReady) pdfSlickReady(pdfSlick)
-          if (!path.startsWith('surf://surf/resource')) {
+          if (!path.startsWith('acosta://acosta/resource')) {
             const title = filename ?? (await getDocumentTitle(pdfSlick))
             if (title && title !== 'document.pdf') document.title = title
           }
@@ -148,7 +148,7 @@
       metadata?.info?.['Title'] ||
       metadata?.metadata?.get('dc:title') ||
       pdfSlick.filename ||
-      'Surf PDF Viewer'
+      'Acosta PDF Viewer'
     )
   }
 

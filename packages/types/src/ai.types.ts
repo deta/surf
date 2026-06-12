@@ -1,5 +1,6 @@
 import { type OpenTarget } from './browser.types'
 import { PageChatMessageSentEventError, PageChatMessageSentEventTrigger } from './events.types'
+import { ACOSTA_API_BASE_URL } from './acosta.types'
 
 export enum Provider {
   OpenAI = 'open-ai',
@@ -219,7 +220,60 @@ export type Model = {
 
 export const OPEN_AI_PATH_SUFFIX = '/v1/chat/completions'
 
-export const BUILT_IN_MODELS = [
+/**
+ * Acosta Browse models. Every AI call is routed through the Acosta AI proxy
+ * (api.acosta.ai) — never directly to a provider. The proxy speaks the
+ * OpenAI-compatible chat completions format and multiplexes Claude, Gemini
+ * and ChatGPT behind unified model names. The per-request API key is the
+ * student's Firebase ID token, injected at call time.
+ */
+export enum AcostaModelIDs {
+  Claude = 'acosta-claude',
+  Gemini = 'acosta-gemini',
+  ChatGPT = 'acosta-chatgpt'
+}
+
+export const ACOSTA_MODELS: Model[] = [
+  {
+    id: AcostaModelIDs.Claude,
+    label: 'Claude',
+    provider: Provider.Anthropic,
+    tier: ModelTiers.Premium,
+    icon: ProviderIcons[Provider.Anthropic],
+    vision: true,
+    supports_json_format: true,
+    provider_url: ACOSTA_API_BASE_URL,
+    custom_model_name: 'claude'
+  },
+  {
+    id: AcostaModelIDs.Gemini,
+    label: 'Gemini',
+    provider: Provider.Google,
+    tier: ModelTiers.Standard,
+    icon: ProviderIcons[Provider.Google],
+    vision: true,
+    supports_json_format: true,
+    provider_url: ACOSTA_API_BASE_URL,
+    custom_model_name: 'gemini'
+  },
+  {
+    id: AcostaModelIDs.ChatGPT,
+    label: 'ChatGPT',
+    provider: Provider.OpenAI,
+    tier: ModelTiers.Premium,
+    icon: ProviderIcons[Provider.OpenAI],
+    vision: true,
+    supports_json_format: true,
+    provider_url: ACOSTA_API_BASE_URL,
+    custom_model_name: 'chatgpt'
+  }
+]
+
+/**
+ * @deprecated Upstream Surf BYOK model catalogue, retained only for config
+ * migrations of pre-Acosta profiles. Not shown in the model picker.
+ */
+export const LEGACY_BUILT_IN_MODELS = [
   {
     id: BuiltInModelIDs.GPT5,
     label: BuiltInModelLabels[BuiltInModelIDs.GPT5],
@@ -341,20 +395,26 @@ export const BUILT_IN_MODELS = [
   }
 ] as Model[]
 
-export const DEFAULT_AI_MODEL = BuiltInModelIDs.GPT4_1
+/**
+ * The live model catalogue. In Acosta Browse this is always the Acosta proxy
+ * models — students never bring their own keys.
+ */
+export const BUILT_IN_MODELS = ACOSTA_MODELS
+
+export const DEFAULT_AI_MODEL: string = AcostaModelIDs.Claude
 
 export const RECOMMENDED_AI_MODELS = [
   {
-    id: BuiltInModelIDs.GPT5,
-    description: 'Most capable model for general use cases'
+    id: AcostaModelIDs.Claude as string,
+    description: 'Thoughtful explanations and step-by-step working'
   },
   {
-    id: BuiltInModelIDs.ClaudeSonnet45,
-    description: 'Excellent analysis and creative skills'
-  },
-  {
-    id: BuiltInModelIDs.Gemini2Flash,
+    id: AcostaModelIDs.Gemini as string,
     description: 'Quick responses with solid reliability'
+  },
+  {
+    id: AcostaModelIDs.ChatGPT as string,
+    description: 'Great all-rounder for study questions'
   }
 ]
 

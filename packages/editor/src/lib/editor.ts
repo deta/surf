@@ -126,7 +126,7 @@ export const createEditorExtensions = (opts?: ExtensionOptions) => [
   Underline,
   Link.configure({
     onClick: opts?.onLinkClick,
-    protocols: ['surf'],
+    protocols: ['acosta'],
     HTMLAttributes: {
       target: '_blank'
     }

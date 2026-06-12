@@ -13,7 +13,15 @@ import type {
   WebContentsViewEvent,
   WebContentsViewManagerActionEvent,
   WebContentsViewActionEvent,
-  ControlWindow
+  ControlWindow,
+  AcostaAuthState,
+  AcostaSelectionActionPayload,
+  AuthCredentials,
+  AuthResult,
+  BlockVerdict,
+  FocusSessionConfig,
+  FocusSessionState,
+  FocusSessionSummary
 } from '@deta/types'
 import { createIPCService, type IPCEvent } from './ipc'
 
@@ -114,6 +122,73 @@ export type UpdateViewBounds = {
   bounds: Electron.Rectangle
 }
 
+/* --- Acosta Browse IPC payloads --- */
+
+export interface AcostaSignIn extends IPCEvent {
+  payload: AuthCredentials
+  output: AuthResult
+}
+
+export interface AcostaSignUp extends IPCEvent {
+  payload: AuthCredentials & { displayName?: string }
+  output: AuthResult
+}
+
+export interface AcostaSignInWithGoogle extends IPCEvent {
+  payload: void
+  output: AuthResult
+}
+
+export interface AcostaSignOut extends IPCEvent {
+  payload: void
+  output: boolean
+}
+
+export interface AcostaGetAuthState extends IPCEvent {
+  payload: void
+  output: AcostaAuthState
+}
+
+export interface AcostaGetIdToken extends IPCEvent {
+  payload: void
+  output: string | null
+}
+
+export interface AcostaCheckUrl extends IPCEvent {
+  payload: string
+  output: BlockVerdict
+}
+
+export interface AcostaFocusStart extends IPCEvent {
+  payload: FocusSessionConfig
+  output: FocusSessionState
+}
+
+export interface AcostaFocusStop extends IPCEvent {
+  payload: void
+  output: FocusSessionSummary | null
+}
+
+export interface AcostaFocusGetState extends IPCEvent {
+  payload: void
+  output: FocusSessionState
+}
+
+export interface AcostaFocusNoteTaken extends IPCEvent {
+  payload: void
+  output: boolean
+}
+
+export interface AcostaRequestAccess extends IPCEvent {
+  payload: { url: string; reason: string }
+  output: { ok: boolean; error?: string }
+}
+
+export interface AcostaApiRequest extends IPCEvent {
+  payload: { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; path: string; body?: unknown }
+  output: { ok: boolean; status: number; data: unknown }
+}
+
 const IPC_EVENTS = ipcService.registerEvents({
   // events that don't return a value
   updateTrafficLights: ipcService.addEvent<boolean>('update-traffic-lights'),
@@ -181,6 +256,16 @@ const IPC_EVENTS = ipcService.registerEvents({
   focusMainRenderer: ipcService.addEvent<void>('focus-main-renderer'),
   updateViewBounds: ipcService.addEvent<UpdateViewBounds>('update-view-bounds'),
 
+  // Acosta Browse events
+  acostaAuthStateChange: ipcService.addEvent<AcostaAuthState>('acosta-auth-state-change'),
+  acostaFocusStateChange: ipcService.addEvent<FocusSessionState>('acosta-focus-state-change'),
+  acostaFocusSessionComplete: ipcService.addEvent<FocusSessionSummary>(
+    'acosta-focus-session-complete'
+  ),
+  acostaSelectionAction:
+    ipcService.addEvent<AcostaSelectionActionPayload>('acosta-selection-action'),
+  acostaToggleFocusMode: ipcService.addEvent<void>('acosta-toggle-focus-mode'),
+
   // events that return a value
   getAdblockerState: ipcService.addEventWithReturn<GetAdblockerState>('get-adblocker-state'),
   captureWebContents: ipcService.addEventWithReturn<CaptureWebContents>('capture-web-contents'),
@@ -196,6 +281,24 @@ const IPC_EVENTS = ipcService.registerEvents({
   ),
   isDefaultBrowser: ipcService.addEventWithReturn<DefaultBrowserCheck>('is-default-browser'),
   showOpenDialog: ipcService.addEventWithReturn<ShowOpenDialog>('show-open-dialog'),
+
+  // Acosta Browse events that return a value
+  acostaSignIn: ipcService.addEventWithReturn<AcostaSignIn>('acosta-sign-in'),
+  acostaSignUp: ipcService.addEventWithReturn<AcostaSignUp>('acosta-sign-up'),
+  acostaSignInWithGoogle: ipcService.addEventWithReturn<AcostaSignInWithGoogle>(
+    'acosta-sign-in-with-google'
+  ),
+  acostaSignOut: ipcService.addEventWithReturn<AcostaSignOut>('acosta-sign-out'),
+  acostaGetAuthState: ipcService.addEventWithReturn<AcostaGetAuthState>('acosta-get-auth-state'),
+  acostaGetIdToken: ipcService.addEventWithReturn<AcostaGetIdToken>('acosta-get-id-token'),
+  acostaCheckUrl: ipcService.addEventWithReturn<AcostaCheckUrl>('acosta-check-url'),
+  acostaFocusStart: ipcService.addEventWithReturn<AcostaFocusStart>('acosta-focus-start'),
+  acostaFocusStop: ipcService.addEventWithReturn<AcostaFocusStop>('acosta-focus-stop'),
+  acostaFocusGetState: ipcService.addEventWithReturn<AcostaFocusGetState>('acosta-focus-get-state'),
+  acostaFocusNoteTaken:
+    ipcService.addEventWithReturn<AcostaFocusNoteTaken>('acosta-focus-note-taken'),
+  acostaRequestAccess: ipcService.addEventWithReturn<AcostaRequestAccess>('acosta-request-access'),
+  acostaApiRequest: ipcService.addEventWithReturn<AcostaApiRequest>('acosta-api-request'),
 
   // WebContentsView events
   webContentsViewManagerAction: ipcService.addEventWithReturn<WebContentsViewManagerActionEvent>(

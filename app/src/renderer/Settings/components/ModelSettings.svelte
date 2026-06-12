@@ -458,7 +458,7 @@
                 <FormField
                   label="Model Label"
                   placeholder="My Custom Model"
-                  infoText="Give your custom model a name so you can identify it within Surf's UI"
+                  infoText="Give your custom model a name so you can identify it within Acosta Browse's UI"
                   value={model.label}
                   on:save={(e) => updateModel(model.id, { label: e.detail })}
                 />

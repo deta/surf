@@ -1446,7 +1446,7 @@
         return
       } else if (type === MentionItemType.NOTEBOOK) {
         messagePort.navigateURL.send({
-          url: `surf://surf/notebook/${id}`,
+          url: `acosta://acosta/notebook/${id}`,
           target
         })
         return

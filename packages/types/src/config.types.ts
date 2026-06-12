@@ -1,4 +1,5 @@
 import type { Model } from './ai.types'
+import type { AcostaSettings } from './acosta.types'
 
 export type UserConfig = {
   defaultBrowser: boolean
@@ -46,6 +47,9 @@ export type UserSettings = {
   teletype_default_action: 'auto' | 'always_ask' | 'always_search'
   completed_onboarding_examples: string[]
   dismissed_onboarding_examples: boolean
+
+  /** Acosta Browse specific settings. */
+  acosta: AcostaSettings
 
   /**
    * @deprecated use individual feature flags instead

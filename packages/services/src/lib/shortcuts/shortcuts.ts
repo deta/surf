@@ -19,6 +19,8 @@ export enum ShortcutActions {
   SWITCH_TO_TAB_9 = 'SWITCH_TO_TAB_9',
   //SWITCH_TO_LAST_TAB = 'SWITCH_TO_LAST_TAB',
   TOGGLE_SIDEBAR = 'TOGGLE_SIDEBAR',
+  TOGGLE_AI_SIDEBAR = 'TOGGLE_AI_SIDEBAR',
+  TOGGLE_FOCUS_MODE = 'TOGGLE_FOCUS_MODE',
   TOGGLE_TAB_ORIENTATION = 'TOGGLE_TAB_ORIENTATION',
   INCREASE_PAGE_ZOOM = 'INCREASE_PAGE_ZOOM',
   DECREASE_PAGE_ZOOM = 'DECREASE_PAGE_ZOOM',
@@ -127,6 +129,18 @@ export const defaultShortcuts: Record<ShortcutActions, ShortcutDefinition<Shortc
     action: ShortcutActions.TOGGLE_SIDEBAR,
     defaultCombo: 'CmdOrCtrl+E',
     description: 'Toggle Sidebar',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.TOGGLE_AI_SIDEBAR]: {
+    action: ShortcutActions.TOGGLE_AI_SIDEBAR,
+    defaultCombo: 'CmdOrCtrl+Shift+A',
+    description: 'Toggle the Acosta AI sidebar',
+    priority: ShortcutPriority.Normal
+  },
+  [ShortcutActions.TOGGLE_FOCUS_MODE]: {
+    action: ShortcutActions.TOGGLE_FOCUS_MODE,
+    defaultCombo: 'CmdOrCtrl+Shift+F',
+    description: 'Start or stop a focus session',
     priority: ShortcutPriority.Normal
   },
   [ShortcutActions.TOGGLE_TAB_ORIENTATION]: {

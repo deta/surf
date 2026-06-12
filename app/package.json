@@ -1,9 +1,9 @@
 {
   "name": "desktop",
-  "productName": "Surf",
+  "productName": "Acosta Browse",
   "version": "0.0.1",
   "main": "./out/main/index.js",
-  "author": "Negative Entropy LLC",
+  "author": "Acosta AI",
   "scripts": {
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",

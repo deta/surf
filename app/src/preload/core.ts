@@ -27,7 +27,12 @@ import {
   WebContentsViewManagerActionOutputs,
   WebContentsViewActionOutputs,
   RendererType,
-  type ControlWindow
+  type ControlWindow,
+  type AcostaAuthState,
+  type AcostaSelectionActionPayload,
+  type FocusSessionConfig,
+  type FocusSessionState,
+  type FocusSessionSummary
 } from '@deta/types'
 
 import {
@@ -772,6 +777,40 @@ const api = {
     return IPC_EVENTS_RENDERER.webContentsViewAction.invoke({ viewId, action } as any) as Promise<
       WebContentsViewActionOutputs[T]
     >
+  },
+
+  acosta: {
+    signIn: (email: string, password: string) =>
+      IPC_EVENTS_RENDERER.acostaSignIn.invoke({ email, password }),
+    signUp: (email: string, password: string, displayName?: string) =>
+      IPC_EVENTS_RENDERER.acostaSignUp.invoke({ email, password, displayName }),
+    signInWithGoogle: () => IPC_EVENTS_RENDERER.acostaSignInWithGoogle.invoke(),
+    signOut: () => IPC_EVENTS_RENDERER.acostaSignOut.invoke(),
+    getAuthState: () => IPC_EVENTS_RENDERER.acostaGetAuthState.invoke(),
+    getIdToken: () => IPC_EVENTS_RENDERER.acostaGetIdToken.invoke(),
+    onAuthStateChange: (callback: (state: AcostaAuthState) => void) =>
+      IPC_EVENTS_RENDERER.acostaAuthStateChange.on((_, state) => callback(state)),
+
+    checkUrl: (url: string) => IPC_EVENTS_RENDERER.acostaCheckUrl.invoke(url),
+    requestAccess: (url: string, reason: string) =>
+      IPC_EVENTS_RENDERER.acostaRequestAccess.invoke({ url, reason }),
+
+    focusStart: (config: FocusSessionConfig) => IPC_EVENTS_RENDERER.acostaFocusStart.invoke(config),
+    focusStop: () => IPC_EVENTS_RENDERER.acostaFocusStop.invoke(),
+    focusGetState: () => IPC_EVENTS_RENDERER.acostaFocusGetState.invoke(),
+    focusNoteTaken: () => IPC_EVENTS_RENDERER.acostaFocusNoteTaken.invoke(),
+    onFocusStateChange: (callback: (state: FocusSessionState) => void) =>
+      IPC_EVENTS_RENDERER.acostaFocusStateChange.on((_, state) => callback(state)),
+    onFocusSessionComplete: (callback: (summary: FocusSessionSummary) => void) =>
+      IPC_EVENTS_RENDERER.acostaFocusSessionComplete.on((_, summary) => callback(summary)),
+    onToggleFocusMode: (callback: () => void) =>
+      IPC_EVENTS_RENDERER.acostaToggleFocusMode.on(() => callback()),
+
+    onSelectionAction: (callback: (payload: AcostaSelectionActionPayload) => void) =>
+      IPC_EVENTS_RENDERER.acostaSelectionAction.on((_, payload) => callback(payload)),
+
+    apiRequest: (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown) =>
+      IPC_EVENTS_RENDERER.acostaApiRequest.invoke({ method, path, body })
   },
 
   ...eventHandlers

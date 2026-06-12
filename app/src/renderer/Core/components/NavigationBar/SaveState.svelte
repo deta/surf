@@ -90,7 +90,7 @@
 
   async function saveToSurf() {
     if (!$isSaved || !resource) {
-      log.debug('Bookmarking page to Surf')
+      log.debug('Bookmarking page to Acosta Browse')
       resource = await view.bookmarkPage()
     }
 
@@ -167,7 +167,7 @@
       {:else}
         <button class="list-item save-to-surf" onclick={saveToSurf}>
           <Icon name="save" />
-          <div class="list-item-label">Add to Surf</div>
+          <div class="list-item-label">Add to Browse</div>
         </button>
       {/if}
     </div>

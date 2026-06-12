@@ -178,6 +178,17 @@ const api = {
     >
   },
 
+  // Subset of the Acosta bridge needed by the Resource renderer: AI calls
+  // authenticate with the Firebase ID token and chats read auth/focus state.
+  acosta: {
+    getAuthState: () => IPC_EVENTS_RENDERER.acostaGetAuthState.invoke(),
+    getIdToken: () => IPC_EVENTS_RENDERER.acostaGetIdToken.invoke(),
+    focusGetState: () => IPC_EVENTS_RENDERER.acostaFocusGetState.invoke(),
+    focusNoteTaken: () => IPC_EVENTS_RENDERER.acostaFocusNoteTaken.invoke(),
+    apiRequest: (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown) =>
+      IPC_EVENTS_RENDERER.acostaApiRequest.invoke({ method, path, body })
+  },
+
   ...eventHandlers
 }
 

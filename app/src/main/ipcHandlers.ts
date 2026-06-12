@@ -10,7 +10,8 @@ import {
   ElectronAppInfo,
   RightSidebarTab,
   SFFSResource,
-  UserSettings
+  UserSettings,
+  type AcostaSelectionActionPayload
 } from '@deta/types'
 import { getPlatform, isPathSafe, isDefaultBrowser } from './utils'
 import { updateTabOrientationMenuItem } from './appMenu'
@@ -52,8 +53,8 @@ export const validateIPCSender = (event: Electron.IpcMainEvent | Electron.IpcMai
   }
 
   if (
-    event.senderFrame?.url.startsWith('surf://surf/resource/') ||
-    event.senderFrame?.url.startsWith('surf://surf/notebook')
+    event.senderFrame?.url.startsWith('acosta://acosta/resource/') ||
+    event.senderFrame?.url.startsWith('acosta://acosta/notebook')
   ) {
     validIDs.push(event.sender.id)
   }
@@ -706,6 +707,26 @@ export const ipcSenders = {
     }
 
     IPC_EVENTS_MAIN.saveLink.sendToWebContents(window.webContents, { url, spaceId })
+  },
+
+  acostaSelectionAction(payload: AcostaSelectionActionPayload) {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.acostaSelectionAction.sendToWebContents(window.webContents, payload)
+  },
+
+  acostaToggleFocusMode() {
+    const window = getMainWindow()
+    if (!window) {
+      log.error('Main window not found')
+      return
+    }
+
+    IPC_EVENTS_MAIN.acostaToggleFocusMode.sendToWebContents(window.webContents)
   },
 
   updateViewBounds(viewId: string, bounds: Electron.Rectangle) {

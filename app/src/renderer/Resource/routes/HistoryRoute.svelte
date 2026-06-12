@@ -28,7 +28,7 @@
           <PageMention
             text={`${container.data.emoji ? container.data.emoji + " " : ""}${container.data.folderName}`}
             onclick={async () => {
-              await navigation.navigate(`surf://notebook/${container.id}`)
+              await navigation.navigate(`acosta://notebook/${container.id}`)
                 .finished;
             }}
             --delay={50 + i * 50 + "ms"}

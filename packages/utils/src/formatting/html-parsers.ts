@@ -158,7 +158,7 @@ export const handleSurflet = (state: State, node: Element) => {
       children: [
         {
           type: 'link',
-          url: `surf://surf/resource/${resourceId}`,
+          url: `acosta://acosta/resource/${resourceId}`,
           children: [{ type: 'text', value: name || 'Surflet' }]
         }
         // { type: 'code', lang: 'html', value: (node.children[0] as any)?.value || '' }
@@ -201,9 +201,9 @@ export const handleSpan = (state: State, node: Element) => {
     // Generate URL based on mention type
     let url = id
     if (mentionType === 'notebook') {
-      url = `surf://surf/notebook/${id}`
+      url = `acosta://acosta/notebook/${id}`
     } else if (mentionType === 'resource') {
-      url = `surf://surf/resource/${id}`
+      url = `acosta://acosta/resource/${id}`
     }
 
     const result = {

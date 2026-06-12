@@ -7,7 +7,7 @@
     "dev:all": "turbo dev",
     "build": "turbo run desktop#build",
     "build:frontend": "turbo run desktop#build:frontend",
-    "build:packages": "turbo build --filter=!desktop",
+    "build:packages": "turbo build --filter=!desktop --filter=!@deta/teletype",
     "build:libs": "turbo run @deta/utils#build @deta/ui#build @deta/icons#build @deta/editor#build --force",
     "build:desktop": "yarn workspace desktop build",
     "build:desktop:mwl": "yarn turbo run desktop#build:mwl",

@@ -238,12 +238,12 @@ const surfProtocolHandleImages = async ({
   }
 }
 
-const ALLOWED_HOSTNAMES = ['core', 'overlay', 'surf']
+const ALLOWED_HOSTNAMES = ['core', 'overlay', 'acosta']
 
 const HOSTNAME_TO_ROOT = {
   core: '/Core/core.html',
   overlay: '/Overlay/overlay.html',
-  surf: '/Resource/resource.html'
+  acosta: '/Resource/resource.html'
 }
 
 export const serveFile = async (req: Request, targetPath: string) => {
@@ -299,7 +299,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
   try {
     const url = new URL(req.url)
 
-    if (url.protocol !== 'surf-internal:' && url.protocol !== 'surf:') {
+    if (url.protocol !== 'acosta-internal:' && url.protocol !== 'acosta:') {
       log.error('Invalid protocol:', url.protocol)
       return new Response('Invalid Surf protocol URL', { status: 400 })
     }
@@ -318,8 +318,11 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
       }
 
       targetPath = rootPath
-    } else if (url.hostname === 'surf') {
-      // Handle root requests (surf://surf/notebook/:id) and root assets
+    } else if (url.hostname === 'acosta' && url.pathname === '/newtab') {
+      // The Acosta new tab page
+      targetPath = '/NewTab/newtab.html'
+    } else if (url.hostname === 'acosta') {
+      // Handle root requests (acosta://acosta/notebook/:id) and root assets
       const match = url.pathname.match(/^\/(notebook|resource)(?:\/([^\/]+))?\/?$/)
 
       if (match) {
@@ -328,7 +331,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
         if (id) {
           // If only ID is present, serve the main HTML
           if (url.pathname === `/${type}/${id}`) {
-            const rootPath = HOSTNAME_TO_ROOT['surf']
+            const rootPath = HOSTNAME_TO_ROOT['acosta']
             if (!rootPath) {
               log.error('Invalid hostname for root path:', url.hostname)
               return new Response('Invalid Surf internal protocol hostname', { status: 400 })
@@ -336,7 +339,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
 
             targetPath = rootPath
           } else if (url.pathname === `/${type}`) {
-            const rootPath = HOSTNAME_TO_ROOT['surf']
+            const rootPath = HOSTNAME_TO_ROOT['acosta']
             if (!rootPath) {
               log.error('Invalid hostname for root path:', url.hostname)
               return new Response('Invalid Surf internal protocol hostname', { status: 400 })
@@ -344,11 +347,11 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
 
             targetPath = rootPath
           } else {
-            // For asset requests (surf://surf/notebook/:id/some/file.js), remove the type and ID prefix
-            targetPath = url.href.replace(`surf://surf/${type}/${id}/`, '')
+            // For asset requests (acosta://acosta/notebook/:id/some/file.js), remove the type and ID prefix
+            targetPath = url.href.replace(`acosta://acosta/${type}/${id}/`, '')
           }
         } else if (url.pathname === `/${type}`) {
-          const rootPath = HOSTNAME_TO_ROOT['surf']
+          const rootPath = HOSTNAME_TO_ROOT['acosta']
           if (!rootPath) {
             log.error('Invalid hostname for root path:', url.hostname)
             return new Response('Invalid Surf internal protocol hostname', { status: 400 })
@@ -356,7 +359,7 @@ export const handleSurfFileRequest = async (req: GlobalRequest) => {
 
           targetPath = rootPath
         } else {
-          // For root assets (surf://surf/notebook/assets/style.css)
+          // For root assets (acosta://acosta/notebook/assets/style.css)
           targetPath = `${url.pathname.substring(type.length + 1)}`
         }
       } else {
@@ -488,7 +491,7 @@ export const surfInternalProtocolHandler = async (req: GlobalRequest) => {
 
 export const surfProtocolHandler = async (req: GlobalRequest) => {
   try {
-    const id = req.url.match(/^surf:\/\/surf\/resource\/([^\/\?]+)/)?.[1]
+    const id = req.url.match(/^acosta:\/\/acosta\/resource\/([^\/\?]+)/)?.[1]
     if (id) {
       const searchParams = new URL(req.url).searchParams
       if (searchParams.has('raw') && searchParams.get('raw') !== 'false') {
@@ -545,7 +548,9 @@ export const surfletProtocolHandler = async (req: GlobalRequest) => {
 export const checkSurfProtocolRequest = (url: string) => {
   try {
     const parsed = new URL(url)
-    return parsed.protocol === 'surf:' && ALLOWED_HOSTNAMES.includes(parsed.hostname.toLowerCase())
+    return (
+      parsed.protocol === 'acosta:' && ALLOWED_HOSTNAMES.includes(parsed.hostname.toLowerCase())
+    )
   } catch {
     return false
   }

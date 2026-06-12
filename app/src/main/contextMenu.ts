@@ -4,6 +4,11 @@ import { getCachedSpaces } from './spaces'
 import { type MenuItemConstructorOptions } from 'electron'
 import { SpaceBasicData } from '@deta/services/ipc'
 import { conditionalArrayItem } from '@deta/utils/data'
+import {
+  ACOSTA_SELECTION_ACTIONS,
+  ACOSTA_SELECTION_ACTION_LABELS,
+  type AcostaSelectionAction
+} from '@deta/types'
 
 const createSpaceAction = (space: SpaceBasicData, handler: () => void) => {
   return {
@@ -59,7 +64,27 @@ export function setupContextMenu(window: Electron.WebContents, options: contextM
         )
       }
 
+      const hasSelection = parameters.selectionText.trim().length > 0
+      const acostaSelectionItems: MenuItemConstructorOptions[] = ACOSTA_SELECTION_ACTIONS.map(
+        (action: AcostaSelectionAction) => ({
+          label: ACOSTA_SELECTION_ACTION_LABELS[action],
+          visible: hasSelection,
+          click: () => {
+            ipcSenders.acostaSelectionAction({
+              action,
+              selectionText: parameters.selectionText,
+              pageURL: parameters.pageURL,
+              pageTitle: parameters.titleText ?? ''
+            })
+          }
+        })
+      )
+
       return [
+        ...acostaSelectionItems,
+        ...conditionalArrayItem<MenuItemConstructorOptions>(hasSelection, {
+          type: 'separator'
+        }),
         {
           label: 'Open in New Tab',
           visible: parameters.linkURL.length > 0,

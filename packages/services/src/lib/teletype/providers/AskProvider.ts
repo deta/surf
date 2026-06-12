@@ -30,11 +30,11 @@ export class AskProvider implements ActionProvider {
       id: 'ask-action',
       name: `${trimmedQuery}`,
       icon: 'face',
-      section: 'Ask Surf',
+      section: 'Ask Acosta',
       priority: 95,
       keywords: ['ask', 'question', 'ai', 'chat', 'help'],
       // description: `Create a new Note about "${trimmedQuery}"`,
-      buttonText: 'Ask Surf',
+      buttonText: 'Ask Acosta',
       handler: async () => {
         await this.triggerAskAction(trimmedQuery, mentions)
       }

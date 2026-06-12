@@ -1,0 +1,133 @@
+/*
+ * Acosta Browse brand styles.
+ * Dark-mode-first palette for a premium education product.
+ */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('./fonts/BricolageGrotesque-Variable.ttf') format('truetype');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./fonts/Geist-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Brand palette */
+  --acosta-navy: #0d1b2a;
+  --acosta-navy-raised: #14263a;
+  --acosta-navy-overlay: #1b324c;
+  --acosta-teal: #00c2a8;
+  --acosta-teal-hover: #00dabd;
+  --acosta-teal-pressed: #00a18c;
+  --acosta-text: #f7f9fb;
+  --acosta-text-muted: rgba(247, 249, 251, 0.65);
+  --acosta-text-faint: rgba(247, 249, 251, 0.4);
+  --acosta-danger: #ff6b6b;
+  --acosta-warning: #ffc857;
+  --acosta-border: rgba(247, 249, 251, 0.12);
+
+  /* Typography */
+  --acosta-font-heading: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --acosta-font-body: 'Geist', 'Inter', system-ui, sans-serif;
+}
+
+.acosta-page {
+  background: var(--acosta-navy);
+  color: var(--acosta-text);
+  font-family: var(--acosta-font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.acosta-page h1,
+.acosta-page h2,
+.acosta-page h3 {
+  font-family: var(--acosta-font-heading);
+}
+
+.acosta-button {
+  background: var(--acosta-teal);
+  color: var(--acosta-navy);
+  font-family: var(--acosta-font-body);
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+.acosta-button:hover:not(:disabled) {
+  background: var(--acosta-teal-hover);
+}
+
+.acosta-button:active:not(:disabled) {
+  background: var(--acosta-teal-pressed);
+  transform: scale(0.99);
+}
+
+.acosta-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.acosta-button-secondary {
+  background: transparent;
+  color: var(--acosta-text);
+  border: 1px solid var(--acosta-border);
+}
+
+.acosta-button-secondary:hover:not(:disabled) {
+  background: var(--acosta-navy-overlay);
+}
+
+.acosta-input {
+  background: var(--acosta-navy-raised);
+  color: var(--acosta-text);
+  border: 1px solid var(--acosta-border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-family: var(--acosta-font-body);
+  width: 100%;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.acosta-input::placeholder {
+  color: var(--acosta-text-faint);
+}
+
+.acosta-input:focus {
+  border-color: var(--acosta-teal);
+}
+
+.acosta-card {
+  background: var(--acosta-navy-raised);
+  border: 1px solid var(--acosta-border);
+  border-radius: 16px;
+}
+
+/* The Acosta "A" logomark backdrop */
+.acosta-logomark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--acosta-teal);
+  color: var(--acosta-navy);
+  font-family: var(--acosta-font-heading);
+  font-weight: 700;
+  border-radius: 22%;
+  user-select: none;
+}

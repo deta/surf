@@ -7,6 +7,8 @@
   import { ShortcutActions } from '@deta/services/shortcuts'
   import { initServices } from '@deta/services/helpers'
   import { handlePreloadEvents } from './handlers/preloadEvents'
+  import { setupAcostaEvents } from './handlers/acostaEvents'
+  import AcostaFocusMode from './components/AcostaFocusMode.svelte'
 
   import WebContentsView from './components/WebContentsView.svelte'
   import TabsListWrapper from './components/Tabs/TabsListWrapper.svelte'
@@ -27,6 +29,8 @@
   import { checkAndCreateDemoItems } from '@deta/services'
 
   const log = useLogScope('Core')
+
+  let focusMode: AcostaFocusMode | undefined = $state()
 
   const {
     config,
@@ -192,6 +196,16 @@
       return true
     })
 
+    shortcutsManager.registerHandler(ShortcutActions.TOGGLE_AI_SIDEBAR, () => {
+      viewManager.setSidebarState({ open: !viewManager.sidebarViewOpen })
+      return true
+    })
+
+    shortcutsManager.registerHandler(ShortcutActions.TOGGLE_FOCUS_MODE, () => {
+      focusMode?.toggle()
+      return true
+    })
+
     shortcutsManager.registerHandler(ShortcutActions.TOGGLE_TAB_ORIENTATION, () => {
       log.debug('Toggling tab orientation (CMD+O)')
       toggleTabOrientation().catch((error) => {
@@ -230,6 +244,8 @@
     })
 
     unsubs.push(handlePreloadEvents())
+    unsubs.push(setupAcostaEvents())
+    unsubs.push(window.api.acosta.onToggleFocusMode(() => focusMode?.toggle()))
 
     try {
       await checkAndCreateDemoItems()
@@ -323,6 +339,8 @@
     <AppSidebar />
   </main>
 </div>
+
+<AcostaFocusMode bind:this={focusMode} />
 
 <style lang="scss">
   :global(html) {

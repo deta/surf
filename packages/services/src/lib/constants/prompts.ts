@@ -1,4 +1,5 @@
 import { markdown as INLINE_SUMMARIZER } from './prompts/inline-summarizer.md'
+import { markdown as ACOSTA_TUTOR } from './prompts/acosta-tutor.md'
 import { markdown as INLINE_EXPLAINER } from './prompts/inline-explainer.md'
 import { markdown as INLINE_TRANSLATE } from './prompts/inline-translate.md'
 import { markdown as INLINE_GRAMMAR } from './prompts/inline-grammar.md'
@@ -18,6 +19,62 @@ export { markdown as FILENAME_CLEANUP_PROMPT } from './prompts/filename-cleanup.
 export { markdown as BROWSER_HISTORY_QUERY_PROMPT } from './prompts/browser-history-query.md'
 
 export const SIMPLE_SUMMARIZER_PROMPT = `You are a summarizer, summarize the text given to you. Only respond with the summarization.`
+
+/**
+ * The Acosta tutor identity — the canonical Acosta platform system prompt.
+ * Prepended to the system prompt of every chat in Acosta Browse; chats must
+ * never run without it. Maintained in prompts/acosta-tutor.md.
+ */
+export const ACOSTA_TUTOR_SYSTEM_PROMPT = ACOSTA_TUTOR
+
+export type AcostaUserContext = {
+  userName?: string | null
+  yearLevel?: string | null
+  location?: string | null
+  subjects?: string[]
+  guardianStatus?: string | null
+  memories?: string[]
+}
+
+/** Full Acosta system prompt with the per-user context block appended. */
+export const buildAcostaSystemPrompt = (context: AcostaUserContext = {}): string => {
+  const subjects =
+    context.subjects && context.subjects.length > 0 ? context.subjects.join(', ') : 'Not specified'
+  const memories =
+    context.memories && context.memories.length > 0
+      ? context.memories.map((memory) => `- ${memory}`).join('\n')
+      : 'No active memories'
+
+  return `${ACOSTA_TUTOR_SYSTEM_PROMPT}
+
+User Context:
+Name: ${context.userName || 'Student'}
+Year Level: ${context.yearLevel || 'Not specified'}
+Location: ${context.location || 'Not specified'}
+Subjects: ${subjects}
+Guardian Status: ${context.guardianStatus || 'Normal'}
+
+Long-Term Memories (Personalisation):
+${memories}`
+}
+
+/** Additional system context while a focus session is running. */
+export const acostaFocusContextPrompt = (subject: string, task: string): string =>
+  `The student is currently in a focus study session. Subject: ${subject}. Task: ${task}. Keep your answers relevant to this task and gently steer the student back to it if their questions drift off-topic.`
+
+/** Pre-built prompts for the page context-menu selection actions. */
+export const ACOSTA_SELECTION_PROMPTS = {
+  explain: (selection: string): string =>
+    `Explain the following in a way that's easy to understand. Break it down step by step and use an example if it helps:\n\n"""\n${selection}\n"""`,
+  quiz: (selection: string): string =>
+    `Quiz me on the following content. Ask me one question at a time, wait for my answer, then tell me if I'm right and explain why before asking the next question. Start with question 1:\n\n"""\n${selection}\n"""`,
+  summarise: (selection: string): string =>
+    `Summarise the following into the key points I need to remember for study notes:\n\n"""\n${selection}\n"""`,
+  'find-in-syllabus': (selection: string): string =>
+    `Where does the following topic fit in the NSW syllabus? Name the subject, stage, and outcome codes if you know them, and explain what I'm expected to be able to do:\n\n"""\n${selection}\n"""`,
+  'add-to-notes': (selection: string): string =>
+    `Write a concise study-note summary (2-4 sentences) of the following, suitable to sit underneath the quoted text in my notes:\n\n"""\n${selection}\n"""`
+} as const
 export const LEGACY_PAGE_CITATION_SUMMARY_PROMPT = LEGACY_PAGE_CITATIONS
 
 export const INLINE_PROMPTS = {

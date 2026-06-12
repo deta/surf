@@ -29,8 +29,13 @@ import {
 } from './surfProtocolHandlers'
 import { attachWCViewManager, WCViewManager } from './viewManager'
 import { useLogScope } from '@deta/utils'
+import type { AcostaAuthState } from '@deta/types'
+import { useAcostaAuth } from './acosta/authService'
 
 const log = useLogScope('MainWindow')
+
+const CORE_URL = 'acosta-internal://Core/Core/core.html'
+const LOGIN_URL = 'acosta-internal://Core/Login/login.html'
 
 let mainWindow: BrowserWindow | undefined
 let viewManager: WCViewManager | undefined
@@ -157,9 +162,9 @@ export function createWindow() {
   })()
 
   webRequestManager.addBeforeRequest(webviewSession, (details, callback) => {
-    const isSurfProtocol = details.url.startsWith('surf:')
+    const isSurfProtocol = details.url.startsWith('acosta:')
     const isSurfletProtocol = details.url.startsWith('surflet:')
-    const isInternalPageRequest = details.url.startsWith('surf-internal:')
+    const isInternalPageRequest = details.url.startsWith('acosta-internal:')
 
     const isMainFrameRequest = details.resourceType === 'mainFrame'
     const urlString = details.webContents && details.webContents.getURL()
@@ -267,17 +272,17 @@ export function createWindow() {
       return
     }
 
-    if (url.protocol === 'surf:') {
+    if (url.protocol === 'acosta:') {
       if (isPDF) {
         callback({ cancel: true })
         loadPDFViewer({ path: details.url, filename })
       } else {
         if (url.hostname === 'resource') {
           callback({ cancel: true })
-          details.webContents?.loadURL(`surf://surf/resource/${url.pathname.slice(1)}`)
+          details.webContents?.loadURL(`acosta://acosta/resource/${url.pathname.slice(1)}`)
         } else if (url.hostname === 'notebook') {
           callback({ cancel: true })
-          details.webContents?.loadURL(`surf://surf/notebook/${url.pathname.slice(1)}`)
+          details.webContents?.loadURL(`acosta://acosta/notebook/${url.pathname.slice(1)}`)
         } else {
           callback({ cancel: false })
         }
@@ -322,10 +327,10 @@ export function createWindow() {
   })
 
   try {
-    webviewSession.protocol.handle('surf', surfProtocolHandler)
+    webviewSession.protocol.handle('acosta', surfProtocolHandler)
     webviewSession.protocol.handle('surflet', surfletProtocolHandler)
-    mainWindowSession.protocol.handle('surf', surfProtocolHandler)
-    mainWindowSession.protocol.handle('surf-internal', surfInternalProtocolHandler)
+    mainWindowSession.protocol.handle('acosta', surfProtocolHandler)
+    mainWindowSession.protocol.handle('acosta-internal', surfInternalProtocolHandler)
   } catch (e) {
     log.error('possibly failed to register surf protocol: ', e)
   }
@@ -387,7 +392,26 @@ export function createWindow() {
   //   mainWindow.loadFile(join(__dirname, '../renderer/Core/core.html'))
   // }
 
-  mainWindow.loadURL('surf-internal://Core/Core/core.html')
+  // Auth gate: the browser UI only loads for a signed-in student. Until then
+  // the window hosts the full-screen Acosta login page.
+  const auth = useAcostaAuth()
+  let showingCore = auth.isSignedIn
+  mainWindow.loadURL(showingCore ? CORE_URL : LOGIN_URL)
+
+  const handleAuthChange = (state: AcostaAuthState) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    if (state.status === 'signed-in' && !showingCore) {
+      showingCore = true
+      mainWindow.loadURL(CORE_URL)
+    } else if (state.status === 'signed-out' && showingCore) {
+      showingCore = false
+      mainWindow.loadURL(LOGIN_URL)
+    }
+  }
+
+  auth.on('auth-state-change', handleAuthChange)
+  mainWindow.on('closed', () => auth.off('auth-state-change', handleAuthChange))
 }
 
 export function getMainWindow(): BrowserWindow | undefined {
@@ -498,9 +522,9 @@ function setupMainWindowWebContentsHandlers(
 
       const url = new URL(details.url)
       if (
-        url.protocol === 'surf:' ||
+        url.protocol === 'acosta:' ||
         url.protocol === 'surflet:' ||
-        url.protocol === 'surf-internal:'
+        url.protocol === 'acosta-internal:'
       ) {
         return { action: 'deny' }
       }
@@ -554,9 +578,9 @@ function setupWebContentsViewWebContentsHandlers(contents: Electron.WebContents)
 
       const url = new URL(details.url)
       if (
-        url.protocol === 'surf:' ||
+        url.protocol === 'acosta:' ||
         url.protocol === 'surflet:' ||
-        url.protocol === 'surf-internal:'
+        url.protocol === 'acosta-internal:'
       ) {
         log.warn('[main] Denied new window request:', details)
         return { action: 'deny' }

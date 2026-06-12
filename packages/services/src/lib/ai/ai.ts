@@ -7,6 +7,8 @@ import { type App, type Message, type Model as ModelBackend } from '@deta/backen
 import { derived, get, writable, type Readable, type Writable } from 'svelte/store'
 import { appendURLPath, generateHash, isDev, useLocalStorageStore, useLogScope } from '@deta/utils'
 import {
+  buildAcostaSystemPrompt,
+  acostaFocusContextPrompt,
   FILENAME_CLEANUP_PROMPT,
   PAGE_PROMPTS_GENERATOR_PROMPT,
   SIMPLE_SUMMARIZER_PROMPT
@@ -184,7 +186,10 @@ export class AIService {
   }
 
   modelToBackendModel(model: Model): ModelBackend {
-    if (model.provider === 'custom') {
+    // Models with a provider_url (all Acosta models and user-added custom
+    // models) are routed through that URL — for the Acosta models this is the
+    // api.acosta.ai proxy, regardless of which provider badge they carry.
+    if (model.provider === 'custom' || model.provider_url) {
       let providerUrl = model.provider_url ?? ''
 
       // for backwards compatibility we need to append the OpenAI path as we were doing that before in the backend
@@ -269,8 +274,44 @@ export class AIService {
       opts
     )
 
-    this.log.debug(`creating ai chat "${title}" with system prompt: ${system_prompt}`)
-    const chatId = await this.sffs.createAIChat(title, system_prompt)
+    // Every chat in Acosta Browse carries the Acosta tutor identity with the
+    // student's context. A focus session adds task context so the tutor keeps
+    // the student on track.
+    let userName: string | null = null
+    try {
+      const authState = await window.api?.acosta?.getAuthState?.()
+      if (authState?.status === 'signed-in') userName = authState.user.displayName
+    } catch {
+      // not fatal — prompt falls back to 'Student'
+    }
+
+    let subjects: string[] | undefined
+    try {
+      subjects = window.api
+        ?.getUserConfigSettings?.()
+        ?.acosta?.subjects?.map((subject: { name: string }) => subject.name)
+    } catch {
+      subjects = undefined
+    }
+
+    let effectiveSystemPrompt = buildAcostaSystemPrompt({ userName, subjects })
+    try {
+      const focusState = await window.api?.acosta?.focusGetState?.()
+      if (focusState?.active && focusState.config) {
+        effectiveSystemPrompt += `\n\n${acostaFocusContextPrompt(
+          focusState.config.subject,
+          focusState.config.task
+        )}`
+      }
+    } catch {
+      // focus state unavailable (e.g. non-core renderer) — tutor prompt still applies
+    }
+    if (system_prompt) {
+      effectiveSystemPrompt += `\n\n${system_prompt}`
+    }
+
+    this.log.debug(`creating ai chat "${title}" with system prompt: ${effectiveSystemPrompt}`)
+    const chatId = await this.sffs.createAIChat(title, effectiveSystemPrompt)
 
     if (!chatId) {
       this.log.error('failed to create ai chat')

@@ -815,7 +815,7 @@ export class WebContents extends EventEmitterBase<WebContentsEmitterEvents> {
       entry &&
       entry.url === this.view.urlValue &&
       entry.title &&
-      !entry.title.startsWith('surf://')
+      !entry.title.startsWith('acosta://')
     ) {
       this.log.debug('URL matches current history entry', entry)
       this.view.title.set(entry.title)
@@ -2054,7 +2054,7 @@ export class WebContentsView extends EventEmitterBase<WebContentsViewEmitterEven
 
     let url = parseUrlIntoCanonical(rawUrl) ?? rawUrl
 
-    const surfResourceId = url.match(/^surf:\/\/resource\/([^\/]+)/)?.[1]
+    const surfResourceId = url.match(/^acosta:\/\/resource\/([^\/]+)/)?.[1]
     if (surfResourceId) {
       return await this.resourceManager.getResource(surfResourceId)
     }

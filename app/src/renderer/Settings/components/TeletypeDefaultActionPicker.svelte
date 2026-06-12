@@ -8,7 +8,7 @@
     { key: 'auto', label: 'Auto (Smart)', description: 'Automatically select based on query type' },
     {
       key: 'always_ask',
-      label: 'Always Ask Surf',
+      label: 'Always Ask Acosta',
       description: 'Always default to Ask Surf action'
     },
     {

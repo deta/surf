@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import type {
   WebAppExtractor,
   DetectedResource,
@@ -27,6 +27,25 @@ const PDFViewerEntryPoint =
   process.argv.find((arg) => arg.startsWith('--pdf-viewer-entry-point='))?.split('=')[1] || ''
 
 let appParser: WebAppExtractor | null = null
+
+/*
+ * Acosta internal pages (block page, new tab page) are served into web content
+ * views over acosta://core/. They get a deliberately tiny bridge — just what
+ * those pages need, nothing the open web could abuse. The main process
+ * additionally validates the sender URL on privileged calls.
+ */
+const isAcostaInternalPage = window.location.href.startsWith('acosta://core/')
+if (isAcostaInternalPage) {
+  contextBridge.exposeInMainWorld('acostaPage', {
+    requestAccess: (url: string, reason: string) =>
+      ipcRenderer.invoke('acosta-request-access', { url, reason }),
+    getAuthState: () => ipcRenderer.invoke('acosta-get-auth-state'),
+    getUserConfig: () => ipcRenderer.invoke('get-user-config'),
+    getFocusState: () => ipcRenderer.invoke('acosta-focus-get-state'),
+    apiRequest: (method: 'GET' | 'POST', path: string, body?: unknown) =>
+      ipcRenderer.invoke('acosta-api-request', { method, path, body })
+  })
+}
 
 // disable console logs in production
 if (!import.meta.env.DEV) {

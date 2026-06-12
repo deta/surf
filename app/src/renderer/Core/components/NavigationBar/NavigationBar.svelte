@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Icon } from '@deta/icons'
+  import AcostaAccountBadge from './AcostaAccountBadge.svelte'
   import { Button, ResourceLoader } from '@deta/ui'
   import BreadcrumbItems from './BreadcrumbItems.svelte'
   import { writable } from 'svelte/store'
@@ -252,6 +253,17 @@
         <span>Ask</span>
       </Button>
     {/if}
+
+    <Button
+      size="md"
+      square
+      onclick={() => document.dispatchEvent(new CustomEvent('acosta-toggle-focus'))}
+      title="Focus mode (Cmd/Ctrl+Shift+F)"
+    >
+      <Icon name="bolt" size="1.2em" />
+    </Button>
+
+    <AcostaAccountBadge />
   </NavigationBarGroup>
 
   <!--{#if false && !hideSearch}

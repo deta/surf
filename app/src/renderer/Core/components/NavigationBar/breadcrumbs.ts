@@ -49,7 +49,7 @@ export async function constructBreadcrumbs(
       // Always start with Surf root
       breadcrumbs.push({
         title: 'Surf',
-        url: new URL('surf://surf/notebook').toString(),
+        url: new URL('acosta://acosta/notebook').toString(),
         navigationIdx: currentHistory.findIndex(
           (entry) => getViewType(entry.url) === ViewType.NotebookHome
         )
@@ -66,7 +66,7 @@ export async function constructBreadcrumbs(
           if (resource.spaceIdsValue.length === 0) {
             breadcrumbs.push({
               title: 'Drafts',
-              url: new URL('surf://surf/notebook/drafts').toString(),
+              url: new URL('acosta://acosta/notebook/drafts').toString(),
               navigationIdx: currentHistory.findIndex((entry) =>
                 entry.url.includes('/notebook/drafts')
               )
@@ -76,7 +76,7 @@ export async function constructBreadcrumbs(
             const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
             breadcrumbs.push({
               title: notebookName,
-              url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
+              url: new URL(`acosta://acosta/notebook/${notebookId}`).toString(),
               navigationIdx: currentHistory.findIndex((entry) =>
                 entry.url.includes(`/notebook/${notebookId}`)
               )
@@ -112,7 +112,7 @@ export async function constructBreadcrumbs(
           const notebookName = await getNotebookDisplayName(notebookManager, notebookId)
           breadcrumbs.push({
             title: notebookName,
-            url: new URL(`surf://surf/notebook/${notebookId}`).toString(),
+            url: new URL(`acosta://acosta/notebook/${notebookId}`).toString(),
             navigationIdx: currentHistory.findIndex((entry) =>
               entry.url.includes(`/notebook/${notebookId}`)
             )
@@ -120,9 +120,9 @@ export async function constructBreadcrumbs(
         } else if (spaceIds.length === 0) {
           breadcrumbs.push({
             title: 'Drafts',
-            url: 'surf://surf/notebook/drafts',
+            url: 'acosta://acosta/notebook/drafts',
             navigationIdx: currentHistory.findIndex(
-              (entry) => entry.url === 'surf://surf/notebook/drafts'
+              (entry) => entry.url === 'acosta://acosta/notebook/drafts'
             )
           })
         }

@@ -1,3 +1,4 @@
+import { getAcostaIdToken } from './acosta'
 import { isDev, useLogScope, type ScopedLogger } from '@deta/utils'
 import type {
   BookmarkFolder,
@@ -619,7 +620,7 @@ export class SFFS {
       JSON.stringify({
         query,
         model,
-        custom_key: opts?.customKey,
+        custom_key: opts?.customKey ?? (await getAcostaIdToken()),
         number_documents: opts?.limit ?? 20,
         resource_ids: opts?.resourceIds
       })
@@ -1083,7 +1084,7 @@ export class SFFS {
     const data: QueryResourcesOptions = {
       query,
       model,
-      custom_key: opts?.customKey,
+      custom_key: opts?.customKey ?? (await getAcostaIdToken()),
       sql_query: opts?.sqlQuery,
       embedding_query: opts?.embeddingQuery,
       embedding_distance_threshold: opts?.embeddingDistanceThreshold
@@ -1124,7 +1125,7 @@ export class SFFS {
     const data: CreateAppOptions = {
       query,
       model,
-      custom_key: opts?.customKey,
+      custom_key: opts?.customKey ?? (await getAcostaIdToken()),
       inline_images: opts?.inlineImages
     }
 
@@ -1175,7 +1176,7 @@ export class SFFS {
       query,
       chat_id: chatId,
       model,
-      custom_key: opts?.customKey,
+      custom_key: opts?.customKey ?? (await getAcostaIdToken()),
       resource_ids: opts?.resourceIds,
       inline_images: opts?.inlineImages,
       limit: opts?.limit ?? 20,
@@ -1226,7 +1227,7 @@ export class SFFS {
       query,
       note_resource_id: noteResourceId,
       model,
-      custom_key: opts?.customKey,
+      custom_key: opts?.customKey ?? (await getAcostaIdToken()),
       resource_ids: opts?.resourceIds,
       inline_images: opts?.inlineImages,
       limit: opts?.limit ?? 20,
@@ -1253,7 +1254,7 @@ export class SFFS {
     const data = {
       messages,
       model,
-      custom_key: opts?.customKey,
+      custom_key: opts?.customKey ?? (await getAcostaIdToken()),
       response_format: opts?.responseFormat
     } as CreateChatCompletionOptions
 
