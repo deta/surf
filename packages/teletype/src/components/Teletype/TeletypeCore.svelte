@@ -207,7 +207,7 @@
       callAction(action)
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       if ($currentAction?.requireInput) {
         e.preventDefault()
         callAction($currentAction)
